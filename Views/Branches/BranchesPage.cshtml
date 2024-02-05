@@ -1,0 +1,85 @@
+﻿@model BranchesModel
+
+@{
+    ViewData["Title"] = "الفروع";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>الـــفـــروع</h1>
+
+@(Html.DevExtreme().DataGrid<BranchesModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("Branches")
+        .LoadAction("LoadBranches")
+        .InsertAction("AddNewBranch")
+        .UpdateAction("UpdateBranch")
+        .DeleteAction("DeleteBranch")
+        .Key("BranchId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("بيانات الفرع")
+                .ShowTitle(true)
+                .Width(700)
+                .Height(250))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.BranchName).Caption("اسم الفرع");
+        columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف");
+        columns.AddFor(m => m.LandlinePhone).Caption("رقم الارضي");
+        columns.AddFor(m => m.Address).Caption("العنوان");
+    })
+    .HeaderFilter(f => f.Visible(true))
+    .Summary(summary => summary
+        .TotalItems(items =>
+        {
+            items.Add()
+                .Column("اسم الفرع")
+                .SummaryType(SummaryType.Count)
+                .DisplayFormat("عدد الفروع : {0}");
+
+            // Add more summaries as needed
+        })
+    )
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Branches');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Branches.xlsx');
+            });
+        });
+    }
+</script>

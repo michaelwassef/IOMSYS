@@ -1,0 +1,82 @@
+﻿@model CategoriesModel
+
+@{
+    ViewData["Title"] = "التصنيفات";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>التصنيفات</h1>
+
+@(Html.DevExtreme().DataGrid<CategoriesModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("Categories")
+        .LoadAction("LoadCategories")
+        .InsertAction("AddNewCategory")
+        .UpdateAction("UpdateCategory")
+        .DeleteAction("DeleteCategory")
+        .Key("CategoryId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("بيانات التصنيف")
+                .ShowTitle(true)
+                .Width(700)
+                .Height(250))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.CategoryName).Caption("اسم التصنيف");
+    })
+    .HeaderFilter(f => f.Visible(true))
+    .Summary(summary => summary
+        .TotalItems(items =>
+        {
+            items.Add()
+                .Column("اسم التصنيف")
+                .SummaryType(SummaryType.Count)
+                .DisplayFormat("عدد التصنيفات : {0}");
+
+            // Add more summaries as needed
+        })
+    )
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Categories');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Categories.xlsx');
+            });
+        });
+    }
+</script>
