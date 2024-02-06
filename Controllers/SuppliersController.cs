@@ -7,42 +7,42 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
     [Authorize(Roles = "GenralManager,BranchManager")]
-    public class CustomersController : Controller
+    public class SuppliersController : Controller
     {
-        private readonly ICustomersService _customersService;
+        private readonly ISuppliersService _SuppliersService;
 
-        public CustomersController(ICustomersService customersService)
+        public SuppliersController(ISuppliersService suppliersService)
         {
-            _customersService = customersService;
+            _SuppliersService = suppliersService;
         }
 
-        public IActionResult CustomersPage()
+        public IActionResult SuppliersPage()
         {
             return View();
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadCustomers()
+        public async Task<IActionResult> LoadSuppliers()
         {
-            var Customers = await _customersService.GetAllCustomersAsync();
-            return Json(Customers);
+            var Suppliers = await _SuppliersService.GetAllSuppliersAsync();
+            return Json(Suppliers);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewSupplier([FromForm] IFormCollection formData)
         {
             try
             {
                 var values = formData["values"];
-                var newCustomer = new CustomersModel();
-                JsonConvert.PopulateObject(values, newCustomer);
+                var newSupplier = new SuppliersModel();
+                JsonConvert.PopulateObject(values, newSupplier);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
+                int addSupplierResult = await _SuppliersService.InsertSupplierAsync(newSupplier);
 
-                if (addCustomerResult > 0)
+                if (addSupplierResult > 0)
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
@@ -55,22 +55,22 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdateSupplier([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var Customer = await _customersService.SelectCustomerByIdAsync(key);
+                var Supplier = await _SuppliersService.SelectSupplierByIdAsync(key);
 
-                JsonConvert.PopulateObject(values, Customer);
+                JsonConvert.PopulateObject(values, Supplier);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updateCustomerResult = await _customersService.UpdateCustomerAsync(Customer);
+                int updateSupplierResult = await _SuppliersService.UpdateSupplierAsync(Supplier);
 
-                if (updateCustomerResult > 0)
+                if (updateSupplierResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
@@ -81,19 +81,19 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the Customer.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the Supplier.", ExceptionMessage = ex.Message });
             }
         }
 
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeleteSupplier([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
-                int deleteCustomerResult = await _customersService.DeleteCustomerAsync(key);
-                if (deleteCustomerResult > 0)
+                int deleteSupplierResult = await _SuppliersService.DeleteSupplierAsync(key);
+                if (deleteSupplierResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });

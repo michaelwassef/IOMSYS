@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "ColorManager,GenralManager")]
+    [Authorize(Roles = "GenralManager,BranchManager")]
     public class ColorsController : Controller
     {
         private readonly IColorsService _colorsService;

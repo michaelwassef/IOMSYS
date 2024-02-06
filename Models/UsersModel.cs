@@ -8,5 +8,6 @@
         public string Password { get; set; }
         public int UserTypeId { get; set; }
         public string UserTypeName { get; set; }
+        public IEnumerable<UserTypesModel> UserTypes { get; set; }
     }
 }

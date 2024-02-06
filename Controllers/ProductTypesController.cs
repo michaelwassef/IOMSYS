@@ -6,43 +6,44 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager")]
-    public class CustomersController : Controller
-    {
-        private readonly ICustomersService _customersService;
 
-        public CustomersController(ICustomersService customersService)
+    [Authorize(Roles = "GenralManager,BranchManager")]
+    public class ProductTypesController : Controller
+    {
+        private readonly IProductTypesService _productTypesService;
+
+        public ProductTypesController(IProductTypesService productTypesService)
         {
-            _customersService = customersService;
+            _productTypesService = productTypesService;
         }
 
-        public IActionResult CustomersPage()
+        public IActionResult ProductTypesPage()
         {
             return View();
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadCustomers()
+        public async Task<IActionResult> LoadProductTypes()
         {
-            var Customers = await _customersService.GetAllCustomersAsync();
-            return Json(Customers);
+            var ProductTypes = await _productTypesService.GetAllProductTypesAsync();
+            return Json(ProductTypes);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewProductType([FromForm] IFormCollection formData)
         {
             try
             {
                 var values = formData["values"];
-                var newCustomer = new CustomersModel();
-                JsonConvert.PopulateObject(values, newCustomer);
+                var newProductType = new ProductTypesModel();
+                JsonConvert.PopulateObject(values, newProductType);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
+                int addProductTypeResult = await _productTypesService.InsertProductTypeAsync(newProductType);
 
-                if (addCustomerResult > 0)
+                if (addProductTypeResult > 0)
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
@@ -55,22 +56,22 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdateProductType([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var Customer = await _customersService.SelectCustomerByIdAsync(key);
+                var ProductType = await _productTypesService.SelectProductTypeByIdAsync(key);
 
-                JsonConvert.PopulateObject(values, Customer);
+                JsonConvert.PopulateObject(values, ProductType);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updateCustomerResult = await _customersService.UpdateCustomerAsync(Customer);
+                int updateProductTypeResult = await _productTypesService.UpdateProductTypeAsync(ProductType);
 
-                if (updateCustomerResult > 0)
+                if (updateProductTypeResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
@@ -81,19 +82,19 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the Customer.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the ProductType.", ExceptionMessage = ex.Message });
             }
         }
 
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeleteProductType([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
-                int deleteCustomerResult = await _customersService.DeleteCustomerAsync(key);
-                if (deleteCustomerResult > 0)
+                int deleteProductTypeResult = await _productTypesService.DeleteProductTypeAsync(key);
+                if (deleteProductTypeResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });

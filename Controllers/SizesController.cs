@@ -7,42 +7,42 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
     [Authorize(Roles = "GenralManager,BranchManager")]
-    public class CustomersController : Controller
+    public class SizesController : Controller
     {
-        private readonly ICustomersService _customersService;
+        private readonly ISizesService _sizesService;
 
-        public CustomersController(ICustomersService customersService)
+        public SizesController(ISizesService sizesService)
         {
-            _customersService = customersService;
+            _sizesService = sizesService;
         }
 
-        public IActionResult CustomersPage()
+        public IActionResult SizesPage()
         {
             return View();
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadCustomers()
+        public async Task<IActionResult> LoadSizes()
         {
-            var Customers = await _customersService.GetAllCustomersAsync();
-            return Json(Customers);
+            var Sizes = await _sizesService.GetAllSizesAsync();
+            return Json(Sizes);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewSize([FromForm] IFormCollection formData)
         {
             try
             {
                 var values = formData["values"];
-                var newCustomer = new CustomersModel();
-                JsonConvert.PopulateObject(values, newCustomer);
+                var newSize = new SizesModel();
+                JsonConvert.PopulateObject(values, newSize);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
+                int addSizeResult = await _sizesService.InsertSizeAsync(newSize);
 
-                if (addCustomerResult > 0)
+                if (addSizeResult > 0)
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
@@ -55,22 +55,22 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdateSize([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var Customer = await _customersService.SelectCustomerByIdAsync(key);
+                var Size = await _sizesService.SelectSizeByIdAsync(key);
 
-                JsonConvert.PopulateObject(values, Customer);
+                JsonConvert.PopulateObject(values, Size);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updateCustomerResult = await _customersService.UpdateCustomerAsync(Customer);
+                int updateSizeResult = await _sizesService.UpdateSizeAsync(Size);
 
-                if (updateCustomerResult > 0)
+                if (updateSizeResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
@@ -81,19 +81,19 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the Customer.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the Size.", ExceptionMessage = ex.Message });
             }
         }
 
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeleteSize([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
-                int deleteCustomerResult = await _customersService.DeleteCustomerAsync(key);
-                if (deleteCustomerResult > 0)
+                int deleteSizeResult = await _sizesService.DeleteSizeAsync(key);
+                if (deleteSizeResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });

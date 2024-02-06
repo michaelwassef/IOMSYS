@@ -1,0 +1,68 @@
+﻿@{
+    ViewData["Title"] = "انواع المنتجات";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>انواع المنتجات</h1>
+
+@(Html.DevExtreme().DataGrid<ProductTypesModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("ProductTypes")
+        .LoadAction("LoadProductTypes")
+        .InsertAction("AddNewProductType")
+        .UpdateAction("UpdateProductType")
+        .DeleteAction("DeleteProductType")
+        .Key("ProductTypeId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .ShowTitle(true)
+                .Width(700)
+                .Height(250))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.ProductTypeName).Caption("اسم نوع المنتجات");
+    })
+    .HeaderFilter(f => f.Visible(true))
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('ProductTypes');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'ProductTypes.xlsx');
+            });
+        });
+    }
+</script>

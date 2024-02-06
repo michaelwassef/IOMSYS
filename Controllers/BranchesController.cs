@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "BranchManager,GenralManager")]
+    [Authorize(Roles = "GenralManager,BranchManager")]
     public class BranchesController : Controller
     {
         private readonly IBranchesService _branchesService;

@@ -1,0 +1,84 @@
+﻿
+@{
+    ViewData["Title"] = "الموردين";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>الموردين</h1>
+
+@(Html.DevExtreme().DataGrid<SuppliersModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("Suppliers")
+        .LoadAction("LoadSuppliers")
+        .InsertAction("AddNewSupplier")
+        .UpdateAction("UpdateSupplier")
+        .DeleteAction("DeleteSupplier")
+        .Key("SupplierId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("بيانات المورد")
+                .ShowTitle(true)
+                .Width(700)
+                .Height(250))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.SupplierName).Caption("اسم المورد");
+        columns.AddFor(m => m.PhoneNumber1).Caption("رقم الهاتف 1");
+        columns.AddFor(m => m.PhoneNumber2).Caption("رقم الهاتف 2");
+        columns.AddFor(m => m.Address).Caption("العنوان");
+    })
+    .HeaderFilter(f => f.Visible(true))
+    .Summary(summary => summary
+        .TotalItems(items =>
+        {
+            items.Add()
+                .Column("اسم المورد")
+                .SummaryType(SummaryType.Count)
+                .DisplayFormat("عدد الموردين : {0}");
+
+            // Add more summaries as needed
+        })
+    )
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Suppliers');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Suppliers.xlsx');
+            });
+        });
+    }
+</script>

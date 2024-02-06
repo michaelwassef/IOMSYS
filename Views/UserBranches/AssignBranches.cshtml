@@ -1,0 +1,69 @@
+﻿@model UserBranchAssignmentViewModel
+
+@{
+    ViewData["Title"] = "اضافة فرع لحساب";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>اضافة فرع لحساب <a href="/Users/UsersPage" class="btn btn-success">عودة</a></h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form id="branchAssignmentForm" method="post" action="@Url.Action("SaveBranchAssignments", "UserBranches")">
+    <div class="mb-3">
+        <label for="userDropdown" class="form-label">اختر اسم المستخدم :</label>
+        <select id="userDropdown" name="SelectedUserId" class="form-control">
+            <option value="" selected disabled>اختر مستخدم</option>
+
+            @foreach (var user in Model.Users)
+            {
+                <option value="@user.UserId">@user.UserName</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="branchDropdown" class="form-label">اختر الفرع او الفروع :</label>
+        <select id="branchDropdown" name="SelectedBranchIds" multiple class="form-control">
+            @foreach (var branch in Model.Branches)
+            {
+                <option value="@branch.BranchId">@branch.BranchName</option>
+            }
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">حفظ</button>
+</form>
+
+@section Scripts {
+    <script>
+        document.getElementById('userDropdown').addEventListener('change', function () {
+            var userId = this.value;
+            fetch(`/UserBranches/GetBranchesForUser?UserId=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    var branchDropdown = document.getElementById('branchDropdown');
+                    branchDropdown.querySelectorAll('option').forEach(option => option.selected = false);
+                    data.forEach(branchId => {
+                        var option = branchDropdown.querySelector(`option[value="${branchId}"]`);
+                        if (option) option.selected = true;
+                    });
+                })
+                .catch(error => console.error('Error fetching branches:', error));
+        });
+    </script>
+}

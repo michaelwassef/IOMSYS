@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "DiscountManager,GenralManager")]
+    [Authorize(Roles = "GenralManager,BranchManager")]
     public class DiscountsController : Controller
     {
         private readonly IDiscountsService _discountsService;

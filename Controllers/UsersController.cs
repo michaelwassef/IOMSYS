@@ -6,43 +6,53 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager")]
-    public class CustomersController : Controller
+    [Authorize(Roles = "GenralManager")]
+    public class UsersController : Controller
     {
-        private readonly ICustomersService _customersService;
+        private readonly IUsersService _UsersService;
+        private readonly IUserTypesService _userTypesService;
 
-        public CustomersController(ICustomersService customersService)
+
+        public UsersController(IUsersService usersService, IUserTypesService userTypesService)
         {
-            _customersService = customersService;
+            _UsersService = usersService;
+            _userTypesService = userTypesService;
         }
 
-        public IActionResult CustomersPage()
+        public IActionResult UsersPageAsync()
         {
             return View();
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadCustomers()
+        public async Task<IActionResult> LoadUsers()
         {
-            var Customers = await _customersService.GetAllCustomersAsync();
-            return Json(Customers);
+            var Users = await _UsersService.GetAllUsersAsync();
+            return Json(Users);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadUserTypes()
+        {
+            var userTypes = await _userTypesService.GetAllUserTypesAsync();
+            return Json(userTypes);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewUser([FromForm] IFormCollection formData)
         {
             try
             {
                 var values = formData["values"];
-                var newCustomer = new CustomersModel();
-                JsonConvert.PopulateObject(values, newCustomer);
+                var newUser = new UsersModel();
+                JsonConvert.PopulateObject(values, newUser);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
+                int addUserResult = await _UsersService.InsertUserAsync(newUser);
 
-                if (addCustomerResult > 0)
+                if (addUserResult > 0)
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
@@ -55,22 +65,22 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdateUser([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var Customer = await _customersService.SelectCustomerByIdAsync(key);
+                var User = await _UsersService.SelectUserByIdAsync(key);
 
-                JsonConvert.PopulateObject(values, Customer);
+                JsonConvert.PopulateObject(values, User);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updateCustomerResult = await _customersService.UpdateCustomerAsync(Customer);
+                int updateUserResult = await _UsersService.UpdateUserAsync(User);
 
-                if (updateCustomerResult > 0)
+                if (updateUserResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
@@ -81,19 +91,19 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the Customer.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the User.", ExceptionMessage = ex.Message });
             }
         }
 
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeleteUser([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
-                int deleteCustomerResult = await _customersService.DeleteCustomerAsync(key);
-                if (deleteCustomerResult > 0)
+                int deleteUserResult = await _UsersService.DeleteUserAsync(key);
+                if (deleteUserResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });

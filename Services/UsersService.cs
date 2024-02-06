@@ -16,7 +16,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<UsersModel>> GetAllUsersAsync()
         {
-            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, U.UserTypeName FROM Users U
+            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName ,U.UserTypeId FROM Users U
                         INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId";
             using (var db = _dapperContext.CreateConnection())
             {
@@ -26,7 +26,7 @@ namespace IOMSYS.Services
 
         public async Task<UsersModel?> SelectUserByIdAsync(int userId)
         {
-            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, U.UserTypeName FROM Users U
+            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName, U.UserTypeId FROM Users U
                         INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId
                         WHERE UserId = @UserId";
             using (var db = _dapperContext.CreateConnection())

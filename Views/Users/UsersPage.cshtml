@@ -1,0 +1,102 @@
+﻿@model UserBranchAssignmentViewModel
+
+@{
+    ViewData["Title"] = "الحسابات";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>الحسابات</h1>
+
+@(Html.DevExtreme().DataGrid<UsersModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("Users")
+        .LoadAction("LoadUsers")
+        .InsertAction("AddNewUser")
+        .UpdateAction("UpdateUser")
+        .DeleteAction("DeleteUser")
+        .Key("UserId")
+    )
+      .OnToolbarPreparing("onToolbarPreparing")
+      .Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+     .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("بيانات المستخدم")
+                .ShowTitle(true)
+                .Width(700)
+                .Height(300))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.UserName).Caption("اسم المستخدم");
+        columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف المستخدم");
+        columns.AddFor(m => m.Password).Caption("كلمة المرور");
+        columns.AddFor(m => m.UserTypeId).Caption("نوع المستخدم").Lookup(lookup => lookup
+       .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUserTypes"))
+       .ValueExpr("UserTypeId")
+       .DisplayExpr("UserTypeName")
+   );
+    })
+    .HeaderFilter(f => f.Visible(true))
+    )
+
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Users');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Users.xlsx');
+            });
+        });
+    }
+        function onToolbarPreparing(e) {
+            var toolbarItems = e.toolbarOptions.items;
+
+            // Custom button configuration
+            var customButton = {
+                widget: 'dxButton',
+                options: {
+                    icon: 'fas fa-plus',
+                    text: 'اضافة فرع لحساب',
+                    onClick: function () {
+                        // Define what happens when you click the button
+                        window.location.href = '@Url.Action("AssignBranches", "UserBranches")';
+                    }
+                },
+                location: 'after',
+                name: 'customButton'
+            };
+
+            // Add the custom button to the toolbar
+            toolbarItems.push(customButton);
+        }
+</script>

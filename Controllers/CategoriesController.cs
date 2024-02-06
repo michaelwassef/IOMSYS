@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "CategoryManager,GenralManager")]
+    [Authorize(Roles = "GenralManager,BranchManager")]
     public class CategoriesController : Controller
     {
         private readonly ICategoriesService _categoriesService;

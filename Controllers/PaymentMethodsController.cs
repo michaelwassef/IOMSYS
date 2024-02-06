@@ -7,42 +7,42 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
     [Authorize(Roles = "GenralManager,BranchManager")]
-    public class CustomersController : Controller
+    public class PaymentMethodsController : Controller
     {
-        private readonly ICustomersService _customersService;
+        private readonly IPaymentMethodsService _paymentMethodsService;
 
-        public CustomersController(ICustomersService customersService)
+        public PaymentMethodsController(IPaymentMethodsService paymentMethodsService)
         {
-            _customersService = customersService;
+            _paymentMethodsService = paymentMethodsService;
         }
 
-        public IActionResult CustomersPage()
+        public IActionResult PaymentMethodsPage()
         {
             return View();
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadCustomers()
+        public async Task<IActionResult> LoadPaymentMethods()
         {
-            var Customers = await _customersService.GetAllCustomersAsync();
-            return Json(Customers);
+            var PaymentMethods = await _paymentMethodsService.GetAllPaymentMethodsAsync();
+            return Json(PaymentMethods);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewPaymentMethod([FromForm] IFormCollection formData)
         {
             try
             {
                 var values = formData["values"];
-                var newCustomer = new CustomersModel();
-                JsonConvert.PopulateObject(values, newCustomer);
+                var newPaymentMethod = new PaymentMethodsModel();
+                JsonConvert.PopulateObject(values, newPaymentMethod);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
+                int addPaymentMethodResult = await _paymentMethodsService.InsertPaymentMethodAsync(newPaymentMethod);
 
-                if (addCustomerResult > 0)
+                if (addPaymentMethodResult > 0)
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
@@ -55,22 +55,22 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdatePaymentMethod([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var Customer = await _customersService.SelectCustomerByIdAsync(key);
+                var PaymentMethod = await _paymentMethodsService.SelectPaymentMethodByIdAsync(key);
 
-                JsonConvert.PopulateObject(values, Customer);
+                JsonConvert.PopulateObject(values, PaymentMethod);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updateCustomerResult = await _customersService.UpdateCustomerAsync(Customer);
+                int updatePaymentMethodResult = await _paymentMethodsService.UpdatePaymentMethodAsync(PaymentMethod);
 
-                if (updateCustomerResult > 0)
+                if (updatePaymentMethodResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
@@ -81,19 +81,19 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the Customer.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the PaymentMethod.", ExceptionMessage = ex.Message });
             }
         }
 
 
         [HttpDelete]
-        public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeletePaymentMethod([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
-                int deleteCustomerResult = await _customersService.DeleteCustomerAsync(key);
-                if (deleteCustomerResult > 0)
+                int deletePaymentMethodResult = await _paymentMethodsService.DeletePaymentMethodAsync(key);
+                if (deletePaymentMethodResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });

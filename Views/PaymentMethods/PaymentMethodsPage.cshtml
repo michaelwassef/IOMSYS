@@ -1,0 +1,69 @@
+﻿
+@{
+    ViewData["Title"] = "طرق الدفع";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>طرق الدفع</h1>
+
+@(Html.DevExtreme().DataGrid<PaymentMethodsModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("PaymentMethods")
+        .LoadAction("LoadPaymentMethods")
+        .InsertAction("AddNewPaymentMethod")
+        .UpdateAction("UpdatePaymentMethod")
+        .DeleteAction("DeletePaymentMethod")
+        .Key("PaymentMethodId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .ShowTitle(true)
+                .Width(700)
+                .Height(250))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.PaymentMethodName).Caption("اسم طريقة الدفع");
+    })
+    .HeaderFilter(f => f.Visible(true))
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('PaymentMethods');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'PaymentMethods.xlsx');
+            });
+        });
+    }
+</script>
