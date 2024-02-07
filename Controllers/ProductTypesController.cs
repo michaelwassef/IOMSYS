@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
 
-    [Authorize(Roles = "GenralManager,BranchManager")]
+    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
     public class ProductTypesController : Controller
     {
         private readonly IProductTypesService _productTypesService;
@@ -17,6 +17,7 @@ namespace IOMSYS.Controllers
             _productTypesService = productTypesService;
         }
 
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public IActionResult ProductTypesPage()
         {
             return View();
@@ -30,6 +31,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewProductType([FromForm] IFormCollection formData)
         {
             try
@@ -56,6 +58,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateProductType([FromForm] IFormCollection formData)
         {
             try
@@ -88,6 +91,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteProductType([FromForm] IFormCollection formData)
         {
             try

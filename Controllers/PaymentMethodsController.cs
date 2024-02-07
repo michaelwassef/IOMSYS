@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager")]
+    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
     public class PaymentMethodsController : Controller
     {
         private readonly IPaymentMethodsService _paymentMethodsService;
@@ -16,6 +16,7 @@ namespace IOMSYS.Controllers
             _paymentMethodsService = paymentMethodsService;
         }
 
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public IActionResult PaymentMethodsPage()
         {
             return View();
@@ -29,6 +30,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewPaymentMethod([FromForm] IFormCollection formData)
         {
             try
@@ -55,6 +57,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdatePaymentMethod([FromForm] IFormCollection formData)
         {
             try
@@ -87,6 +90,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePaymentMethod([FromForm] IFormCollection formData)
         {
             try

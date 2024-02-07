@@ -16,7 +16,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<ProductsModel>> GetAllProductsAsync()
         {
-            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes
+            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId
                 FROM Products P
                 INNER JOIN Categories C ON C.CategoryId = P.CategoryId
                 INNER JOIN ProductTypes T ON T.ProductTypeId = P.ProductTypeId";
@@ -29,7 +29,7 @@ namespace IOMSYS.Services
 
         public async Task<ProductsModel?> SelectProductByIdAsync(int productId)
         {
-            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes
+            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId
                 FROM Products P
                 INNER JOIN Categories C ON C.CategoryId = P.CategoryId
                 INNER JOIN ProductTypes T ON T.ProductTypeId = P.ProductTypeId
@@ -43,14 +43,14 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertProductAsync(ProductsModel product)
         {
-            var sql = @"INSERT INTO Products (ProductName, CategoryId, ProductPhoto, ProductTypeId, SellPrice, BuyPrice, MaxDiscount, DiscountsOn, Notes) 
-                        VALUES (@ProductName, @CategoryId, @ProductPhoto, @ProductTypeId, @SellPrice, @BuyPrice, @MaxDiscount, @DiscountsOn, @Notes);
-                        SELECT CAST(SCOPE_IDENTITY() as int);";
+            var sql = @"INSERT INTO Products (ProductId, ProductName, CategoryId, ProductPhoto, ProductTypeId, SellPrice, BuyPrice, MaxDiscount, DiscountsOn, Notes) 
+                VALUES (@ProductId, @ProductName, @CategoryId, @ProductPhoto, @ProductTypeId, @SellPrice, @BuyPrice, @MaxDiscount, @DiscountsOn, @Notes);";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteScalarAsync<int>(sql, new { product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes }).ConfigureAwait(false);
+                    await db.ExecuteAsync(sql, new { product.ProductId, product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes }).ConfigureAwait(false);
+                    return product.ProductId;
                 }
             }
             catch

@@ -10,7 +10,7 @@
         public int BranchId { get; set; }
         public int PaymentMethodId { get; set; }
         public int UserId { get; set; }
-        public DateOnly SaleDate { get; set; }
+        public DateTime SaleDate { get; set; }
 
         //for joins
         public string CustomerName { get; set; }

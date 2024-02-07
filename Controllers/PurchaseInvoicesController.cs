@@ -7,45 +7,43 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
     [Authorize(Roles = "GenralManager,BranchManager,Employee")]
-    public class ColorsController : Controller
+    public class PurchaseInvoicesController : Controller
     {
-        private readonly IColorsService _colorsService;
+        private readonly IPurchaseInvoicesService _purchaseInvoicesService;
 
-        public ColorsController(IColorsService colorsService)
+        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService)
         {
-            _colorsService = colorsService;
+            _purchaseInvoicesService = purchaseInvoicesService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult ColorsPage()
+        public IActionResult PurchaseInvoicesPage()
         {
             return View();
         }
 
         [HttpGet]
-        [Authorize(Roles = "GenralManager,BranchManager,Employee")]
-        public async Task<IActionResult> LoadColors()
+        public async Task<IActionResult> LoadPurchaseInvoices()
         {
-            var Colors = await _colorsService.GetAllColorsAsync();
-            return Json(Colors);
+            var purchaseInvoices = await _purchaseInvoicesService.GetAllPurchaseInvoicesAsync();
+            return Json(purchaseInvoices);
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public async Task<IActionResult> AddNewColor([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewPurchaseInvoice([FromForm] IFormCollection formData)
         {
             try
             {
                 var values = formData["values"];
-                var newColor = new ColorsModel();
-                JsonConvert.PopulateObject(values, newColor);
+                var newPurchaseInvoices = new PurchaseInvoicesModel();
+                JsonConvert.PopulateObject(values, newPurchaseInvoices);
+                newPurchaseInvoices.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addColorResult = await _colorsService.InsertColorAsync(newColor);
+                int addPurchaseInvoicesResult = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(newPurchaseInvoices);
 
-                if (addColorResult > 0)
+                if (addPurchaseInvoicesResult > 0)
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
@@ -58,23 +56,23 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public async Task<IActionResult> UpdateColor([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdatePurchaseInvoice([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var Color = await _colorsService.SelectColorByIdAsync(key);
+                var PurchaseInvoices = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(key);
+                JsonConvert.PopulateObject(values, PurchaseInvoices);
 
-                JsonConvert.PopulateObject(values, Color);
+                PurchaseInvoices.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updateColorResult = await _colorsService.UpdateColorAsync(Color);
+                int updatePurchaseInvoicesResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(PurchaseInvoices);
 
-                if (updateColorResult > 0)
+                if (updatePurchaseInvoicesResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
@@ -85,20 +83,20 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the Color.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseInvoices.", ExceptionMessage = ex.Message });
             }
         }
 
 
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]
-        public async Task<IActionResult> DeleteColor([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeletePurchaseInvoice([FromForm] IFormCollection formData)
         {
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
-                int deleteColorResult = await _colorsService.DeleteColorAsync(key);
-                if (deleteColorResult > 0)
+                int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(key);
+                if (deletePurchaseInvoicesResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });

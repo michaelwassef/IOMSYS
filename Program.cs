@@ -2,7 +2,6 @@ using IOMSYS.Dapper;
 using IOMSYS.IServices;
 using IOMSYS.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +33,8 @@ builder.Services.AddScoped<IAccessService, AccessService>();
 
 builder.Services.AddAuthentication(
     CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(option => {
+    .AddCookie(option =>
+    {
         option.LoginPath = "/Access/Login";
         option.AccessDeniedPath = "/Access/AccessDenied";
         option.ExpireTimeSpan = TimeSpan.FromMinutes(60);
@@ -51,6 +51,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
 app.UseStaticFiles();
 
 app.UseRouting();

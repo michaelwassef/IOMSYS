@@ -6,7 +6,8 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager")]
+    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+
     public class UsersController : Controller
     {
         private readonly IUsersService _UsersService;
@@ -19,6 +20,7 @@ namespace IOMSYS.Controllers
             _userTypesService = userTypesService;
         }
 
+        [Authorize(Roles = "GenralManager")]
         public IActionResult UsersPageAsync()
         {
             return View();
@@ -39,6 +41,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> AddNewUser([FromForm] IFormCollection formData)
         {
             try
@@ -65,6 +68,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> UpdateUser([FromForm] IFormCollection formData)
         {
             try
@@ -97,6 +101,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteUser([FromForm] IFormCollection formData)
         {
             try

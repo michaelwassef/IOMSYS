@@ -17,7 +17,7 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesAsync()
         {
             var sql = @"
-                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp, pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate
+                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp,pi.SupplierId,pi.BranchId,pi.PaymentMethodId, pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate,pi.UserId
                 FROM PurchaseInvoices pi
                 LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
                 LEFT JOIN Branches b ON pi.BranchId = b.BranchId
@@ -33,7 +33,7 @@ namespace IOMSYS.Services
         public async Task<PurchaseInvoicesModel> GetPurchaseInvoiceByIdAsync(int purchaseInvoiceId)
         {
             var sql = @"
-                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp, pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate
+                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp,pi.SupplierId,pi.BranchId,pi.PaymentMethodId, pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate,pi.UserId
                 FROM PurchaseInvoices pi
                 LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
                 LEFT JOIN Branches b ON pi.BranchId = b.BranchId

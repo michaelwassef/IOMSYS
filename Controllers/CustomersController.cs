@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager")]
+    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
     public class CustomersController : Controller
     {
         private readonly ICustomersService _customersService;
@@ -16,6 +16,7 @@ namespace IOMSYS.Controllers
             _customersService = customersService;
         }
 
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public IActionResult CustomersPage()
         {
             return View();
@@ -87,6 +88,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
         {
             try

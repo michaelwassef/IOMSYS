@@ -1,0 +1,109 @@
+﻿
+@{
+    ViewData["Title"] = "المنتجات";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>بيانات المنتجات</h1>
+
+@(
+Html.DevExtreme().DataGrid<ProductsModel>()
+      .ID("gridContainer")
+      .DataSource(d => d
+          .Mvc()
+          .Controller("Products")
+          .LoadAction("LoadProducts")
+          .InsertAction("AddNewProduct")
+          .UpdateAction("UpdateProduct")
+          .DeleteAction("DeleteProduct")
+          .Key("ProductId")
+      )
+     .OnToolbarPreparing("onToolbarPreparing")
+     .Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+     .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("بيانات المنتج الاساسية")
+                .ShowTitle(true)
+                .Width(800)
+                .Height(500))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.ProductId).Caption("رقم المنتج");
+        columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
+        columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
+        columns.AddFor(m => m.BuyPrice).Caption("سعر شراء المنتج");
+        columns.AddFor(m => m.MaxDiscount).Caption("اقصي نسبة خصم");
+        columns.AddFor(m => m.DiscountsOn).Caption("متوفر خصم");
+        columns.AddFor(m => m.Notes).Caption("ملاحظات");
+        columns.AddFor(m => m.CategoryId).Caption("تصنيف المنتج").Lookup(lookup => lookup
+            .DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories"))
+            .ValueExpr("CategoryId")
+            .DisplayExpr("CategoryName"));
+        columns.AddFor(m => m.ProductTypeId).Caption("نوع المنتج").Lookup(lookup => lookup
+            .DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes"))
+            .ValueExpr("ProductTypeId")
+            .DisplayExpr("ProductTypeName"));
+        columns.AddFor(m => m.ProductPhoto).Caption("صورة المنتج")
+            .EditCellTemplate(@<text>
+                @(Html.DevExtreme().FileUploader()
+                    .ID("fileUploader")
+                    .SelectButtonText("اختر صورة المنتج")
+        .Accept("image/*"))</text>);
+    })
+    .HeaderFilter(f => f.Visible(true))
+    )
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Products');
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Products.xlsx');
+            });
+        });
+    }
+
+    function onToolbarPreparing(e) {
+        var toolbarItems = e.toolbarOptions.items;
+        var customButton = {
+            widget: 'dxButton',
+            options: {
+                icon: 'fas fa-plus',
+                text: 'اضافة تصنيف جديد',
+                onClick: function () {
+                    window.location.href = '@Url.Action("CategoriesPage", "Categories")';
+                }
+            },
+            location: 'after',
+            name: 'customButton'
+        };
+        toolbarItems.push(customButton);
+    }
+</script>

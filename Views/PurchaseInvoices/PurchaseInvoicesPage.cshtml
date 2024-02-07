@@ -1,0 +1,101 @@
+﻿
+@{
+    ViewData["Title"] = "PurchaseInvoicesPage";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>فواتير المشتريات</h1>
+
+@(Html.DevExtreme().DataGrid<PurchaseInvoicesModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("PurchaseInvoices")
+        .LoadAction("LoadPurchaseInvoices")
+        .InsertAction("AddNewPurchaseInvoice")
+        .UpdateAction("UpdatePurchaseInvoice")
+        .DeleteAction("DeletePurchaseInvoice")
+        .Key("PurchaseInvoiceId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("فاتورة مشتريات")
+                .ShowTitle(true)
+                .Width(800)
+                .Height(400))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.PurchaseInvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
+        columns.AddFor(m => m.TotalAmount).Caption("اجمالي مبلغ الفاتورة");
+        columns.AddFor(m => m.PaidUp).Caption("اجمالي المدفوع من الفاتورة");
+        columns.AddFor(m => m.Remainder).Caption("الباقي من مبلغ الفاتورة");
+        columns.AddFor(m => m.SupplierId).Caption("اسم المورد").Lookup(lookup => lookup
+          .DataSource(d => d.Mvc().Controller("Suppliers").LoadAction("LoadSuppliers"))
+          .ValueExpr("SupplierId")
+          .DisplayExpr("SupplierName"));
+        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
+       .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
+       .ValueExpr("BranchId")
+       .DisplayExpr("BranchName"));
+       columns.AddFor(m => m.PaymentMethodId).Caption("طريقة الدفع").Lookup(lookup => lookup
+      .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
+      .ValueExpr("PaymentMethodId")
+      .DisplayExpr("PaymentMethodName"));
+        columns.AddFor(m => m.PurchaseDate).Caption("تاريخ الفاتورة");
+        columns.AddFor(m => m.UserId).Caption("مدخل الفاتورة").AllowEditing(false).Lookup(lookup => lookup
+       .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
+       .ValueExpr("UserId")
+       .DisplayExpr("UserName"));
+    })
+    .HeaderFilter(f => f.Visible(true))
+    .Summary(summary => summary
+        .TotalItems(items =>
+        {
+            items.Add()
+                .Column("رقم الفاتورة")
+                .SummaryType(SummaryType.Count)
+                .DisplayFormat("عدد الفواتير : {0}");
+
+            // Add more summaries as needed
+        })
+    )
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('PurchaseInvoices');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'PurchaseInvoices.xlsx');
+            });
+        });
+    }
+</script>

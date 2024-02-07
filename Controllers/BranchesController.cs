@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager")]
+    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
     public class BranchesController : Controller
     {
         private readonly IBranchesService _branchesService;
@@ -15,7 +15,7 @@ namespace IOMSYS.Controllers
         {
             _branchesService = branchesService;
         }
-
+        [Authorize(Roles = "GenralManager")]
         public IActionResult BranchesPage()
         {
             return View();
@@ -29,6 +29,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> AddNewBranch([FromForm] IFormCollection formData)
         {
             try
@@ -55,6 +56,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> UpdateBranch([FromForm] IFormCollection formData)
         {
             try
@@ -87,6 +89,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteBranch([FromForm] IFormCollection formData)
         {
             try

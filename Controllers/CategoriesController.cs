@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager")]
+    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
     public class CategoriesController : Controller
     {
         private readonly ICategoriesService _categoriesService;
@@ -16,6 +16,7 @@ namespace IOMSYS.Controllers
             _categoriesService = categoriesService;
         }
 
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public IActionResult CategoriesPage()
         {
             return View();
@@ -29,6 +30,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewCategory([FromForm] IFormCollection formData)
         {
             try
@@ -55,6 +57,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
+        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateCategory([FromForm] IFormCollection formData)
         {
             try
@@ -87,6 +90,7 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteCategory([FromForm] IFormCollection formData)
         {
             try
