@@ -10,12 +10,20 @@ namespace IOMSYS.Controllers
     public class PurchaseInvoicesController : Controller
     {
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
+        private readonly IPurchaseItemsService _purchaseItemsService;
+        private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
 
-        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService)
+        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService)
         {
             _purchaseInvoicesService = purchaseInvoicesService;
+            _purchaseItemsService = purchaseItemsService;
+            _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
         }
 
+        public IActionResult PurchasePage()
+        {
+            return View();
+        }
         public IActionResult PurchaseInvoicesPage()
         {
             return View();
@@ -29,31 +37,35 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewPurchaseInvoice([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewPurchaseInvoice([FromForm] string items, [FromForm] PurchaseInvoicesModel model)
         {
             try
             {
-                var values = formData["values"];
-                var newPurchaseInvoices = new PurchaseInvoicesModel();
-                JsonConvert.PopulateObject(values, newPurchaseInvoices);
-                newPurchaseInvoices.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+                model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+                model.PurchaseItems = JsonConvert.DeserializeObject<List<PurchaseItemsModel>>(items);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int addPurchaseInvoicesResult = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(newPurchaseInvoices);
+                // Insert the invoice
+                int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
+                if (invoiceId <= 0)
+                    return BadRequest(new { ErrorMessage = "Could Not Add Invoice" });
 
-                if (addPurchaseInvoicesResult > 0)
-                    return Ok(new { SuccessMessage = "Successfully Added" });
-                else
-                    return BadRequest(new { ErrorMessage = "Could Not Add" });
+                // Insert the items and link them to the invoice
+                foreach (var item in model.PurchaseItems)
+                {
+                    item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
+                    await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
+                }
+
+                return Ok(new { SuccessMessage = "Successfully Added" });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdatePurchaseInvoice([FromForm] IFormCollection formData)
@@ -62,31 +74,26 @@ namespace IOMSYS.Controllers
             {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var PurchaseInvoices = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(key);
-                JsonConvert.PopulateObject(values, PurchaseInvoices);
+                var purchaseInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(key);
+                JsonConvert.PopulateObject(values, purchaseInvoice);
 
-                PurchaseInvoices.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+                purchaseInvoice.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int updatePurchaseInvoicesResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(PurchaseInvoices);
-
-                if (updatePurchaseInvoicesResult > 0)
-                {
-                    return Ok(new { SuccessMessage = "Updated Successfully" });
-                }
-                else
-                {
+                // Update the invoice
+                int updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(purchaseInvoice);
+                if (updateResult <= 0)
                     return BadRequest(new { ErrorMessage = "Could Not Update" });
-                }
+
+                return Ok(new { SuccessMessage = "Updated Successfully" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseInvoices.", ExceptionMessage = ex.Message });
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the invoice.", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]

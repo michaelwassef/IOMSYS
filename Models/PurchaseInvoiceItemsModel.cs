@@ -3,6 +3,6 @@
     public class PurchaseInvoiceItemsModel
     {
         public int PurchaseInvoiceId { get; set; }
-        public string PurchaseItemId { get; set; }
+        public int PurchaseItemId { get; set; }
     }
 }

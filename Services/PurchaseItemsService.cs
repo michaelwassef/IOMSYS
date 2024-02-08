@@ -44,6 +44,24 @@ namespace IOMSYS.Services
                 return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseItemId = purchaseItemId }).ConfigureAwait(false);
             }
         }
+        public async Task<PurchaseItemsModel> GetPurchaseItemsByInvoiceIdAsync(int InvoiceId)
+        {
+            var sql = @"
+                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice
+                FROM PurchaseInvoiceItems pii
+                INNER JOIN PurchaseItems pi ON pii.PurchaseItemId = pi.PurchaseItemId
+                LEFT JOIN Products p ON pi.ProductId = p.ProductId
+                LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
+                LEFT JOIN Colors c ON pi.ColorId = c.ColorId
+                WHERE pii.PurchaseInvoiceId = @PurchaseInvoiceId;
+                ";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseInvoiceId = InvoiceId }).ConfigureAwait(false);
+            }
+        }
+
         public async Task<int> InsertPurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {
             var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice) 
