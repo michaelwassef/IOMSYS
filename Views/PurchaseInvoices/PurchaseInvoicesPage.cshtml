@@ -4,33 +4,33 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>اضافة فاتوره مشتريات جديدة</h1>
-
+<h1 class="text-center">اضافة فاتوره مشتريات جديدة</h1>
+<div id="alertPlaceholder"></div>
 <!-- Temporarily store items here -->
 <div id="itemForm">
     <h3>اضافة الاصناف</h3>
     <div class="row">
         <div class="form-group col-md-4 mb-3">
         <label for="ProductId">اسم المنتج</label>
-        <select id="ProductId" class="form-control" placeholder="Product Name"></select>
+            <select id="ProductId" class="form-control" placeholder="Product Name" required></select>
     </div>
         <div class="form-group col-md-4 mb-3">
         <label for="SizeId">المقاس</label>
-        <select id="SizeId" class="form-control" placeholder="Size"></select>
+            <select id="SizeId" class="form-control" placeholder="Size" required></select>
     </div>
     <div class="form-group col-md-4 mb-3">
         <label for="ColorId">اللون</label>
-        <select id="ColorId" class="form-control" placeholder="Color"></select>
+            <select id="ColorId" class="form-control" placeholder="Color" required></select>
     </div>
     <div class="form-group col-md-6 mb-3">
         <label for="Quantity">الكمية</label>
-        <input type="number" id="Quantity" class="form-control" placeholder="Quantity" />
+            <input type="number" id="Quantity" class="form-control" placeholder="Quantity" required/>
     </div>
         <div class="form-group col-md-6 mb-3">
         <label for="BuyPrice">سعر الشراء للواحد</label>
-        <input type="number" id="BuyPrice" class="form-control" placeholder="Buy Price For one" />
+            <input type="number" id="BuyPrice" class="form-control" placeholder="Buy Price For one" required />
     </div>
-        <button type="button" onclick="addItem()" class="btn btn-primary mb-3">Add Item</button>
+        <button type="button" onclick="addItem()" class="btn btn-primary mb-3">اضافة صنف</button>
 </div>
 </div>
 
@@ -38,40 +38,42 @@
 <div id="itemsGridContainer"></div>
 
 <!-- Invoice Details Form -->
-<div id="invoiceDetailsForm" style="margin-top: 20px;">
-    <h3>بيانات الفاتورة</h3>
-   <div class="row">
-    <div class="form-group col-md-4 mb-3">
-        <label for="supplierId">اسم المورد</label>
-        <select id="supplierName" class="form-control"></select>
+<form id="invoiceForm">
+    <div id="invoiceDetailsForm" style="margin-top: 20px;">
+        <h3>بيانات الفاتورة</h3>
+        <div class="row">
+            <div class="form-group col-md-4 mb-3">
+                <label for="supplierId">اسم المورد</label>
+                <select id="SupplierId" class="form-control" required></select>
+            </div>
+            <div class="form-group col-md-4 mb-3">
+                <label for="branchId">اسم الفرع</label>
+                    <select id="BranchId" class="form-control"></select>
+            </div>
+            <div class="form-group col-md-4 mb-3">
+                <label for="paymentMethodName">طريقة الدفع</label>
+                    <select id="PaymentMethodId" class="form-control" required></select>
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="totalAmount">اجمالي مبلغ الفاتورة</label>
+                <input type="number" id="totalAmount" class="form-control" placeholder="اجمالي مبلغ الفاتورة" required/>
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="paidUp">المدفوع</label>
+                <input type="number" id="paidUp" class="form-control" placeholder="المدفوع" required/>
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="remainder">الباقي</label>
+                <input type="number" id="remainder" class="form-control" placeholder="الباقي" required />
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="purchaseDate">تاريخ الفاتورة</label>
+                <input type="date" id="purchaseDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required/>
+            </div>
+               <button type="button" onclick="saveInvoice()" class="btn btn-success">حفظ الفاتورة</button>
+        </div>
     </div>
-    <div class="form-group col-md-4 mb-3">
-        <label for="branchId">اسم الفرع</label>
-        <select id="branchName" class="form-control"></select>
-    </div>
-    <div class="form-group col-md-4 mb-3">
-        <label for="paymentMethodName">طريقة الدفع</label>
-        <select id="paymentMethodName" class="form-control"></select>
-    </div>
-    <div class="form-group col-md-3 mb-3">
-        <label for="totalAmount">اجمالي مبلغ الفاتورة</label>
-        <input type="number" id="totalAmount" class="form-control" placeholder="اجمالي مبلغ الفاتورة" />
-    </div>
-    <div class="form-group col-md-3 mb-3">
-        <label for="paidUp">المدفوع</label>
-        <input type="number" id="paidUp" class="form-control" placeholder="المدفوع" />
-    </div>
-    <div class="form-group col-md-3 mb-3">
-        <label for="remainder">الباقي</label>
-        <input type="number" id="remainder" class="form-control" placeholder="الباقي" />
-    </div>
-        <div class="form-group col-md-3 mb-3">
-        <label for="purchaseDate">تاريخ الفاتورة</label>
-            <input type="date" id="purchaseDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" />
-    </div>
-        <button type="button" onclick="saveInvoice()" class="btn btn-success">حفظ الفاتورة</button>
-</div>
-</div>
+</form>
 
 
 
@@ -99,7 +101,17 @@
         populateDropdown('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
         populateDropdown('/Sizes/LoadSizes', 'SizeId', 'SizeId', 'SizeName');
         populateDropdown('/Colors/LoadColors', 'ColorId', 'ColorId', 'ColorName');
-        refreshItemsGrid(); 
+        populateDropdown('/Suppliers/LoadSuppliers', 'SupplierId', 'SupplierId', 'SupplierName');
+        populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
+        populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
+        document.getElementById('paidUp').addEventListener('input', calculateTotals);
+        refreshItemsGrid();
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var yyyy = today.getFullYear();
+        today = yyyy + '-' + mm + '-' + dd;
+        document.getElementById('purchaseDate').value = today;
     });
 
     async function populateDropdown(url, elementId, valueField, textField) {
@@ -124,12 +136,6 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        populateDropdown('/Suppliers/LoadSuppliers', 'supplierName', 'SupplierId', 'SupplierName');
-        populateDropdown('/Branches/LoadBranches', 'branchName', 'BranchId', 'BranchName');
-        populateDropdown('/PaymentMethods/LoadPaymentMethods', 'paymentMethodName', 'PaymentMethodId', 'PaymentMethodName');
-    });
-
     var tempItems = []; // Temporary storage for items
 
     function addItem() {
@@ -137,8 +143,14 @@
         var productId = document.getElementById('ProductId').value;
         var sizeId = document.getElementById('SizeId').value;
         var colorId = document.getElementById('ColorId').value;
-        var quantity = parseInt(document.getElementById('Quantity').value, 10);
+        var quantity = parseInt(document.getElementById('Quantity').value);
         var buyPrice = parseFloat(document.getElementById('BuyPrice').value);
+
+        // Check if any field is empty
+        if (!productId || !sizeId || !colorId || !quantity || !buyPrice) {
+            alert('برجاء ملاء بيانات الاصناف');
+            return;
+        }
 
         // Add to temporary storage
         tempItems.push({ ProductId: productId, SizeId: sizeId, ColorId: colorId , Quantity: quantity, BuyPrice: buyPrice });
@@ -152,43 +164,130 @@
 
         // Refresh the grid
         refreshItemsGrid();
+        calculateTotals();
     }
+
+    //to fetch productname in grid
+    let productsLookup = [];
+    async function fetchProductsLookup() {
+        const response = await fetch('/Products/LoadProducts');
+        if (response.ok) {
+            productsLookup = await response.json();
+        }
+    }
+    fetchProductsLookup();
+
+    //to fetch sizename in grid
+    let sizesLookup = [];
+    async function fetchsizesLookup() {
+        const response = await fetch('/Sizes/LoadSizes');
+        if (response.ok) {
+            sizesLookup = await response.json();
+        }
+    }
+    fetchsizesLookup();
+
+    //to fetch colorname in grid
+    let colorsLookup = [];
+    async function fetchcolorsLookup() {
+        const response = await fetch('/Colors/LoadColors');
+        if (response.ok) {
+            colorsLookup = await response.json();
+        }
+    }
+    fetchcolorsLookup();
 
     function refreshItemsGrid() {
         $("#itemsGridContainer").dxDataGrid({
             dataSource: tempItems,
             columns: [
-                { dataField: "ProductId", caption: "اسم المنتج" },
+                {
+                    dataField: "ProductId", caption: "اسم المنتج" , lookup: {
+                        dataSource: productsLookup,
+                        valueExpr: "ProductId",
+                        displayExpr: "ProductName"
+                    }
+                },
+                {
+                    dataField: "SizeId", caption: "المقاس", lookup: {
+                        dataSource: sizesLookup,
+                        valueExpr: "SizeId",
+                        displayExpr: "SizeName"
+                    }
+                },
+                {
+                    dataField: "ColorId", caption: "اللون", lookup: {
+                        dataSource: colorsLookup,
+                        valueExpr: "ColorId",
+                        displayExpr: "ColorName"
+                    }
+                },
                 { dataField: "Quantity", caption: "الكمية" },
-                { dataField: "SizeId", caption: "المقاس" },
-                { dataField: "ColorId", caption: "اللون" },
                 { dataField: "BuyPrice", caption: "سعر البيع للواحد" }
             ],
             showBorders: true,
             editing: {
-                allowDeleting: true 
+                allowDeleting: true
             },
             onRowRemoving: function (e) {
                 var index = tempItems.indexOf(e.data);
                 if (index > -1) {
                     tempItems.splice(index, 1); 
                 }
-            }
+            },
+            rtlEnabled: true
         });
     }
 
+    function calculateTotals() {
+    let totalAmount = 0;
+        // Calculate totalAmount
+        tempItems.forEach(item => {
+            totalAmount += item.Quantity * item.BuyPrice;
+        });
+
+        // Update totalAmount input
+        document.getElementById('totalAmount').value = totalAmount.toFixed(2);
+
+        // Calculate remainder
+        const paidUp = parseFloat(document.getElementById('paidUp').value) || 0;
+        const remainder = totalAmount - paidUp;
+
+        // Update remainder input
+        document.getElementById('remainder').value = remainder.toFixed(2);
+    }
+
+    function displayMessage(type, message) {
+        const messageContainer = document.createElement("div");
+        messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+        messageContainer.role = "alert";
+        messageContainer.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+
+        // Assuming you have a specific element to append this message to, for example:
+        const alertPlaceholder = document.getElementById("alertPlaceholder"); // Make sure to have this element in your HTML
+        alertPlaceholder.innerHTML = ''; // Clear previous messages
+        alertPlaceholder.appendChild(messageContainer);
+    }
+
+
     async function saveInvoice() {
+         if (tempItems.length === 0) {
+            alert('يجب اضافة صنف واحد علي الاقل');
+            return; // Stop the function execution
+        }
+
         // Create FormData object
         var formData = new FormData();
 
-        // Assuming tempItems is an array of item objects
-        // Convert item objects array into a JSON string and append to formData
         formData.append("items", JSON.stringify(tempItems));
 
         // Append other invoice details to formData
-        formData.append("SupplierId", document.getElementById('supplierName').value);
-        formData.append("BranchId", document.getElementById('branchName').value);
-        formData.append("PaymentMethodId", document.getElementById('paymentMethodName').value);
+        formData.append("SupplierId", document.getElementById('SupplierId').value);
+        formData.append("BranchId", document.getElementById('BranchId').value);
+        formData.append("PaymentMethodId", document.getElementById('PaymentMethodId').value);
         formData.append("TotalAmount", document.getElementById('totalAmount').value);
         formData.append("PaidUp", document.getElementById('paidUp').value);
         formData.append("Remainder", document.getElementById('remainder').value);
@@ -199,17 +298,16 @@
                 method: 'POST',
                 body: formData 
             });
-
             if (response.ok) {
                 let result = await response.json();
-                console.log(result);
-                alert('Invoice saved successfully');
-                // Reset form and tempItems array
-                document.getElementById('invoiceDetailsForm').reset();
-                tempItems = [];
-                refreshItemsGrid();
-            } else {
-                alert('Failed to save invoice');
+                if (result.success) {
+                    displayMessage('success', result.message);
+                    document.getElementById('invoiceForm').reset();
+                    tempItems = [];
+                    refreshItemsGrid();
+                } else {
+                    displayMessage('error', result.message);
+                }
             }
         } catch (error) {
             console.error('Error:', error);

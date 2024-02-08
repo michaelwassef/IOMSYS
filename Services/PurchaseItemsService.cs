@@ -32,35 +32,48 @@ namespace IOMSYS.Services
         public async Task<PurchaseItemsModel> GetPurchaseItemByIdAsync(int purchaseItemId)
         {
             var sql = @"
-                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice
-                FROM PurchaseItems pi
-                LEFT JOIN Products p ON pi.ProductId = p.ProductId
-                LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
-                LEFT JOIN Colors c ON pi.ColorId = c.ColorId
-                WHERE pi.PurchaseItemId = @PurchaseItemId";
+                SELECT 
+                    pi.PurchaseItemId, 
+                    p.ProductName, 
+                    s.SizeName, 
+                    c.ColorName, 
+                    pi.Quantity, 
+                    pi.BuyPrice,
+                    pii.PurchaseInvoiceId
+                FROM 
+                    PurchaseItems pi
+                    LEFT JOIN Products p ON pi.ProductId = p.ProductId
+                    LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
+                    LEFT JOIN Colors c ON pi.ColorId = c.ColorId
+                    INNER JOIN PurchaseInvoiceItems pii ON pi.PurchaseItemId = pii.PurchaseItemId
+                WHERE 
+                    pi.PurchaseItemId = @PurchaseItemId;";
 
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseItemId = purchaseItemId }).ConfigureAwait(false);
             }
         }
-        public async Task<PurchaseItemsModel> GetPurchaseItemsByInvoiceIdAsync(int InvoiceId)
+        public async Task<IEnumerable<PurchaseItemsModel>> GetPurchaseItemsByInvoiceIdAsync(int InvoiceId)
         {
             var sql = @"
-                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice
+                SELECT pi.PurchaseItemId, pi.ProductId, pi.SizeId, pi.ColorId, pi.Quantity, pi.BuyPrice, 
+                       p.ProductName, s.SizeName, c.ColorName
                 FROM PurchaseInvoiceItems pii
                 INNER JOIN PurchaseItems pi ON pii.PurchaseItemId = pi.PurchaseItemId
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
                 LEFT JOIN Colors c ON pi.ColorId = c.ColorId
                 WHERE pii.PurchaseInvoiceId = @PurchaseInvoiceId;
-                ";
+            ";
 
             using (var db = _dapperContext.CreateConnection())
             {
-                return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseInvoiceId = InvoiceId }).ConfigureAwait(false);
+                var items = await db.QueryAsync<PurchaseItemsModel>(sql, new { PurchaseInvoiceId = InvoiceId }).ConfigureAwait(false);
+                return items;
             }
         }
+
 
         public async Task<int> InsertPurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {

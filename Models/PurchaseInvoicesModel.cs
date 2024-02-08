@@ -7,13 +7,13 @@
         public decimal PaidUp { get; set; }
         public decimal Remainder { get; set; }
         public int SupplierId { get; set; }
-        public string SupplierName { get; set; }
+        public string? SupplierName { get; set; }
         public int BranchId { get; set; }
-        public string BranchName { get; set; }
+        public string? BranchName { get; set; }
         public int PaymentMethodId { get; set; }
-        public string PaymentMethodName { get; set; }
+        public string? PaymentMethodName { get; set; }
         public int UserId { get; set; }
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
         public DateTime PurchaseDate { get; set; }
 
         // New property to hold associated purchase items

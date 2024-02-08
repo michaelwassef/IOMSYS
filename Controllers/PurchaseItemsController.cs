@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -10,10 +11,12 @@ namespace IOMSYS.Controllers
     public class PurchaseItemsController : Controller
     {
         private readonly IPurchaseItemsService _PurchaseItemsService;
+        private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService)
         {
             _PurchaseItemsService = PurchaseItemsService;
+            _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
         }
 
         public IActionResult PurchaseItemsPage()
@@ -27,6 +30,14 @@ namespace IOMSYS.Controllers
             var PurchaseItems = await _PurchaseItemsService.GetAllPurchaseItemsAsync();
             return Json(PurchaseItems);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadPurchaseItemsByInvoiceId([FromQuery] int purchaseInvoiceId)
+        {
+            var purchaseItems = await _PurchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(purchaseInvoiceId);
+            return Json(purchaseItems);
+        }
+
 
         [HttpPost]
         public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
@@ -86,13 +97,24 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePurchaseItem([FromForm] IFormCollection formData)
         {
             try
             {
-                var key = Convert.ToInt32(formData["key"]);
-                int deletePurchaseItemsResult = await _PurchaseItemsService.DeletePurchaseItemAsync(key);
+                // Assume formData contains both the purchase item ID and the associated invoice ID
+                var purchaseItemId = Convert.ToInt32(formData["key"]);
+                var purchaseInvoiceIdModel = await _PurchaseItemsService.GetPurchaseItemByIdAsync(purchaseItemId);
+                var purchaseInvoiceId = purchaseInvoiceIdModel.PurchaseInvoiceId;
+
+                // Step 1: Remove the connection between the invoice and the item
+                var removeConnectionResult = await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel
+                {
+                    PurchaseInvoiceId = purchaseInvoiceId,
+                    PurchaseItemId = purchaseItemId
+                });
+
+                // Step 2: Delete the purchase item
+                int deletePurchaseItemsResult = await _PurchaseItemsService.DeletePurchaseItemAsync(purchaseItemId);
                 if (deletePurchaseItemsResult > 0)
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 else
@@ -103,5 +125,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

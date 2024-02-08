@@ -45,12 +45,12 @@ namespace IOMSYS.Controllers
                 model.PurchaseItems = JsonConvert.DeserializeObject<List<PurchaseItemsModel>>(items);
 
                 if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+                    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
                 // Insert the invoice
                 int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
                 if (invoiceId <= 0)
-                    return BadRequest(new { ErrorMessage = "Could Not Add Invoice" });
+                    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
                 // Insert the items and link them to the invoice
                 foreach (var item in model.PurchaseItems)
@@ -58,12 +58,11 @@ namespace IOMSYS.Controllers
                     item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
                     await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                 }
-
-                return Ok(new { SuccessMessage = "Successfully Added" });
+                return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
+                return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري"+ ex.Message });
             }
         }
 
@@ -96,22 +95,43 @@ namespace IOMSYS.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePurchaseInvoice([FromForm] IFormCollection formData)
         {
             try
             {
-                var key = Convert.ToInt32(formData["key"]);
-                int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(key);
+                var invoiceId = Convert.ToInt32(formData["key"]);
+
+                // Step 1: Retrieve all items associated with the invoice
+                var items = await _purchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
+
+                // Step 2: Remove links from PurchaseInvoiceItems
+                foreach (var item in items)
+                {
+                    await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
+                }
+
+                // Step 3: Delete items from PurchaseItems
+                foreach (var item in items)
+                {
+                    await _purchaseItemsService.DeletePurchaseItemAsync(item.PurchaseItemId);
+                }
+
+                // Step 4: Delete the invoice
+                int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
                 if (deletePurchaseInvoicesResult > 0)
+                {
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
+                {
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
+                }
             }
             catch (Exception ex)
             {
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }
