@@ -12,23 +12,27 @@
     <div class="row">
         <div class="form-group col-md-4 mb-3">
         <label for="ProductId">اسم المنتج</label>
-            <select id="ProductId" class="form-control" placeholder="Product Name" required></select>
+            <select id="ProductId" class="form-control" placeholder="اسم المنتج" required></select>
     </div>
         <div class="form-group col-md-4 mb-3">
         <label for="SizeId">المقاس</label>
-            <select id="SizeId" class="form-control" placeholder="Size" required></select>
+            <select id="SizeId" class="form-control" placeholder="المقاس" required></select>
     </div>
     <div class="form-group col-md-4 mb-3">
         <label for="ColorId">اللون</label>
-            <select id="ColorId" class="form-control" placeholder="Color" required></select>
+            <select id="ColorId" class="form-control" placeholder="اللون" required></select>
     </div>
-    <div class="form-group col-md-6 mb-3">
+    <div class="form-group col-md-4 mb-3">
         <label for="Quantity">الكمية</label>
-            <input type="number" id="Quantity" class="form-control" placeholder="Quantity" required/>
+            <input type="number" id="Quantity" class="form-control" placeholder="الكمية" required/>
     </div>
-        <div class="form-group col-md-6 mb-3">
+        <div class="form-group col-md-4 mb-3">
         <label for="BuyPrice">سعر الشراء للواحد</label>
-            <input type="number" id="BuyPrice" class="form-control" placeholder="Buy Price For one" required />
+            <input type="number" id="BuyPrice" class="form-control" placeholder="سعر الشراء للواحد" required />
+    </div>
+        <div class="form-group col-md-4 mb-3">
+            <label for="SellPrice">سعر البيع للواحد</label>
+            <input type="number" id="SellPrice" class="form-control" placeholder="سعر البيع للواحد" />
     </div>
         <button type="button" onclick="addItem()" class="btn btn-primary mb-3">اضافة صنف</button>
 </div>
@@ -61,6 +65,12 @@
             <div class="form-group col-md-3 mb-3">
                 <label for="paidUp">المدفوع</label>
                 <input type="number" id="paidUp" class="form-control" placeholder="المدفوع" required/>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="fullPaymentCheckbox">
+                    <label class="form-check-label" for="fullPaymentCheckbox">
+                        دفع كامل المبلغ
+                    </label>
+                </div>
             </div>
             <div class="form-group col-md-3 mb-3">
                 <label for="remainder">الباقي</label>
@@ -104,15 +114,53 @@
         populateDropdown('/Suppliers/LoadSuppliers', 'SupplierId', 'SupplierId', 'SupplierName');
         populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
+
         document.getElementById('paidUp').addEventListener('input', calculateTotals);
+
         refreshItemsGrid();
+
         var today = new Date();
         var dd = String(today.getDate()).padStart(2, '0');
         var mm = String(today.getMonth() + 1).padStart(2, '0');
         var yyyy = today.getFullYear();
         today = yyyy + '-' + mm + '-' + dd;
         document.getElementById('purchaseDate').value = today;
+
+        document.getElementById('ProductId').addEventListener('change', function () {
+            var productId = this.value;
+            if (productId) {
+                fetchSellPrice(productId);
+            } else {
+                document.getElementById('SellPrice').value = '';
+            }
+        });
+
+        document.getElementById('fullPaymentCheckbox').addEventListener('change', function () {
+            if (this.checked) {
+                // If checked, set the "Paid Up" field to the total amount
+                document.getElementById('paidUp').value = document.getElementById('totalAmount').value;
+            } else {
+                // If unchecked, clear the "Paid Up" field (or adjust as needed)
+                document.getElementById('paidUp').value = '';
+            }
+            calculateTotals(); // Recalculate totals to update the "Remainder"
+        });
     });
+
+    async function fetchSellPrice(productId) {
+    try {
+        const response = await fetch(`/Products/LoadProductById?ProductId=${productId}`);
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('SellPrice').value = data.SellPrice;
+        } else {
+            document.getElementById('SellPrice').value = '';
+        }
+    } catch (error) {
+        console.error('Error fetching SellPrice for:', productId, error);
+        document.getElementById('SellPrice').value = '';
+    }
+}
 
     async function populateDropdown(url, elementId, valueField, textField) {
         try {
@@ -145,15 +193,16 @@
         var colorId = document.getElementById('ColorId').value;
         var quantity = parseInt(document.getElementById('Quantity').value);
         var buyPrice = parseFloat(document.getElementById('BuyPrice').value);
+        var sellPrice = parseFloat(document.getElementById('SellPrice').value);
 
         // Check if any field is empty
-        if (!productId || !sizeId || !colorId || !quantity || !buyPrice) {
+        if (!productId || !sizeId || !colorId || !quantity || !buyPrice || !sellPrice) {
             alert('برجاء ملاء بيانات الاصناف');
             return;
         }
 
         // Add to temporary storage
-        tempItems.push({ ProductId: productId, SizeId: sizeId, ColorId: colorId , Quantity: quantity, BuyPrice: buyPrice });
+        tempItems.push({ ProductId: productId, SizeId: sizeId, ColorId: colorId, Quantity: quantity, BuyPrice: buyPrice, SellPrice: sellPrice });
 
         // Reset input fields
         document.getElementById('ProductId').value = '';
@@ -161,6 +210,7 @@
         document.getElementById('ColorId').value = '';
         document.getElementById('Quantity').value = '';
         document.getElementById('BuyPrice').value = '';
+        document.getElementById('SellPrice').value = '';
 
         // Refresh the grid
         refreshItemsGrid();
@@ -223,10 +273,11 @@
                     }
                 },
                 { dataField: "Quantity", caption: "الكمية" },
-                { dataField: "BuyPrice", caption: "سعر البيع للواحد" }
+                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" },
+                { dataField: "SellPrice", caption: "سعر البيع للواحد" }
             ],
             showBorders: true,
-            editing: {
+            editing: { 
                 allowDeleting: true
             },
             onRowRemoving: function (e) {

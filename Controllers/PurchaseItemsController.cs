@@ -13,12 +13,14 @@ namespace IOMSYS.Controllers
         private readonly IPurchaseItemsService _PurchaseItemsService;
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
+        private readonly IProductsService _ProductsService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService)
         {
             _PurchaseItemsService = PurchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
             _purchaseInvoicesService = purchaseInvoicesService;
+            _ProductsService = productsService;
         }
 
         [HttpGet]
@@ -51,7 +53,7 @@ namespace IOMSYS.Controllers
 
                 if (addPurchaseItemsResult > 0)
                 {
-                    await RecalculateInvoiceTotal(newPurchaseItems.PurchaseInvoiceId);
+                    await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
                     return Ok(new { SuccessMessage = "Successfully Added" });
                 }
                 else
@@ -80,7 +82,6 @@ namespace IOMSYS.Controllers
 
                 if (updatePurchaseItemsResult > 0)
                 {
-                    await RecalculateInvoiceTotal(PurchaseItems.PurchaseInvoiceId);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else

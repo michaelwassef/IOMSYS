@@ -2,6 +2,7 @@
 using IOMSYS.Dapper;
 using IOMSYS.IServices;
 using IOMSYS.Models;
+using Microsoft.CodeAnalysis;
 
 namespace IOMSYS.Services
 {
@@ -83,6 +84,21 @@ namespace IOMSYS.Services
                 using (var db = _dapperContext.CreateConnection())
                 {
                     return await db.ExecuteAsync(sql, new { ProductId = productId }).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+        public async Task<int> UpdateProductBuyandSellPriceAsync(int ProductId,decimal BuyPrice,decimal SellPrice)
+        {
+            var sql = @"UPDATE Products SET BuyPrice = @BuyPrice,SellPrice=@SellPrice WHERE ProductId = @ProductId";
+            try
+            {
+                using (var db = _dapperContext.CreateConnection())
+                {
+                    return await db.ExecuteAsync(sql, new { BuyPrice, SellPrice, ProductId }).ConfigureAwait(false);
                 }
             }
             catch

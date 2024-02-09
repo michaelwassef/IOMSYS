@@ -53,8 +53,8 @@ Html.DevExtreme().DataGrid<ProductsModel>()
     {
         columns.AddFor(m => m.ProductId).Caption("رقم المنتج");
         columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
-        columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
         columns.AddFor(m => m.BuyPrice).Caption("سعر شراء المنتج");
+        columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
         columns.AddFor(m => m.MaxDiscount).Caption("اقصي نسبة خصم");
         columns.AddFor(m => m.DiscountsOn).Caption("متوفر خصم");
         columns.AddFor(m => m.Notes).Caption("ملاحظات");

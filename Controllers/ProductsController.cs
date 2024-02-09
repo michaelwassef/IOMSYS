@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -30,6 +29,13 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> LoadProducts()
         {
             var Products = await _ProductsService.GetAllProductsAsync();
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadProductById(int ProductId)
+        {
+            var Products = await _ProductsService.SelectProductByIdAsync(ProductId);
             return Json(Products);
         }
 

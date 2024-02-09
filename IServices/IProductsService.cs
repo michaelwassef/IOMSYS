@@ -9,5 +9,6 @@ namespace IOMSYS.IServices
         Task<int> InsertProductAsync(ProductsModel product);
         Task<int> UpdateProductAsync(ProductsModel product);
         Task<int> DeleteProductAsync(int productId);
+        Task<int> UpdateProductBuyandSellPriceAsync(int ProductId, decimal BuyPrice,decimal SellPrice);
     }
 }
