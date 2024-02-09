@@ -12,16 +12,13 @@ namespace IOMSYS.Controllers
     {
         private readonly IPurchaseItemsService _PurchaseItemsService;
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
+        private readonly IPurchaseInvoicesService _purchaseInvoicesService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService)
         {
             _PurchaseItemsService = PurchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
-        }
-
-        public IActionResult PurchaseItemsPage()
-        {
-            return View();
+            _purchaseInvoicesService = purchaseInvoicesService;
         }
 
         [HttpGet]
@@ -38,7 +35,6 @@ namespace IOMSYS.Controllers
             return Json(purchaseItems);
         }
 
-
         [HttpPost]
         public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
         {
@@ -54,7 +50,10 @@ namespace IOMSYS.Controllers
                 int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
 
                 if (addPurchaseItemsResult > 0)
+                {
+                    await RecalculateInvoiceTotal(newPurchaseItems.PurchaseInvoiceId);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -63,7 +62,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)
@@ -82,6 +80,7 @@ namespace IOMSYS.Controllers
 
                 if (updatePurchaseItemsResult > 0)
                 {
+                    await RecalculateInvoiceTotal(PurchaseItems.PurchaseInvoiceId);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -94,7 +93,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseItems.", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpDelete]
         public async Task<IActionResult> DeletePurchaseItem([FromForm] IFormCollection formData)
@@ -116,9 +114,59 @@ namespace IOMSYS.Controllers
                 // Step 2: Delete the purchase item
                 int deletePurchaseItemsResult = await _PurchaseItemsService.DeletePurchaseItemAsync(purchaseItemId);
                 if (deletePurchaseItemsResult > 0)
+                {
+                    await RecalculateInvoiceTotal(purchaseInvoiceId);
+                    await DeleteInvoiceIfNoItems(purchaseInvoiceId);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+
+        private async Task<bool> RecalculateInvoiceTotal(int invoiceId)
+        {
+            try
+            {
+                var items = await _PurchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
+                var totalAmount = items.Sum(item => item.Quantity * item.BuyPrice);
+
+                var invoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(invoiceId);
+                if (invoice != null)
+                {
+                    invoice.TotalAmount = totalAmount;
+                    var updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(invoice);
+                    return updateResult > 0;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<IActionResult> DeleteInvoiceIfNoItems(int invoiceId)
+        {
+            try
+            {
+                // Step 1: Check if any items are associated with this invoice
+                var items = await _PurchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
+
+                // Step 2: If no items are associated, proceed to delete the invoice
+                int deleteResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
+                if (deleteResult > 0)
+                {
+                    return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+                }
+                else
+                {
+                    return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
+                }
             }
             catch (Exception ex)
             {

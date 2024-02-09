@@ -21,6 +21,7 @@
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
+     .ColumnAutoWidth(true)
     .Editing(e => e
         .Mode(GridEditMode.Popup)
         .AllowAdding(true)
@@ -30,7 +31,7 @@
                 .Title("بيانات الفرع")
                 .ShowTitle(true)
                 .Width(700)
-                .Height(250))
+                .Height(450))
     )
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))

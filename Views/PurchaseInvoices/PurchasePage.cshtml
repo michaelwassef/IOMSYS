@@ -20,6 +20,7 @@
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
+     .ColumnAutoWidth(true)
      .Editing(e => e
         .Mode(GridEditMode.Popup)
         .AllowDeleting(true)
@@ -47,9 +48,9 @@
     .Columns(columns =>
     {
         columns.AddFor(m => m.PurchaseInvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
-        columns.AddFor(m => m.TotalAmount).Caption("اجمالي مبلغ الفاتورة");
-        columns.AddFor(m => m.PaidUp).Caption("اجمالي المدفوع من الفاتورة");
-        columns.AddFor(m => m.Remainder).Caption("الباقي من مبلغ الفاتورة");
+        columns.AddFor(m => m.TotalAmount).Caption("اجمالي الفاتورة");
+        columns.AddFor(m => m.PaidUp).Caption("المدفوع من الفاتورة");
+        columns.AddFor(m => m.Remainder).Caption("الباقي من المبلغ");
         columns.AddFor(m => m.SupplierId).Caption("اسم المورد").Lookup(lookup => lookup
           .DataSource(d => d.Mvc().Controller("Suppliers").LoadAction("LoadSuppliers"))
           .ValueExpr("SupplierId")
@@ -110,17 +111,17 @@
                 .DisplayFormat("عدد الفواتير : {0}");
 
             items.Add()
-            .Column("اجمالي مبلغ الفاتورة")
+            .Column("اجمالي الفاتورة")
             .SummaryType(SummaryType.Sum)
             .DisplayFormat("اجمالي الفواتير : {0}");
 
             items.Add()
-            .Column("اجمالي المدفوع من الفاتورة")
+            .Column("المدفوع من الفاتورة")
             .SummaryType(SummaryType.Sum)
             .DisplayFormat("اجمالي المدفوع : {0}");   
             
             items.Add()
-           .Column("الباقي من مبلغ الفاتورة")
+           .Column("الباقي من المبلغ")
            .SummaryType(SummaryType.Sum)
            .DisplayFormat("اجمالي المتبقي : {0}");
         })

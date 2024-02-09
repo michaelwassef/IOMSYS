@@ -23,6 +23,7 @@
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
+          .ColumnAutoWidth(true)
      .Editing(e => e
         .Mode(GridEditMode.Popup)
         .AllowAdding(true)
@@ -32,7 +33,7 @@
                 .Title("بيانات المستخدم")
                 .ShowTitle(true)
                 .Width(700)
-                .Height(300))
+                .Height(370))
     )
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))

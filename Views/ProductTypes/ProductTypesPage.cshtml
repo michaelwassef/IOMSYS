@@ -19,15 +19,15 @@
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
+          .ColumnAutoWidth(true)
     .Editing(e => e
         .Mode(GridEditMode.Popup)
         .AllowAdding(true)
         .AllowUpdating(true)
         .AllowDeleting(true)
         .Popup(p => p
-                .ShowTitle(true)
                 .Width(700)
-                .Height(250))
+                .Height(200))
     )
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))

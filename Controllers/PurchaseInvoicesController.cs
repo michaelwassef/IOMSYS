@@ -12,7 +12,6 @@ namespace IOMSYS.Controllers
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
         private readonly IPurchaseItemsService _purchaseItemsService;
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
-
         public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService)
         {
             _purchaseInvoicesService = purchaseInvoicesService;
@@ -24,6 +23,7 @@ namespace IOMSYS.Controllers
         {
             return View();
         }
+
         public IActionResult PurchaseInvoicesPage()
         {
             return View();
@@ -62,7 +62,7 @@ namespace IOMSYS.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري"+ ex.Message });
+                return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" + ex.Message });
             }
         }
 
