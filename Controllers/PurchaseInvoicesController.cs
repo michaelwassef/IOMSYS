@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -14,13 +13,15 @@ namespace IOMSYS.Controllers
         private readonly IPurchaseItemsService _purchaseItemsService;
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
         private readonly IProductsService _ProductsService;
+        private readonly IPaymentTransactionService _paymentTransactionService;
 
-        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService)
+        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService)
         {
             _purchaseInvoicesService = purchaseInvoicesService;
             _purchaseItemsService = purchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
             _ProductsService = productsService;
+            _paymentTransactionService = paymentTransactionService;
         }
 
         public IActionResult PurchasePage()
@@ -40,6 +41,13 @@ namespace IOMSYS.Controllers
             return Json(purchaseInvoices);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> LoadPurchaseInvoicesByBranch(int branchId)
+        {
+            var purchaseInvoices = await _purchaseInvoicesService.GetAllPurchaseInvoicesByBranchAsync(branchId);
+            return Json(purchaseInvoices);
+        }
+
         [HttpPost]
         public async Task<IActionResult> AddNewPurchaseInvoice([FromForm] string items, [FromForm] PurchaseInvoicesModel model)
         {
@@ -48,8 +56,8 @@ namespace IOMSYS.Controllers
                 model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
                 model.PurchaseItems = JsonConvert.DeserializeObject<List<PurchaseItemsModel>>(items);
 
-                if (!ModelState.IsValid)
-                    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
+                //if (!ModelState.IsValid)
+                //    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
                 decimal itemsTotal = model.PurchaseItems.Sum(item => item.Quantity * item.BuyPrice);
 
@@ -85,8 +93,21 @@ namespace IOMSYS.Controllers
                 {
                     item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
                     await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
-                    await _ProductsService.UpdateProductBuyandSellPriceAsync(item.ProductId, item.BuyPrice,item.SellPrice);
+                    await _ProductsService.UpdateProductBuyandSellPriceAsync(item.ProductId, item.BuyPrice, item.SellPrice);
                 }
+
+                var paymentTransaction = new PaymentTransactionModel
+                {
+                    BranchId = model.BranchId,
+                    PaymentMethodId = model.PaymentMethodId,
+                    Amount = model.TotalAmount,
+                    TransactionType = "خصم",
+                    TransactionDate = model.PurchaseDate,
+                    ModifiedUser = model.UserId,
+                    ModifiedDate = DateTime.Now
+                };
+                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+
                 return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
             catch (Exception ex)
@@ -99,7 +120,7 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> UpdatePurchaseInvoice([FromForm] IFormCollection formData)
         {
             try
-            {                
+            {
                 //return items and sum of (qty*buyprice) and compare by new totalinvoice if not equal return ("اجمالي الفاتورة لا يتوافق مع اجمالي الاصناف")
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];

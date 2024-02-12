@@ -178,8 +178,168 @@ namespace IOMSYS.Services
                 return await db.QueryAsync<ProductsModel>(sql).ConfigureAwait(false);
             }
         }
+        public async Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync(int BranchId)
+        {
+            var sql = @"
+            WITH Purchased AS (
+                SELECT 
+                    PI.ProductId, 
+                    PI.SizeId, 
+                    PI.ColorId, 
+                    SUM(PI.Quantity) AS PurchasedQuantity
+                FROM PurchaseItems PI
+                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
+                WHERE PInv.BranchId = @BranchId
+                GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
+            ),
+            Sold AS (
+                SELECT 
+                    SI.ProductId, 
+                    SI.SizeId, 
+                    SI.ColorId, 
+                    SUM(SI.Quantity) AS SoldQuantity
+                FROM SalesItems SI
+                INNER JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
+                INNER JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
+                WHERE SInv.BranchId = @BranchId
+                GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
+            ),
+            NetAvailable AS (
+                SELECT 
+                    P.ProductId, 
+                    P.SizeId, 
+                    P.ColorId, 
+                    (ISNULL(P.PurchasedQuantity, 0) - ISNULL(S.SoldQuantity, 0)) AS AvailableQuantity
+                FROM Purchased P
+                LEFT JOIN Sold S ON P.ProductId = S.ProductId AND P.SizeId = S.SizeId AND P.ColorId = S.ColorId
+            ),
+            TotalSellPrice AS (
+                SELECT
+                    SI.ProductId,
+                    SI.SizeId,
+                    SI.ColorId,
+                    SUM(SI.Quantity * SI.SellPrice) AS TotalSellPrice,
+                    SUM(SI.Quantity) AS TotalSoldQuantity
+                FROM SalesItems SI
+                INNER JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
+                INNER JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
+                WHERE SInv.BranchId = @BranchId
+                GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
+            ),
+            TotalBuyPrice AS (
+                SELECT
+                    PI.ProductId,
+                    PI.SizeId,
+                    PI.ColorId,
+                    SUM(PI.Quantity * PI.BuyPrice) AS TotalBuyPrice
+                FROM PurchaseItems PI
+                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
+                WHERE PInv.BranchId = @BranchId
+                GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
+            )
+            SELECT 
+                Prod.ProductId, 
+                Prod.ProductName,
+                Prod.CategoryId, 
+                C.CategoryName,
+                Prod.MinQuantity,
+                Prod.SellPrice, 
+                Prod.BuyPrice, 
+                S.SizeId,
+                S.SizeName,
+                Col.ColorId,
+                Col.ColorName,
+                NA.AvailableQuantity AS TotalQuantity,
+                Prod.Notes,
+                TS.TotalSellPrice,
+                TB.TotalBuyPrice,
+                TS.TotalSoldQuantity
+            FROM Products Prod
+            INNER JOIN Categories C ON C.CategoryId = Prod.CategoryId
+            INNER JOIN ProductTypes T ON T.ProductTypeId = Prod.ProductTypeId
+            INNER JOIN NetAvailable NA ON NA.ProductId = Prod.ProductId
+            LEFT JOIN Sizes S ON S.SizeId = NA.SizeId
+            LEFT JOIN Colors Col ON Col.ColorId = NA.ColorId
+            LEFT JOIN TotalSellPrice TS ON TS.ProductId = Prod.ProductId AND TS.SizeId = NA.SizeId AND TS.ColorId = NA.ColorId
+            LEFT JOIN TotalBuyPrice TB ON TB.ProductId = Prod.ProductId AND TB.SizeId = NA.SizeId AND TB.ColorId = NA.ColorId
+            GROUP BY 
+                Prod.ProductId, 
+                Prod.ProductName,
+                Prod.CategoryId, 
+                C.CategoryName,
+                Prod.MinQuantity,
+                S.SizeId,
+                S.SizeName,
+                Col.ColorId,
+                Col.ColorName,    
+                Prod.SellPrice,
+                Prod.BuyPrice,
+                NA.AvailableQuantity,
+                Prod.Notes,
+                TS.TotalSellPrice,
+                TB.TotalBuyPrice,
+                TS.TotalSoldQuantity;
+            ";
 
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ProductsModel>(sql, new { BranchId }).ConfigureAwait(false);
+            }
+        }
+        public async Task<IEnumerable<ProductsModel>> GetMinQuantityProductsInWarehouseAsync(int BranchId)
+        {
+            var sql = @"
+            SELECT 
+                Prod.ProductId,
+                Prod.ProductName,
+                COALESCE(NA.AvailableQuantity, 0) AS AvailableQty,
+                C.CategoryName,
+                Prod.MinQuantity
+            FROM Products Prod
+            INNER JOIN Categories C ON C.CategoryId = Prod.CategoryId
+            LEFT JOIN (
+                SELECT 
+                    PI.ProductId,
+                    SUM(PI.Quantity) AS PurchasedQuantity
+                FROM PurchaseItems PI
+                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
+                WHERE PInv.BranchId = @BranchId
+                GROUP BY PI.ProductId
+            ) PurchasedProducts ON PurchasedProducts.ProductId = Prod.ProductId
+            LEFT JOIN (
+                SELECT 
+                    SI.ProductId,
+                    SUM(SI.Quantity) AS SoldQuantity
+                FROM SalesItems SI
+                INNER JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
+                INNER JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
+                WHERE SInv.BranchId = @BranchId
+                GROUP BY SI.ProductId
+            ) SoldProducts ON SoldProducts.ProductId = Prod.ProductId
+            LEFT JOIN (
+                SELECT 
+                    PI.ProductId, 
+                    SUM(PI.Quantity) AS PurchasedQuantity,
+                    ISNULL(SUM(SI.Quantity), 0) AS SoldQuantity,
+                    (SUM(PI.Quantity) - ISNULL(SUM(SI.Quantity), 0)) AS AvailableQuantity
+                FROM PurchaseItems PI
+                LEFT JOIN SalesItems SI ON PI.ProductId = SI.ProductId
+                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
+                WHERE PInv.BranchId = @BranchId
+                GROUP BY PI.ProductId
+            ) NA ON NA.ProductId = Prod.ProductId
+            WHERE (PurchasedProducts.ProductId IS NULL OR PurchasedProducts.PurchasedQuantity < Prod.MinQuantity)
+              AND (SoldProducts.ProductId IS NULL OR SoldProducts.SoldQuantity < Prod.MinQuantity);";
 
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ProductsModel>(sql, new { BranchId }).ConfigureAwait(false);
+            }
+        }
         public async Task<IEnumerable<ProductsModel>> GetAvailableSizesAndColorsForProduct(int productId)
         {
             var sql = @"SELECT DISTINCT

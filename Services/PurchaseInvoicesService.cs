@@ -30,6 +30,23 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesByBranchAsync(int BranchId)
+        {
+            var sql = @"
+                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp,pi.SupplierId,pi.BranchId,pi.PaymentMethodId, pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate,pi.UserId
+                FROM PurchaseInvoices pi
+                LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
+                LEFT JOIN Branches b ON pi.BranchId = b.BranchId
+                LEFT JOIN PaymentMethods pm ON pi.PaymentMethodId = pm.PaymentMethodId
+                LEFT JOIN Users u ON pi.UserId = u.UserId
+                WHERE pi.BranchId = @BranchId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<PurchaseInvoicesModel>(sql, new { BranchId }).ConfigureAwait(false);
+            }
+        }
+
         public async Task<PurchaseInvoicesModel> GetPurchaseInvoiceByIdAsync(int purchaseInvoiceId)
         {
             var sql = @"

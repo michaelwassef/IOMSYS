@@ -1,0 +1,155 @@
+﻿@{
+    ViewData["Title"] = "WarehousePage";
+    Layout = "_DevExtremeLayout";
+}
+
+<div id="alertPlaceholder"></div>
+<h1>المخزن</h1>
+
+<div class="row">
+    <div class="form-group col-md-3 mb-3">
+        <label for="branchId">اسم الفرع</label>
+        <select id="BranchId" class="form-control"></select>
+    </div>
+</div>
+
+@(Html.DevExtreme().DataGrid<ProductsModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("Products")
+        .LoadAction("GetAllProductsInWarehouseByBranch")
+        .Key("ProductId")
+    )
+    .Selection(s => s.Mode(SelectionMode.Multiple))
+    .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+    .OnExporting("exporting")
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .Editing(e => e.Mode(GridEditMode.Popup))
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+@*        columns.AddFor(m => m.ProductId).Caption("كود المنتج");
+*@        columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
+        columns.AddFor(m => m.SizeName).Caption("المقاس");
+        columns.AddFor(m => m.ColorName).Caption("اللون");
+        columns.AddFor(m => m.CategoryName).Caption("التصنيف");
+        columns.AddFor(m => m.SellPrice).Caption("سعر البيع للواحد");
+        columns.AddFor(m => m.BuyPrice).Caption("سعر الشراء للواحد");
+        columns.AddFor(m => m.TotalQuantity).Caption("الكمية المتوفرة");
+        columns.AddFor(m => m.TotalBuyPrice).Caption("اجمالي مبلغ الشراء");
+        columns.AddFor(m => m.TotalSellPrice).Caption("اجمالي مبلغ البيع");
+        columns.AddFor(m => m.TotalSoldQuantity).Caption("الكمية المباعة");
+        columns.AddFor(m => m.Notes).Caption("ملاحظات");
+    })
+    .HeaderFilter(f => f.Visible(true))
+    .Summary(summary => summary
+        .TotalItems(items =>
+        {
+            items.Add()
+            .Column("اجمالي مبلغ الشراء")
+            .SummaryType(SummaryType.Sum)
+            .DisplayFormat("اجمالي مبلغ الشراء : {0}");
+
+            items.Add()
+            .Column("اجمالي مبلغ البيع")
+            .SummaryType(SummaryType.Sum)
+            .DisplayFormat("اجمالي مبلغ البيع : {0}");
+
+            items.Add()
+           .Column("الكمية المباعة")
+           .SummaryType(SummaryType.Sum)
+           .DisplayFormat("اجمالي الكمية المباعة : {0}");
+        })
+    )
+)
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            // Load branches data
+            const branchesResponse = await fetch('/Branches/LoadBranches');
+            if (!branchesResponse.ok) {
+                console.error('Failed to load branches data');
+                return;
+            }
+            const branchesData = await branchesResponse.json();
+
+            // Populate branches dropdown
+            populateDropdownData(branchesData);
+
+            // Set the default branch to the first option
+            const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
+            if (defaultBranchId) {
+                const loadUrl = `/Products/GetAllProductsInWarehouseByBranch?branchId=${defaultBranchId}`;
+                loadSalesInvoices(loadUrl);
+            }
+
+            // Event listener for branch selection change
+            $('#BranchId').change(function () {
+                const branchId = $(this).val();
+                const loadUrl = `/Products/GetAllProductsInWarehouseByBranch?branchId=${branchId}`;
+                loadSalesInvoices(loadUrl);
+            });
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    });
+
+    function populateDropdownData(data) {
+        const selectElement = document.getElementById('BranchId');
+        selectElement.innerHTML = '';
+        data.forEach(item => {
+            const option = new Option(item['BranchName'], item['BranchId']);
+            selectElement.add(option);
+        });
+    }
+
+    async function loadSalesInvoices(url) {
+        try {
+            const salesInvoicesResponse = await fetch(url);
+            if (!salesInvoicesResponse.ok) {
+                console.error('Failed to load sales invoices data');
+                return;
+            }
+            const salesInvoicesData = await salesInvoicesResponse.json();
+
+            $("#gridContainer").dxDataGrid("instance").option("dataSource", {
+                load: function () {
+                    return salesInvoicesData;
+                },
+                key: "ProductId"
+            });
+        } catch (error) {
+            console.error('Error loading sales invoices:', error);
+        }
+    }
+
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Products');
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Products.xlsx');
+            });
+        });
+    }
+</script>

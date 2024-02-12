@@ -1,0 +1,209 @@
+﻿
+@{
+    ViewData["Title"] = "PaymentTransactionsPage";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>ادارة الخزنة</h1>
+
+<div class="row">
+    <div class="form-group col-md-2 mb-3">
+        <label for="branchId">اسم الفرع</label>
+        <select id="BranchId" class="form-control"></select>
+    </div>
+    <div class="form-group col-md-2 mb-3">
+        <div class="form-group col-md-5 mb-3" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
+    </div>
+</div>
+
+
+@(Html.DevExtreme().DataGrid<PaymentTransactionModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("PaymentTransactions")
+        .LoadAction("LoadPaymentTransactions")
+        .InsertAction("AddNewPaymentTransaction")
+        .UpdateAction("UpdatePaymentTransaction")
+        .DeleteAction("DeletePaymentTransaction")
+        .Key("TransactionId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+     .ColumnAutoWidth(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Title("بيانات المعاملة")
+                .ShowTitle(true)
+                .Width(700)
+                .Height(450))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.TransactionId).Caption("كود العملية");
+        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
+          .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
+          .ValueExpr("BranchId")
+          .DisplayExpr("BranchName")); ;
+        columns.AddFor(m => m.PaymentMethodId).Caption("الخزنة").Lookup(lookup => lookup
+        .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
+        .ValueExpr("PaymentMethodId")
+        .DisplayExpr("PaymentMethodName"));
+        columns.AddFor(m => m.TransactionType).Caption("نوع المعاملة");
+        columns.AddFor(m => m.TransactionDate).Caption("تاريخ المعاملة");
+        columns.AddFor(m => m.Amount).Caption("القيمة");
+        columns.AddFor(m => m.Details).Caption("ملاحظات");
+        columns.AddFor(m => m.ModifiedDate).Caption("تاريخ الادخال");
+        columns.AddFor(m => m.ModifiedUser).Caption("مدخل البيانات").AllowEditing(false).Lookup(lookup => lookup
+       .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
+       .ValueExpr("UserId")
+       .DisplayExpr("UserName")); 
+    })
+    .HeaderFilter(f => f.Visible(true))
+    .Summary(summary => summary
+        .TotalItems(items =>
+        {
+            items.Add()
+                .Column("اسم الفرع")
+                .SummaryType(SummaryType.Count)
+                .DisplayFormat("عدد الفروع : {0}");
+
+            // Add more summaries as needed
+        })
+    )
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Branches');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Branches.xlsx');
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            // Load branches data
+            const branchesResponse = await fetch('/Branches/LoadBranches');
+            if (!branchesResponse.ok) {
+                console.error('Failed to load branches data');
+                return;
+            }
+            const branchesData = await branchesResponse.json();
+
+            // Populate branches dropdown
+            populateDropdownData(branchesData);
+
+            if (branchesData.length > 0) {
+                await fetchBranchAccountBalance(branchesData[0]['BranchId']);
+            }
+
+            // Set the default branch to the first option
+            const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
+            if (defaultBranchId) {
+                const loadUrl = `/PaymentTransactions/LoadPaymentTransactionsByBranch?branchId=${defaultBranchId}`;
+                loadSalesInvoices(loadUrl);
+            }
+
+            // Event listener for branch selection change
+            $('#BranchId').change(async function () {
+                const branchId = $(this).val();
+                const loadUrl = `/PaymentTransactions/LoadPaymentTransactionsByBranch?branchId=${branchId}`;
+                loadSalesInvoices(loadUrl);
+                await fetchBranchAccountBalance(branchId);
+            });
+
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    });
+
+
+    async function fetchBranchAccountBalance(branchId) {
+        try {
+            const response = await fetch(`/PaymentTransactions/GetBranchAccountBalance?BranchId=${branchId}`);
+            if (!response.ok) {
+                console.error('Failed to load payment transactions data');
+                return;
+            }
+            const accountBalance = await response.json();
+            document.getElementById('branchTreasury').innerText = `خزنة الفرع: ${accountBalance} ج.م`;
+        } catch (error) {
+            console.error('Error fetching branch account balance:', error);
+        }
+    }
+
+    function populateDropdownData(data) {
+        const selectElement = document.getElementById('BranchId');
+        selectElement.innerHTML = '';
+        data.forEach(item => {
+            const option = new Option(item['BranchName'], item['BranchId']);
+            selectElement.add(option);
+        });
+    }
+
+    async function loadSalesInvoices(url) {
+        try {
+            const salesInvoicesResponse = await fetch(url);
+            if (!salesInvoicesResponse.ok) {
+                console.error('Failed to load sales invoices data');
+                return;
+            }
+            const salesInvoicesData = await salesInvoicesResponse.json();
+
+            $("#gridContainer").dxDataGrid("instance").option("dataSource", {
+                load: function () {
+                    return salesInvoicesData;
+                },
+                key: "TransactionId"
+            });
+        } catch (error) {
+            console.error('Error loading sales invoices:', error);
+        }
+    }
+</script>
+<style>
+    #branchTreasury {
+        background-color: #f0f0f0; 
+        border: 1px solid #d3d3d3; 
+        padding: 18px; 
+        margin-top: 18px; 
+        font-size: 18px; 
+        border-radius: 8px; 
+        width: auto; 
+        max-width: 100%; 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    #branchTreasury #treasuryValue {
+        font-weight: bold; 
+        color: #007bff; 
+    }
+</style>

@@ -27,6 +27,15 @@ namespace IOMSYS.Controllers
             return View();
         }
 
+        public IActionResult WarehousePage()
+        {
+            return View();
+        }
+        public IActionResult WarehouseDeficienciesPage()
+        {
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> LoadProducts()
         {
@@ -38,6 +47,20 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> GetAllProductsInWarehouse()
         {
             var Products = await _ProductsService.GetAllProductsInWarehouseAsync();
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllProductsInWarehouseByBranch(int branchId)
+        {
+            var Products = await _ProductsService.GetAllProductsInWarehouseAsync(branchId);
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetMinQuantityProductsInWarehouseByBranch(int branchId)
+        {
+            var Products = await _ProductsService.GetMinQuantityProductsInWarehouseAsync(branchId);
             return Json(Products);
         }
 

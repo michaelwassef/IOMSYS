@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -13,13 +14,15 @@ namespace IOMSYS.Controllers
         private readonly ISalesItemsService _salesItemsService;
         private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
         private readonly IProductsService _productsService;
+        private readonly IPaymentTransactionService _paymentTransactionService;
 
-        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IProductsService productsService)
+        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesItemsService = salesItemsService;
             _salesInvoiceItemsService = salesInvoiceItemsService;
             _productsService = productsService;
+            _paymentTransactionService = paymentTransactionService;
         }
 
         public IActionResult SalesPage()
@@ -39,6 +42,13 @@ namespace IOMSYS.Controllers
             return Json(Invoices);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> LoadSalesInvoicesByBranch(int branchId)
+        {
+            var Invoices = await _salesInvoicesService.GetAllSalesInvoicesByBranshAsync(branchId);
+            return Json(Invoices);
+        }
+
         [HttpPost]
         public async Task<IActionResult> AddNewSaleInvoice([FromForm] string items, [FromForm] SalesInvoicesModel model)
         {
@@ -46,7 +56,7 @@ namespace IOMSYS.Controllers
             {
                 model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
                 model.SalesItems = JsonConvert.DeserializeObject<List<SalesItemsModel>>(items);
-                
+
                 //if (!ModelState.IsValid)
                 //    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
@@ -86,6 +96,18 @@ namespace IOMSYS.Controllers
                     item.SalesItemId = await _salesItemsService.InsertSalesItemAsync(item);
                     await _salesInvoiceItemsService.AddSalesItemToInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
                 }
+
+                var paymentTransaction = new PaymentTransactionModel
+                {
+                    BranchId = model.BranchId,
+                    PaymentMethodId = model.PaymentMethodId,
+                    Amount = model.TotalAmount,
+                    TransactionType = "اضافة",
+                    TransactionDate = model.SaleDate,
+                    ModifiedUser = model.UserId,
+                    ModifiedDate = DateTime.Now
+                };
+                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
                 return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
             catch (Exception ex)
@@ -191,5 +213,25 @@ namespace IOMSYS.Controllers
             return totalAmount;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SaleInvoiceReport(int invoiceId)
+        {
+            try
+            {
+                var report = new SaleInvoice();
+                report.Parameters["InvoiceId"].Value = invoiceId;
+                report.CreateDocument();
+                MemoryStream memoryStream = new MemoryStream();
+                report.ExportToPdf(memoryStream);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                // Return the PDF file to the client
+                return File(memoryStream, "application/pdf", "SaleInvoice.pdf");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred while generating the report.", ExceptionMessage = ex.Message });
+            }
+        }
     }
 }

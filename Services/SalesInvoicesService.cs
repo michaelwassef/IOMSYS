@@ -2,6 +2,7 @@
 using IOMSYS.Dapper;
 using IOMSYS.IServices;
 using IOMSYS.Models;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace IOMSYS.Services
 {
@@ -28,6 +29,24 @@ namespace IOMSYS.Services
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<SalesInvoicesModel>(sql).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<IEnumerable<SalesInvoicesModel>> GetAllSalesInvoicesByBranshAsync(int BranchId)
+        {
+            var sql = @"
+                SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
+                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
+                FROM SalesInvoices si
+                LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
+                LEFT JOIN Branches b ON si.BranchId = b.BranchId
+                LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
+                LEFT JOIN Users u ON si.UserId = u.UserId
+                WHERE si.BranchId = @BranchId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<SalesInvoicesModel>(sql, new { BranchId }).ConfigureAwait(false);
             }
         }
 

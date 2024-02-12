@@ -21,5 +21,10 @@
         public int? ColorId { get; set; }
         public string? SizeName { get; set; }
         public string? ColorName { get; set; }
+        public int? TotalQuantity { get; set; }
+        public decimal? TotalBuyPrice { get; set; }
+        public decimal? TotalSellPrice { get; set; }
+        public int? TotalSoldQuantity { get; set; }
+        public int? AvailableQty { get; set; }
     }
 }

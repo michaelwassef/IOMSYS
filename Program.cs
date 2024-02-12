@@ -28,6 +28,7 @@ builder.Services.AddScoped<ISuppliersService, SuppliersService>();
 builder.Services.AddScoped<IUserBranchesService, UserBranchesService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IUserTypesService, UserTypesService>();
+builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
 
 
