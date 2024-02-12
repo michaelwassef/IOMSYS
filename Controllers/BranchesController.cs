@@ -15,6 +15,7 @@ namespace IOMSYS.Controllers
         {
             _branchesService = branchesService;
         }
+
         [Authorize(Roles = "GenralManager")]
         public IActionResult BranchesPage()
         {
@@ -106,5 +107,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

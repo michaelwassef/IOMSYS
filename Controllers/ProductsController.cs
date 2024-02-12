@@ -1,8 +1,10 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Drawing;
 
 namespace IOMSYS.Controllers
 {
@@ -30,6 +32,27 @@ namespace IOMSYS.Controllers
         {
             var Products = await _ProductsService.GetAllProductsAsync();
             return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllProductsInWarehouse()
+        {
+            var Products = await _ProductsService.GetAllProductsInWarehouseAsync();
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSizeandColorOfProduct([FromQuery] int ProductId)
+        {
+            var Products = await _ProductsService.GetAvailableSizesAndColorsForProduct(ProductId);
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailable(int productId,int colorId,int sizeId,int BranchId)
+        {
+            var sizesAndColors = await _ProductsService.GetAvailableQuantity(productId,colorId,sizeId, BranchId);
+            return Ok(sizesAndColors);
         }
 
         [HttpGet]
@@ -117,5 +140,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

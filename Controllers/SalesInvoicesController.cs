@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -8,50 +7,50 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
     [Authorize(Roles = "GenralManager,BranchManager,Employee")]
-    public class PurchaseInvoicesController : Controller
+    public class SalesInvoicesController : Controller
     {
-        private readonly IPurchaseInvoicesService _purchaseInvoicesService;
-        private readonly IPurchaseItemsService _purchaseItemsService;
-        private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
-        private readonly IProductsService _ProductsService;
+        private readonly ISalesInvoicesService _salesInvoicesService;
+        private readonly ISalesItemsService _salesItemsService;
+        private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
+        private readonly IProductsService _productsService;
 
-        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService)
+        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IProductsService productsService)
         {
-            _purchaseInvoicesService = purchaseInvoicesService;
-            _purchaseItemsService = purchaseItemsService;
-            _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
-            _ProductsService = productsService;
+            _salesInvoicesService = salesInvoicesService;
+            _salesItemsService = salesItemsService;
+            _salesInvoiceItemsService = salesInvoiceItemsService;
+            _productsService = productsService;
         }
 
-        public IActionResult PurchasePage()
+        public IActionResult SalesPage()
         {
             return View();
         }
 
-        public IActionResult PurchaseInvoicesPage()
+        public IActionResult SalesInvoicesPage()
         {
             return View();
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadPurchaseInvoices()
+        public async Task<IActionResult> LoadSalesInvoices()
         {
-            var purchaseInvoices = await _purchaseInvoicesService.GetAllPurchaseInvoicesAsync();
-            return Json(purchaseInvoices);
+            var Invoices = await _salesInvoicesService.GetAllSalesInvoicesAsync();
+            return Json(Invoices);
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewPurchaseInvoice([FromForm] string items, [FromForm] PurchaseInvoicesModel model)
+        public async Task<IActionResult> AddNewSaleInvoice([FromForm] string items, [FromForm] SalesInvoicesModel model)
         {
             try
             {
                 model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
-                model.PurchaseItems = JsonConvert.DeserializeObject<List<PurchaseItemsModel>>(items);
+                model.SalesItems = JsonConvert.DeserializeObject<List<SalesItemsModel>>(items);
+                
+                //if (!ModelState.IsValid)
+                //    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
-                if (!ModelState.IsValid)
-                    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
-
-                decimal itemsTotal = model.PurchaseItems.Sum(item => item.Quantity * item.BuyPrice);
+                decimal itemsTotal = model.SalesItems.Sum(item => item.Quantity * item.SellPrice);
 
                 // Compare itemsTotal with the TotalAmount of the invoice
                 if (itemsTotal != model.TotalAmount)
@@ -76,16 +75,16 @@ namespace IOMSYS.Controllers
                 }
 
                 // Insert the invoice
-                int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
+                int invoiceId = await _salesInvoicesService.InsertSalesInvoiceAsync(model);
+
                 if (invoiceId <= 0)
                     return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
                 // Insert the items and link them to the invoice and update buyprice
-                foreach (var item in model.PurchaseItems)
+                foreach (var item in model.SalesItems)
                 {
-                    item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
-                    await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
-                    await _ProductsService.UpdateProductBuyandSellPriceAsync(item.ProductId, item.BuyPrice,item.SellPrice);
+                    item.SalesItemId = await _salesItemsService.InsertSalesItemAsync(item);
+                    await _salesInvoiceItemsService.AddSalesItemToInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
                 }
                 return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
@@ -96,30 +95,28 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdatePurchaseInvoice([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdateSaleInvoice([FromForm] IFormCollection formData)
         {
             try
-            {                
-                //return items and sum of (qty*buyprice) and compare by new totalinvoice if not equal return ("اجمالي الفاتورة لا يتوافق مع اجمالي الاصناف")
+            {
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
-                var purchaseInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(key);
-                JsonConvert.PopulateObject(values, purchaseInvoice);
+                var SaleInvoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(key);
+                JsonConvert.PopulateObject(values, SaleInvoice);
 
-                purchaseInvoice.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+                SaleInvoice.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                decimal totalAmount = purchaseInvoice.TotalAmount;
-
-                decimal totalItemsAmount = await InvoiceTotalByItems(purchaseInvoice.PurchaseInvoiceId);
-                if (totalItemsAmount != purchaseInvoice.TotalAmount)
+                decimal totalItemsAmount = await InvoiceTotalByItems(SaleInvoice.SalesInvoiceId);
+                if (totalItemsAmount != SaleInvoice.TotalAmount)
                 {
                     return BadRequest(new { ErrorMessage = "اجمالي الفاتورة لا يتوافق مع اجمالي الاصناف" });
                 }
 
-                decimal paidUp = purchaseInvoice.PaidUp;
+                decimal paidUp = SaleInvoice.PaidUp;
+                decimal totalAmount = SaleInvoice.TotalAmount;
                 decimal remainder = totalAmount - paidUp;
 
                 // Check if PaidUp is less than or equal to TotalAmount
@@ -129,13 +126,13 @@ namespace IOMSYS.Controllers
                 }
 
                 // Check if Remainder is less than or equal to TotalAmount and PaidUp + Remainder equals TotalAmount
-                if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != purchaseInvoice.Remainder)
+                if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != SaleInvoice.Remainder)
                 {
                     return BadRequest(new { ErrorMessage = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
                 }
 
                 // Update the invoice
-                int updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(purchaseInvoice);
+                int updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(SaleInvoice);
                 if (updateResult <= 0)
                     return BadRequest(new { ErrorMessage = "Could Not Update" });
 
@@ -149,30 +146,30 @@ namespace IOMSYS.Controllers
 
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]
-        public async Task<IActionResult> DeletePurchaseInvoice([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeleteSaleInvoice([FromForm] IFormCollection formData)
         {
             try
             {
                 var invoiceId = Convert.ToInt32(formData["key"]);
 
                 // Step 1: Retrieve all items associated with the invoice
-                var items = await _purchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
+                var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
 
-                // Step 2: Remove links from PurchaseInvoiceItems
+                // Step 2: Remove links from SaleInvoiceItems
                 foreach (var item in items)
                 {
-                    await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
+                    await _salesInvoiceItemsService.RemoveSalesItemFromInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
                 }
 
-                // Step 3: Delete items from PurchaseItems
+                // Step 3: Delete items from SaleItems
                 foreach (var item in items)
                 {
-                    await _purchaseItemsService.DeletePurchaseItemAsync(item.PurchaseItemId);
+                    await _salesItemsService.DeleteSalesItemAsync(item.SalesItemId);
                 }
 
                 // Step 4: Delete the invoice
-                int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
-                if (deletePurchaseInvoicesResult > 0)
+                int deleteSaleInvoicesResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
+                if (deleteSaleInvoicesResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 }
@@ -189,8 +186,8 @@ namespace IOMSYS.Controllers
 
         private async Task<decimal> InvoiceTotalByItems(int invoiceId)
         {
-            var items = await _purchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
-            var totalAmount = items.Sum(item => item.Quantity * item.BuyPrice);
+            var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
+            var totalAmount = items.Sum(item => item.Quantity * item.SellPrice);
             return totalAmount;
         }
 

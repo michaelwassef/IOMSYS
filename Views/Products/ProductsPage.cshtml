@@ -55,8 +55,8 @@ Html.DevExtreme().DataGrid<ProductsModel>()
         columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
         columns.AddFor(m => m.BuyPrice).Caption("سعر شراء المنتج");
         columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
-        columns.AddFor(m => m.MaxDiscount).Caption("اقصي نسبة خصم");
-        columns.AddFor(m => m.DiscountsOn).Caption("متوفر خصم");
+        columns.AddFor(m => m.MinQuantity).Caption("أقل عدد في المخزن");
+        columns.AddFor(m => m.MaxDiscount).Caption("اقصي قيمة خصم");
         columns.AddFor(m => m.Notes).Caption("ملاحظات");
         columns.AddFor(m => m.CategoryId).Caption("تصنيف المنتج").Lookup(lookup => lookup
             .DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories"))
@@ -102,7 +102,7 @@ Html.DevExtreme().DataGrid<ProductsModel>()
                     window.location.href = '@Url.Action("CategoriesPage", "Categories")';
                 }
             },
-            location: 'after',
+            location: 'before',
             name: 'customButton'
         };
         toolbarItems.push(customButton);

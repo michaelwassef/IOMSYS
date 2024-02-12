@@ -17,7 +17,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<ProductsModel>> GetAllProductsAsync()
         {
-            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId
+            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId,P.MinQuantity
                 FROM Products P
                 INNER JOIN Categories C ON C.CategoryId = P.CategoryId
                 INNER JOIN ProductTypes T ON T.ProductTypeId = P.ProductTypeId";
@@ -30,7 +30,7 @@ namespace IOMSYS.Services
 
         public async Task<ProductsModel?> SelectProductByIdAsync(int productId)
         {
-            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId
+            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId,P.MinQuantity
                 FROM Products P
                 INNER JOIN Categories C ON C.CategoryId = P.CategoryId
                 INNER JOIN ProductTypes T ON T.ProductTypeId = P.ProductTypeId
@@ -44,13 +44,13 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertProductAsync(ProductsModel product)
         {
-            var sql = @"INSERT INTO Products (ProductId, ProductName, CategoryId, ProductPhoto, ProductTypeId, SellPrice, BuyPrice, MaxDiscount, DiscountsOn, Notes) 
-                VALUES (@ProductId, @ProductName, @CategoryId, @ProductPhoto, @ProductTypeId, @SellPrice, @BuyPrice, @MaxDiscount, @DiscountsOn, @Notes);";
+            var sql = @"INSERT INTO Products (ProductId, ProductName, CategoryId, ProductPhoto, ProductTypeId, SellPrice, BuyPrice, MaxDiscount, DiscountsOn, Notes,MinQuantity) 
+                VALUES (@ProductId, @ProductName, @CategoryId, @ProductPhoto, @ProductTypeId, @SellPrice, @BuyPrice, @MaxDiscount, @DiscountsOn, @Notes,@MinQuantity);";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    await db.ExecuteAsync(sql, new { product.ProductId, product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes }).ConfigureAwait(false);
+                    await db.ExecuteAsync(sql, new { product.ProductId, product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes,product.MinQuantity }).ConfigureAwait(false);
                     return product.ProductId;
                 }
             }
@@ -62,12 +62,12 @@ namespace IOMSYS.Services
 
         public async Task<int> UpdateProductAsync(ProductsModel product)
         {
-            var sql = @"UPDATE Products SET ProductName = @ProductName, CategoryId = @CategoryId, ProductPhoto = @ProductPhoto, ProductTypeId = @ProductTypeId, SellPrice = @SellPrice, BuyPrice = @BuyPrice, MaxDiscount = @MaxDiscount, DiscountsOn = @DiscountsOn, Notes = @Notes WHERE ProductId = @ProductId";
+            var sql = @"UPDATE Products SET ProductName = @ProductName, CategoryId = @CategoryId, ProductPhoto = @ProductPhoto, ProductTypeId = @ProductTypeId, SellPrice = @SellPrice, BuyPrice = @BuyPrice, MaxDiscount = @MaxDiscount, DiscountsOn = @DiscountsOn, Notes = @Notes, MinQuantity = @MinQuantity WHERE ProductId = @ProductId";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteAsync(sql, new { product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes, product.ProductId }).ConfigureAwait(false);
+                    return await db.ExecuteAsync(sql, new { product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes, product.MinQuantity, product.ProductId }).ConfigureAwait(false);
                 }
             }
             catch
@@ -106,5 +106,138 @@ namespace IOMSYS.Services
                 return -1;
             }
         }
+
+        public async Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync()
+        {
+            var sql = @"
+        WITH Purchased AS (
+            SELECT 
+                PI.ProductId, 
+                PI.SizeId, 
+                PI.ColorId, 
+                SUM(PI.Quantity) AS PurchasedQuantity
+            FROM PurchaseItems PI
+            GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
+        ),
+        Sold AS (
+            SELECT 
+                SI.ProductId, 
+                SI.SizeId, 
+                SI.ColorId, 
+                SUM(SI.Quantity) AS SoldQuantity
+            FROM SalesItems SI
+            GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
+        ),
+        NetAvailable AS (
+            SELECT 
+                P.ProductId, 
+                P.SizeId, 
+                P.ColorId, 
+                (ISNULL(P.PurchasedQuantity, 0) - ISNULL(S.SoldQuantity, 0)) AS AvailableQuantity
+            FROM Purchased P
+            LEFT JOIN Sold S ON P.ProductId = S.ProductId AND P.SizeId = S.SizeId AND P.ColorId = S.ColorId
+        )
+        SELECT 
+            Prod.ProductId, 
+            Prod.ProductName,
+            Prod.CategoryId, 
+            C.CategoryName,
+            Prod.MinQuantity,
+            Prod.SellPrice, 
+            Prod.BuyPrice, 
+            S.SizeId,
+            S.SizeName,
+            Col.ColorId,
+            Col.ColorName,
+            NA.AvailableQuantity AS TotalQuantity,
+            Prod.Notes
+        FROM Products Prod
+        INNER JOIN Categories C ON C.CategoryId = Prod.CategoryId
+        INNER JOIN ProductTypes T ON T.ProductTypeId = Prod.ProductTypeId
+        INNER JOIN NetAvailable NA ON NA.ProductId = Prod.ProductId
+        LEFT JOIN Sizes S ON S.SizeId = NA.SizeId
+        LEFT JOIN Colors Col ON Col.ColorId = NA.ColorId
+        WHERE NA.AvailableQuantity > 0
+        GROUP BY 
+            Prod.ProductId, 
+            Prod.ProductName,
+            Prod.CategoryId, 
+            C.CategoryName,
+            Prod.MinQuantity,
+            S.SizeId,
+            S.SizeName,
+            Col.ColorId,
+            Col.ColorName,    
+            Prod.SellPrice,
+            Prod.BuyPrice,
+            NA.AvailableQuantity,
+            Prod.Notes;";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ProductsModel>(sql).ConfigureAwait(false);
+            }
+        }
+
+
+        public async Task<IEnumerable<ProductsModel>> GetAvailableSizesAndColorsForProduct(int productId)
+        {
+            var sql = @"SELECT DISTINCT
+                    S.SizeId,
+                    S.SizeName,
+                    Col.ColorId,
+                    Col.ColorName
+                FROM PurchaseItems PI
+                LEFT JOIN Sizes S ON PI.SizeId = S.SizeId
+                LEFT JOIN Colors Col ON PI.ColorId = Col.ColorId
+                WHERE PI.ProductId = @ProductId
+                AND PI.Quantity > 0;";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ProductsModel>(sql, new { ProductId = productId }).ConfigureAwait(false);
+            }
+        }
+        public async Task<int> GetAvailableQuantity(int productId, int colorId, int sizeId, int branchId)
+        {
+            var sql = @"
+                    WITH Purchased AS (
+                        SELECT 
+                            PI.ProductId, 
+                            PI.SizeId, 
+                            PI.ColorId, 
+                            SUM(PI.Quantity) AS PurchasedQuantity
+                        FROM PurchaseItems PI
+                        JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                        JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
+                        WHERE PInv.BranchId = @BranchId
+                        GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
+                    ),
+                    Sold AS (
+                        SELECT 
+                            SI.ProductId, 
+                            SI.SizeId, 
+                            SI.ColorId, 
+                            SUM(SI.Quantity) AS SoldQuantity
+                        FROM SalesItems SI
+                        JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
+                        JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
+                        WHERE SInv.BranchId = @BranchId
+                        GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
+                    )
+                    SELECT 
+                        (ISNULL(P.PurchasedQuantity, 0) - ISNULL(S.SoldQuantity, 0)) AS AvailableQuantity
+                    FROM Purchased P
+                    LEFT JOIN Sold S ON P.ProductId = S.ProductId AND P.SizeId = S.SizeId AND P.ColorId = S.ColorId
+                    WHERE P.ProductId = @ProductId AND P.SizeId = @SizeId AND P.ColorId = @ColorId;
+                ";
+
+            using (var connection = _dapperContext.CreateConnection())
+            {
+                var availableQuantity = await connection.QuerySingleOrDefaultAsync<int>(sql, new { ProductId = productId, ColorId = colorId, SizeId = sizeId, BranchId = branchId });
+                return availableQuantity;
+            }
+        }
+
     }
 }

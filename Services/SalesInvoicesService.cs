@@ -17,8 +17,8 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesInvoicesModel>> GetAllSalesInvoicesAsync()
         {
             var sql = @"
-                SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, 
-                       c.CustomerName, b.BranchName, pm.PaymentMethodName, u.UserName
+                SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
+                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
@@ -34,8 +34,8 @@ namespace IOMSYS.Services
         public async Task<SalesInvoicesModel> GetSalesInvoiceByIdAsync(int salesInvoiceId)
         {
             var sql = @"
-                SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, 
-                       c.CustomerName, b.BranchName, pm.PaymentMethodName, u.UserName
+                SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
+                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
@@ -52,8 +52,8 @@ namespace IOMSYS.Services
         public async Task<int> InsertSalesInvoiceAsync(SalesInvoicesModel salesInvoice)
         {
             var sql = @"
-                INSERT INTO SalesInvoices (CustomerId, TotalAmount, PaidUp, Remainder, BranchId, PaymentMethodId, UserId, SaleDate) 
-                VALUES (@CustomerId, @TotalAmount, @PaidUp, @Remainder, @BranchId, @PaymentMethodId, @UserId, @SaleDate);
+                INSERT INTO SalesInvoices (CustomerId, TotalAmount, PaidUp, Remainder, BranchId, PaymentMethodId, UserId, SaleDate, TotalDiscount) 
+                VALUES (@CustomerId, @TotalAmount, @PaidUp, @Remainder, @BranchId, @PaymentMethodId, @UserId, @SaleDate, @TotalDiscount);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -67,7 +67,7 @@ namespace IOMSYS.Services
             var sql = @"
                 UPDATE SalesInvoices 
                 SET CustomerId = @CustomerId, TotalAmount = @TotalAmount, PaidUp = @PaidUp, Remainder = @Remainder, 
-                    BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, UserId = @UserId, SaleDate = @SaleDate
+                    BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, UserId = @UserId, SaleDate = @SaleDate, TotalDiscount = @TotalDiscount
                 WHERE SalesInvoiceId = @SalesInvoiceId";
 
             using (var db = _dapperContext.CreateConnection())

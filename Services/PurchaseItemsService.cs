@@ -74,7 +74,6 @@ namespace IOMSYS.Services
             }
         }
 
-
         public async Task<int> InsertPurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {
             var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice) 

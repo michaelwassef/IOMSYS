@@ -10,5 +10,8 @@ namespace IOMSYS.IServices
         Task<int> UpdateProductAsync(ProductsModel product);
         Task<int> DeleteProductAsync(int productId);
         Task<int> UpdateProductBuyandSellPriceAsync(int ProductId, decimal BuyPrice,decimal SellPrice);
+        Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync();
+        Task<IEnumerable<ProductsModel>> GetAvailableSizesAndColorsForProduct(int productId);
+        Task<int> GetAvailableQuantity(int productId, int colorId, int sizeId,int branchId);
     }
 }

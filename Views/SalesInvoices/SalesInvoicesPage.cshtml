@@ -1,10 +1,10 @@
 ﻿
 @{
-    ViewData["Title"] = "PurchaseInvoicesPage";
+    ViewData["Title"] = "SalesInvoicesPage";
     Layout = "_DevExtremeLayout";
 }
 
-<h1 class="text-center">اضافة فاتوره مشتريات جديدة</h1>
+<h1>اضافة فاتورة مبيعات</h1>
 
 <div id="alertPlaceholder"></div>
 
@@ -12,31 +12,37 @@
     <h3>اضافة الاصناف</h3>
     <div class="row">
         <div class="form-group col-md-4 mb-3">
-        <label for="ProductId">اسم المنتج</label>
+            <label for="ProductId">اسم المنتج</label>
             <select id="ProductId" class="form-control" placeholder="اسم المنتج" required></select>
-    </div>
+        </div>
         <div class="form-group col-md-4 mb-3">
-        <label for="SizeId">المقاس</label>
+            <label for="SizeId">المقاس</label>
             <select id="SizeId" class="form-control" placeholder="المقاس" required></select>
-    </div>
-    <div class="form-group col-md-4 mb-3">
-        <label for="ColorId">اللون</label>
-            <select id="ColorId" class="form-control" placeholder="اللون" required></select>
-    </div>
-    <div class="form-group col-md-4 mb-3">
-        <label for="Quantity">الكمية</label>
-            <input type="number" id="Quantity" class="form-control" placeholder="الكمية" required min="0" />
-    </div>
+        </div>
         <div class="form-group col-md-4 mb-3">
-        <label for="BuyPrice">سعر الشراء للواحد</label>
-            <input type="number" id="BuyPrice" class="form-control" placeholder="سعر الشراء للواحد" required min="0" />
-    </div>
+            <label for="ColorId">اللون</label>
+            <select id="ColorId" class="form-control" placeholder="اللون" required></select>
+        </div>
+        <div class="form-group col-md-4 mb-3">
+            <label for="Quantity">الكمية</label>
+            <input type="number" id="Quantity" class="form-control" placeholder="الكمية" required min="0" />
+            <!-- New div for showing available quantity -->
+            <div id="availableQtyDisplay" class="text-primary mt-2"></div>
+        </div>
         <div class="form-group col-md-4 mb-3">
             <label for="SellPrice">سعر البيع للواحد</label>
-            <input type="number" id="SellPrice" class="form-control" placeholder="سعر البيع للواحد" min="0" />
-    </div>
+            <input type="number" id="SellPrice" class="form-control" placeholder="سعر البيع للواحد" readonly min="0" />
+        </div>
+        <div class="form-group col-md-4 mb-3">
+            <label for="discount">الخصم للقطعة الواحده</label>
+            <input type="number" id="discount" class="form-control" placeholder="الخصم" value="0" required min="0" />
+
+            <div id="maxDiscountDisplay" class="text-muted"></div>
+            <input type="hidden" id="maxDiscount" value="" />
+        </div>
+
         <button type="button" onclick="addItem()" class="btn btn-primary mb-3">اضافة صنف</button>
-</div>
+    </div>
 </div>
 
 <!-- Display items -->
@@ -47,21 +53,25 @@
     <div id="invoiceDetailsForm" style="margin-top: 20px;">
         <h3>بيانات الفاتورة</h3>
         <div class="row">
-            <div class="form-group col-md-4 mb-3">
-                <label for="supplierId">اسم المورد</label>
-                <select id="SupplierId" class="form-control" required></select>
-            </div>
-            <div class="form-group col-md-4 mb-3">
-                <label for="branchId">اسم الفرع</label>
-                    <select id="BranchId" class="form-control"></select>
-            </div>
-            <div class="form-group col-md-4 mb-3">
-                <label for="paymentMethodName">طريقة الدفع</label>
-                    <select id="PaymentMethodId" class="form-control" required></select>
+            <div class="form-group col-md-3 mb-3">
+                <label for="customerId">اسم الزبون</label>
+                <select id="CustomerId" class="form-control" required></select>
             </div>
             <div class="form-group col-md-3 mb-3">
-                <label for="totalAmount">اجمالي مبلغ الفاتورة</label>
+                <label for="branchId">اسم الفرع</label>
+                <select id="BranchId" class="form-control"></select>
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="paymentMethodName">طريقة الدفع</label>
+                <select id="PaymentMethodId" class="form-control" required></select>
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="totalAmount">اجمالي مبلغ الفاتورة بعد الخصم</label>
                 <input type="number" id="totalAmount" class="form-control" placeholder="اجمالي مبلغ الفاتورة" required readonly min="0" />
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <label for="totalDiscount">اجمالي الخصم</label>
+                <input type="number" id="totalDiscount" class="form-control" placeholder="اجمالي الخصم" readonly min="0" />
             </div>
             <div class="form-group col-md-3 mb-3">
                 <label for="paidUp">المدفوع</label>
@@ -75,20 +85,18 @@
             </div>
             <div class="form-group col-md-3 mb-3">
                 <label for="remainder">الباقي</label>
-                <input type="number" id="remainder" class="form-control" placeholder="الباقي" required min="0" />
+                <input type="number" id="remainder" class="form-control" placeholder="الباقي" required readonly min="0" />
             </div>
             <div class="form-group col-md-3 mb-3">
-                <label for="purchaseDate">تاريخ الفاتورة</label>
-                <input type="date" id="purchaseDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required/>
+                <label for="saleDate">تاريخ الفاتورة</label>
+                <input type="date" id="saleDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required />
             </div>
-               <button type="button" onclick="saveInvoice()" class="btn btn-success">حفظ الفاتورة</button>
+            <button type="button" onclick="saveInvoice()" class="btn btn-success">حفظ الفاتورة</button>
         </div>
     </div>
 </form>
 
-
-
-<script>
+  <script>
     async function populateDropdown(url, elementId, valueField, textField) {
         try {
             const response = await fetch(url);
@@ -141,29 +149,111 @@
         }
     }
 
+    async function fetchAvailableSizes(productId) {
+        try {
+            const response = await fetch(`/Products/GetSizeandColorOfProduct?ProductId=${productId}`);
+            const sizes = await response.json();
+            populateDropdownWithItems('SizeId', sizes, 'SizeName', 'SizeId');
+        } catch (error) {
+            console.error('Error fetching available sizes:', error);
+        }
+    }
+
+    async function fetchAvailableColors(productId) {
+        try {
+            const response = await fetch(`/Products/GetSizeandColorOfProduct?ProductId=${productId}`);
+            const colors = await response.json();
+            populateDropdownWithItems('ColorId', colors, 'ColorName', 'ColorId');
+        } catch (error) {
+            console.error('Error fetching available colors:', error);
+        }
+    }
+
+    function populateDropdownWithItems(elementId, items, textField, valueField) {
+        const selectElement = document.getElementById(elementId);
+        selectElement.innerHTML = '<option value="">برجاء الاختيار</option>'; 
+        items.forEach(item => {
+            const option = new Option(item[textField], item[valueField]);
+            selectElement.add(option);
+        });
+    }
+
+    function resetDropdown(elementId) {
+        const selectElement = document.getElementById(elementId);
+        selectElement.innerHTML = '<option value="">برجاء الاختيار</option>';
+    }
+
+    // Function to fetch available quantity
+    async function fetchAvailableQuantity(productId, sizeId, colorId, branchId) {
+        try {
+            const response = await fetch(`/Products/GetAvailable?productId=${productId}&colorId=${colorId}&sizeId=${sizeId}&BranchId=${branchId}`);
+            const data = await response.json();
+            $('#Quantity').attr('max', data); 
+            $('#availableQtyDisplay').text(`الكمية المتاحة: ${data}`);
+        } catch (error) {
+            console.error('Error fetching available quantity:', error);
+            $('#availableQtyDisplay').text(`Error fetching available quantity`);
+        }
+    }
+
     async function fetchSellPrice(productId) {
     try {
         const response = await fetch(`/Products/LoadProductById?ProductId=${productId}`);
         if (response.ok) {
             const data = await response.json();
-            document.getElementById('SellPrice').value = data.SellPrice;
+                document.getElementById('SellPrice').value = data.SellPrice;
+                // Update MaxDiscount display
+                document.getElementById('maxDiscountDisplay').innerText = `الحد الأقصى للخصم: ${data.MaxDiscount}`;
+                // Store MaxDiscount in a hidden input or use a global variable for validation
+                document.getElementById('maxDiscount').value = data.MaxDiscount;
         } else {
-            document.getElementById('SellPrice').value = '';
-        }
+                document.getElementById('SellPrice').value = '';
+                document.getElementById('maxDiscountDisplay').innerText = '';
+                document.getElementById('maxDiscount').value = '';
+            }
     } catch (error) {
         console.error('Error fetching SellPrice for:', productId, error);
         document.getElementById('SellPrice').value = '';
+        document.getElementById('maxDiscountDisplay').innerText = '';
+        document.getElementById('maxDiscount').value = '';
     }
     }
 
+    $('#ProductId').on('change', async function () {
+        var productId = $(this).val();
+        if (productId) {
+            fetchSellPrice(productId);
+            await fetchAvailableSizes(productId);
+            await fetchAvailableColors(productId);
+        } else {
+            // Reset sizes and colors if no product is selected
+            $('#SizeId').empty().append(new Option("برجاء الاختيار", ""));
+            $('#ColorId').empty().append(new Option("برجاء الاختيار", ""));
+        }
+    });
+
+    $(document).ready(function() {
+    $('#ProductId, #SizeId, #ColorId, #BranchId').change(function() {
+        // Get the current selected values
+        var productId = $('#ProductId').val();
+        var sizeId = $('#SizeId').val();
+        var colorId = $('#ColorId').val();
+        var branchId = $('#BranchId').val();
+
+        if(productId && sizeId && colorId && branchId) {
+            fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+        } else {
+            $('#availableQtyDisplay').text('');
+        }
+    });
+});
     document.addEventListener('DOMContentLoaded', function () {
-        populateDropdownSEARCH('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
-        populateDropdown('/Sizes/LoadSizes', 'SizeId', 'SizeId', 'SizeName');
-        populateDropdown('/Colors/LoadColors', 'ColorId', 'ColorId', 'ColorName');
-        populateDropdownSEARCH('/Suppliers/LoadSuppliers', 'SupplierId', 'SupplierId', 'SupplierName');
+        populateDropdownSEARCH('/Products/GetAllProductsInWarehouse', 'ProductId', 'ProductId', 'ProductName');
+        populateDropdownSEARCH('/Customers/LoadCustomers', 'CustomerId', 'CustomerId', 'CustomerName');
         populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
         document.getElementById('paidUp').addEventListener('input', calculateTotals);
+        document.getElementById('totalDiscount').addEventListener('input', calculateDiscounts);
 
         refreshItemsGrid();
 
@@ -172,7 +262,7 @@
         var mm = String(today.getMonth() + 1).padStart(2, '0');
         var yyyy = today.getFullYear();
         today = yyyy + '-' + mm + '-' + dd;
-        document.getElementById('purchaseDate').value = today;
+        document.getElementById('saleDate').value = today;
 
         $('#ProductId').on('change', function () {
             var productId = $(this).val();
@@ -197,33 +287,73 @@
 
     function addItem() {
         // Get item details
-        var productId = document.getElementById('ProductId').value;
-        var sizeId = document.getElementById('SizeId').value;
-        var colorId = document.getElementById('ColorId').value;
-        var quantity = parseInt(document.getElementById('Quantity').value);
-        var buyPrice = parseFloat(document.getElementById('BuyPrice').value);
+        //var productId = document.getElementById('ProductId').value;
+        //var sizeId = document.getElementById('SizeId').value;
+        //var colorId = document.getElementById('ColorId').value;
+        //var quantity = parseInt(document.getElementById('Quantity').value);
         var sellPrice = parseFloat(document.getElementById('SellPrice').value);
+        var discount = parseFloat(document.getElementById('discount').value);
+        var DiscountId = null;
+        var maxDiscount = parseFloat(document.getElementById('maxDiscount').value);
+        var productId = $('#ProductId').val();
+        var sizeId = $('#SizeId').val();
+        var colorId = $('#ColorId').val();
+        var quantity = parseInt($('#Quantity').val());
+        var maxQuantity = parseInt($('#Quantity').attr('max') || '0');
+
+        if (quantity > maxQuantity) {
+            alert(`الكمية المدخلة تتجاوز الكمية المتاحة. الكمية المتاحة: ${maxQuantity}`);
+            return; 
+        }
+
+        // Validation for discount exceeding MaxDiscount
+        if (discount > maxDiscount) {
+            alert(`الحد الأقصى للخصم هو ${maxDiscount}`);
+            return; 
+        }
+
+        if (discount < 0) {
+            alert('الخصم لا يمكن أن يكون قيمة سالبة');
+            return;
+        }
 
         // Check if any field is empty
-        if (!productId || !sizeId || !colorId || !quantity || !buyPrice || !sellPrice) {
+        if (!productId || !sizeId || !colorId || !quantity || !sellPrice) {
             alert('برجاء ملاء بيانات الاصناف');
             return;
         }
 
-        // Add to temporary storage
-        tempItems.push({ ProductId: productId, SizeId: sizeId, ColorId: colorId, Quantity: quantity, BuyPrice: buyPrice, SellPrice: sellPrice });
+        var effectiveSellPrice = discount > 0 ? sellPrice - discount : sellPrice;
+        var Totaldiscount = discount * quantity;
+
+        if (effectiveSellPrice < 0) {
+            alert('الخصم لا يمكن أن يكون أكبر من سعر البيع للواحد');
+            return;
+        }
+
+        tempItems.push({
+            ProductId: productId,
+            SizeId: sizeId,
+            ColorId: colorId,
+            Quantity: quantity,
+            SellPrice: effectiveSellPrice, 
+            Discount: discount,
+            totaldiscount: Totaldiscount,
+            ItemDiscount: discount
+        });
 
         // Reset input fields
         $('#ProductId').val(null).trigger('change');
         document.getElementById('SizeId').value = '';
         document.getElementById('ColorId').value = '';
         document.getElementById('Quantity').value = '';
-        document.getElementById('BuyPrice').value = '';
         document.getElementById('SellPrice').value = '';
+        document.getElementById('discount').value = '';
 
         // Refresh the grid
         refreshItemsGrid();
         calculateTotals();
+        calculateDiscounts();
     }
 
     let productsLookup = [];
@@ -279,8 +409,9 @@
                     }
                 },
                 { dataField: "Quantity", caption: "الكمية" },
-                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" },
-                { dataField: "SellPrice", caption: "سعر البيع للواحد" }
+                { dataField: "SellPrice", caption: "سعر البيع للواحد بعد الخصم" },
+                { dataField: "Discount", caption: "الخصم علي القطعة الواحدة" },
+                { dataField: "totaldiscount", caption: "اجمالي المخصوم" }
             ],
             showBorders: true,
             editing: { 
@@ -290,6 +421,7 @@
                 calculateTotals();
                 document.getElementById('paidUp').value = document.getElementById('totalAmount').value;
                 calculateTotals();
+                calculateDiscounts();
             },
             onRowRemoving: function (e) {
                 var index = tempItems.indexOf(e.data);
@@ -303,10 +435,11 @@
     }
 
     function calculateTotals() {
-    let totalAmount = 0;
+        let totalAmount = 0;
+
         // Calculate totalAmount
         tempItems.forEach(item => {
-            totalAmount += item.Quantity * item.BuyPrice;
+            totalAmount += item.Quantity * item.SellPrice;
         });
 
         // Update totalAmount input
@@ -318,6 +451,18 @@
 
         // Update remainder input
         document.getElementById('remainder').value = remainder.toFixed(2);
+    }
+
+    function calculateDiscounts() {
+        let DiscountsAmount = 0;
+
+        // Calculate totalAmount
+        tempItems.forEach(item => {
+            DiscountsAmount += item.totaldiscount;
+        });
+
+        // Update totalAmount input
+        document.getElementById('totalDiscount').value = DiscountsAmount.toFixed(2);
     }
 
     function displayMessage(type, message) {
@@ -343,20 +488,20 @@
 
         // Create FormData object
         var formData = new FormData();
-
         formData.append("items", JSON.stringify(tempItems));
 
         // Append other invoice details to formData
-        formData.append("SupplierId", document.getElementById('SupplierId').value);
+        formData.append("CustomerId", document.getElementById('CustomerId').value);
         formData.append("BranchId", document.getElementById('BranchId').value);
         formData.append("PaymentMethodId", document.getElementById('PaymentMethodId').value);
         formData.append("TotalAmount", document.getElementById('totalAmount').value);
         formData.append("PaidUp", document.getElementById('paidUp').value);
         formData.append("Remainder", document.getElementById('remainder').value);
-        formData.append("PurchaseDate", document.getElementById('purchaseDate').value);
+        formData.append("SaleDate", document.getElementById('saleDate').value);
+        formData.append("TotalDiscount", document.getElementById('totalDiscount').value);
 
         try {
-            let response = await fetch('/PurchaseInvoices/AddNewPurchaseInvoice', {
+            let response = await fetch('/SalesInvoices/AddNewSaleInvoice', {
                 method: 'POST',
                 body: formData 
             });

@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -37,65 +36,66 @@ namespace IOMSYS.Controllers
             return Json(purchaseItems);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
-        {
-            try
-            {
-                var values = formData["values"];
-                var newPurchaseItems = new PurchaseItemsModel();
-                JsonConvert.PopulateObject(values, newPurchaseItems);
+        //[HttpPost]
+        //public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
+        //{
+        //    try
+        //    {
+        //        var values = formData["values"];
+        //        var newPurchaseItems = new PurchaseItemsModel();
+        //        JsonConvert.PopulateObject(values, newPurchaseItems);
 
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+        //        if (!ModelState.IsValid)
+        //            return BadRequest(ModelState);
 
-                int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
+        //        int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
 
-                if (addPurchaseItemsResult > 0)
-                {
-                    await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
-                    return Ok(new { SuccessMessage = "Successfully Added" });
-                }
-                else
-                    return BadRequest(new { ErrorMessage = "Could Not Add" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
-            }
-        }
+        //        if (addPurchaseItemsResult > 0)
+        //        {
+        //            await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
+        //            return Ok(new { SuccessMessage = "Successfully Added" });
+        //        }
+        //        else
+        //            return BadRequest(new { ErrorMessage = "Could Not Add" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
+        //    }
+        //}
 
-        [HttpPut]
-        public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)
-        {
-            try
-            {
-                var key = Convert.ToInt32(formData["key"]);
-                var values = formData["values"];
-                var PurchaseItems = await _PurchaseItemsService.GetPurchaseItemByIdAsync(key);
-                JsonConvert.PopulateObject(values, PurchaseItems);
+        //[HttpPut]
+        //public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)
+        //{
+        //    try
+        //    {
+        //        var key = Convert.ToInt32(formData["key"]);
+        //        var values = formData["values"];
+        //        var PurchaseItems = await _PurchaseItemsService.GetPurchaseItemByIdAsync(key);
+        //        JsonConvert.PopulateObject(values, PurchaseItems);
 
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+        //        if (!ModelState.IsValid)
+        //            return BadRequest(ModelState);
 
-                int updatePurchaseItemsResult = await _PurchaseItemsService.UpdatePurchaseItemAsync(PurchaseItems);
+        //        int updatePurchaseItemsResult = await _PurchaseItemsService.UpdatePurchaseItemAsync(PurchaseItems);
 
-                if (updatePurchaseItemsResult > 0)
-                {
-                    return Ok(new { SuccessMessage = "Updated Successfully" });
-                }
-                else
-                {
-                    return BadRequest(new { ErrorMessage = "Could Not Update" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseItems.", ExceptionMessage = ex.Message });
-            }
-        }
+        //        if (updatePurchaseItemsResult > 0)
+        //        {
+        //            return Ok(new { SuccessMessage = "Updated Successfully" });
+        //        }
+        //        else
+        //        {
+        //            return BadRequest(new { ErrorMessage = "Could Not Update" });
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseItems.", ExceptionMessage = ex.Message });
+        //    }
+        //}
 
         [HttpDelete]
+        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePurchaseItem([FromForm] IFormCollection formData)
         {
             try

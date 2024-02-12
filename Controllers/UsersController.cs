@@ -13,7 +13,6 @@ namespace IOMSYS.Controllers
         private readonly IUsersService _UsersService;
         private readonly IUserTypesService _userTypesService;
 
-
         public UsersController(IUsersService usersService, IUserTypesService userTypesService)
         {
             _UsersService = usersService;
@@ -118,5 +117,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

@@ -18,9 +18,5 @@
 
         // New property to hold associated purchase items
         public List<PurchaseItemsModel> PurchaseItems { get; set; }
-        public PurchaseInvoicesModel()
-        {
-            PurchaseItems = new List<PurchaseItemsModel>();
-        }
     }
 }

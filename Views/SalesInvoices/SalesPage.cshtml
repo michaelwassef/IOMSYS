@@ -1,20 +1,20 @@
 ﻿
 @{
-    ViewData["Title"] = "PurchaseInvoicesPage";
+    ViewData["Title"] = "SalesPage";
     Layout = "_DevExtremeLayout";
 }
 
-<h1>فواتير المشتريات</h1>
+<h1>فواتير المبيعات</h1>
 
-@(Html.DevExtreme().DataGrid<PurchaseInvoicesModel>()
+@(Html.DevExtreme().DataGrid<SalesInvoicesModel>()
     .ID("gridContainer")
     .DataSource(d => d
         .Mvc()
-        .Controller("PurchaseInvoices")
-        .LoadAction("LoadPurchaseInvoices")
-        .UpdateAction("UpdatePurchaseInvoice")
-        .DeleteAction("DeletePurchaseInvoice")
-        .Key("PurchaseInvoiceId")
+        .Controller("SalesInvoices")
+        .LoadAction("LoadSalesInvoices")
+        .UpdateAction("UpdateSaleInvoice")
+        .DeleteAction("DeleteSaleInvoice")
+        .Key("SalesInvoiceId")
     ).OnToolbarPreparing("onToolbarPreparing")
     .Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
@@ -26,7 +26,7 @@
         .AllowDeleting(true)
         .AllowUpdating(true)
         .Popup(p => p
-                .Title("فاتورة مشتريات")
+                .Title("فاتورة مبيعات")
                 .ShowTitle(true)
                 .Width(800)
                 .Height(700))
@@ -47,23 +47,24 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.PurchaseInvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
-        columns.AddFor(m => m.TotalAmount).Caption("اجمالي الفاتورة").AllowEditing(false);
+        columns.AddFor(m => m.SalesInvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
+        columns.AddFor(m => m.TotalAmount).Caption("اجمالي الفاتورة بعد الخصم").AllowEditing(false);
+        columns.AddFor(m => m.TotalDiscount).Caption("اجمالي الخصم").AllowEditing(false);
         columns.AddFor(m => m.PaidUp).Caption("المدفوع من الفاتورة");
         columns.AddFor(m => m.Remainder).Caption("الباقي من المبلغ");
-        columns.AddFor(m => m.SupplierId).Caption("اسم المورد").Lookup(lookup => lookup
-          .DataSource(d => d.Mvc().Controller("Suppliers").LoadAction("LoadSuppliers"))
-          .ValueExpr("SupplierId")
-          .DisplayExpr("SupplierName"));
+        columns.AddFor(m => m.CustomerId).Caption("اسم الزبون").Lookup(lookup => lookup
+          .DataSource(d => d.Mvc().Controller("Customers").LoadAction("LoadCustomers"))
+          .ValueExpr("CustomerId")
+          .DisplayExpr("CustomerName"));
         columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
        .ValueExpr("BranchId")
        .DisplayExpr("BranchName"));
-       columns.AddFor(m => m.PaymentMethodId).Caption("طريقة الدفع").Lookup(lookup => lookup
-        .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
-        .ValueExpr("PaymentMethodId")
-        .DisplayExpr("PaymentMethodName"));
-        columns.AddFor(m => m.PurchaseDate).Caption("تاريخ الفاتورة");
+        columns.AddFor(m => m.PaymentMethodId).Caption("طريقة الدفع").Lookup(lookup => lookup
+         .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
+         .ValueExpr("PaymentMethodId")
+         .DisplayExpr("PaymentMethodName"));
+        columns.AddFor(m => m.SaleDate).Caption("تاريخ الفاتورة");
         columns.AddFor(m => m.UserId).Caption("مدخل الفاتورة").AllowEditing(false).Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
        .ValueExpr("UserId")
@@ -72,7 +73,7 @@
     {
         md.Enabled(true);
         md.Template(@<text>
-            @(Html.DevExtreme().DataGrid<PurchaseItemsModel>()
+            @(Html.DevExtreme().DataGrid<SalesItemsModel>()
         .ColumnAutoWidth(true)
         .ShowBorders(true)
         .Columns(columns =>
@@ -85,17 +86,19 @@
 
             columns.AddFor(m => m.Quantity).Caption("الكمية");
 
-            columns.AddFor(m => m.BuyPrice).Caption("سعر الشراء للواحد");
+            columns.AddFor(m => m.SellPrice).Caption("سعر البيع للواحد");
+
+            columns.AddFor(m => m.ItemDiscount).Caption("مبلغ الخصم للواحد");
         })
-        .DataSource(d => d.Mvc() 
-        .Controller("PurchaseItems")
-        .LoadAction("LoadPurchaseItemsByInvoiceId")
-        .Key("PurchaseItemId")
-        .DeleteAction("DeletePurchaseItem")
-        .LoadParams(new { purchaseInvoiceId = new JS("data.PurchaseInvoiceId") }))
+        .DataSource(d => d.Mvc()
+        .Controller("SalesItems")
+        .LoadAction("LoadSaleItemsByInvoiceId")
+        .Key("SalesItemId")
+        .DeleteAction("DeleteSaleItem")
+        .LoadParams(new { SalesInvoiceId = new JS("data.SalesInvoiceId") }))
         .Editing(e => e
-            .Mode(GridEditMode.Popup)
-            .AllowDeleting(true)
+        .Mode(GridEditMode.Popup)
+        .AllowDeleting(true)
         )
         .RtlEnabled(true)
         )
@@ -111,15 +114,15 @@
                 .DisplayFormat("عدد الفواتير : {0}");
 
             items.Add()
-            .Column("اجمالي الفاتورة")
+            .Column("اجمالي الفاتورة بعد الخصم")
             .SummaryType(SummaryType.Sum)
-            .DisplayFormat("اجمالي الفواتير : {0}");
+            .DisplayFormat("اجمالي مبلغ الفواتير : {0}");
 
             items.Add()
             .Column("المدفوع من الفاتورة")
             .SummaryType(SummaryType.Sum)
-            .DisplayFormat("اجمالي المدفوع : {0}");   
-            
+            .DisplayFormat("اجمالي المدفوع : {0}");
+
             items.Add()
            .Column("الباقي من المبلغ")
            .SummaryType(SummaryType.Sum)
@@ -131,7 +134,7 @@
 <script>
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
-        var worksheet = workbook.addWorksheet('PurchaseInvoices');
+        var worksheet = workbook.addWorksheet('SalesInvoices');
 
         DevExpress.excelExporter.exportDataGrid({
             component: e.component,
@@ -139,7 +142,7 @@
             autoFilterEnabled: true
         }).then(function () {
             workbook.xlsx.writeBuffer().then(function (buffer) {
-                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'PurchaseInvoices.xlsx');
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'SalesInvoices.xlsx');
             });
         });
     }
@@ -150,14 +153,14 @@
             widget: 'dxButton',
             options: {
                 icon: 'fas fa-plus',
-                text: 'اضافة فاتوره مشتريات جديده',
+                text: 'اضافة فاتوره مبيعات جديده',
                 onClick: function () {
-                    window.location.href = '@Url.Action("PurchaseInvoicesPage", "PurchaseInvoices")';
+                    window.location.href = '@Url.Action("SalesInvoicesPage", "SalesInvoices")';
                 }
             },
             location: 'before',
             name: 'customButton'
         };
         toolbarItems.push(customButton);
-    } 
+    }
 </script>

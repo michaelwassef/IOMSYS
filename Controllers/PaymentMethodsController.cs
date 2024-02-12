@@ -88,7 +88,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePaymentMethod([FromForm] IFormCollection formData)
@@ -107,5 +106,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }
