@@ -91,6 +91,8 @@ namespace IOMSYS.Controllers
                 // Insert the items and link them to the invoice and update buyprice
                 foreach (var item in model.PurchaseItems)
                 {
+                    item.BranchId = model.BranchId;
+                    item.Statues = 1;
                     item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
                     await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                     await _ProductsService.UpdateProductBuyandSellPriceAsync(item.ProductId, item.BuyPrice, item.SellPrice);

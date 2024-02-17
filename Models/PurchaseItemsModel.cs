@@ -13,5 +13,8 @@
         public string? SizeName { get; set; }
         public string? ColorName { get; set; }
         public decimal SellPrice { get; set; }
+        public string? Notes { get; set; }
+        public int BranchId { get; set; }
+        public int Statues { get; set; }
     }
 }

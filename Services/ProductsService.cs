@@ -17,17 +17,55 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<ProductsModel>> GetAllProductsAsync()
         {
-            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId,P.MinQuantity
-                FROM Products P
-                INNER JOIN Categories C ON C.CategoryId = P.CategoryId
-                INNER JOIN ProductTypes T ON T.ProductTypeId = P.ProductTypeId";
+            var sql = @"SELECT 
+                            P.ProductId, 
+                            P.ProductName, 
+                            C.CategoryName, 
+                            T.ProductTypeName, 
+                            P.SellPrice, 
+                            P.BuyPrice, 
+                            P.MaxDiscount, 
+                            P.DiscountsOn, 
+                            P.Notes, 
+                            P.CategoryId, 
+                            P.ProductTypeId,
+                            P.MinQuantity,
+                            (COALESCE(SUM(pi.Quantity), 0) - COALESCE((
+                                SELECT SUM(si.Quantity)
+                                FROM SalesItems si
+                                JOIN SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
+                                JOIN SalesInvoices si2 ON sii.SalesInvoiceId = si2.SalesInvoiceId
+                                WHERE si.ProductId = P.ProductId
+                            ), 0)) AS TotalQuantity
+                        FROM 
+                            Products P
+                        INNER JOIN 
+                            Categories C ON C.CategoryId = P.CategoryId
+                        INNER JOIN 
+                            ProductTypes T ON T.ProductTypeId = P.ProductTypeId
+                        LEFT JOIN 
+                            PurchaseItems pi ON P.ProductId = pi.ProductId
+                        LEFT JOIN 
+                            SalesItems si ON P.ProductId = si.ProductId
+                        GROUP BY 
+                            P.ProductId, 
+                            P.ProductName, 
+                            C.CategoryName, 
+                            T.ProductTypeName, 
+                            P.SellPrice, 
+                            P.BuyPrice, 
+                            P.MaxDiscount, 
+                            P.DiscountsOn, 
+                            P.Notes, 
+                            P.CategoryId, 
+                            P.ProductTypeId,
+                            P.MinQuantity";
 
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<ProductsModel>(sql).ConfigureAwait(false);
             }
         }
-
         public async Task<ProductsModel?> SelectProductByIdAsync(int productId)
         {
             var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId,P.MinQuantity
@@ -110,68 +148,48 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync()
         {
             var sql = @"
-        WITH Purchased AS (
-            SELECT 
-                PI.ProductId, 
-                PI.SizeId, 
-                PI.ColorId, 
-                SUM(PI.Quantity) AS PurchasedQuantity
-            FROM PurchaseItems PI
-            GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
-        ),
-        Sold AS (
-            SELECT 
-                SI.ProductId, 
-                SI.SizeId, 
-                SI.ColorId, 
-                SUM(SI.Quantity) AS SoldQuantity
-            FROM SalesItems SI
-            GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
-        ),
-        NetAvailable AS (
-            SELECT 
-                P.ProductId, 
-                P.SizeId, 
-                P.ColorId, 
-                (ISNULL(P.PurchasedQuantity, 0) - ISNULL(S.SoldQuantity, 0)) AS AvailableQuantity
-            FROM Purchased P
-            LEFT JOIN Sold S ON P.ProductId = S.ProductId AND P.SizeId = S.SizeId AND P.ColorId = S.ColorId
-        )
-        SELECT 
-            Prod.ProductId, 
-            Prod.ProductName,
-            Prod.CategoryId, 
-            C.CategoryName,
-            Prod.MinQuantity,
-            Prod.SellPrice, 
-            Prod.BuyPrice, 
-            S.SizeId,
-            S.SizeName,
-            Col.ColorId,
-            Col.ColorName,
-            NA.AvailableQuantity AS TotalQuantity,
-            Prod.Notes
-        FROM Products Prod
-        INNER JOIN Categories C ON C.CategoryId = Prod.CategoryId
-        INNER JOIN ProductTypes T ON T.ProductTypeId = Prod.ProductTypeId
-        INNER JOIN NetAvailable NA ON NA.ProductId = Prod.ProductId
-        LEFT JOIN Sizes S ON S.SizeId = NA.SizeId
-        LEFT JOIN Colors Col ON Col.ColorId = NA.ColorId
-        WHERE NA.AvailableQuantity > 0
-        GROUP BY 
-            Prod.ProductId, 
-            Prod.ProductName,
-            Prod.CategoryId, 
-            C.CategoryName,
-            Prod.MinQuantity,
-            S.SizeId,
-            S.SizeName,
-            Col.ColorId,
-            Col.ColorName,    
-            Prod.SellPrice,
-            Prod.BuyPrice,
-            NA.AvailableQuantity,
-            Prod.Notes;";
+                SELECT 
+                    P.ProductId, 
+                    P.ProductName, 
+                    C.CategoryName, 
+                    T.ProductTypeName,
+                    s.SizeName,
+                    r.ColorName,
+                    COALESCE(SUM(pi.Quantity), 0) AS PurchasedQuantity,
+                    COALESCE(SUM(si.Quantity), 0) AS SoldQuantity,
+                    COALESCE(SUM(pi.BuyPrice * pi.Quantity), 0) AS TotalBuyPrice,
+                    (COALESCE(SUM(pi.Quantity), 0) - COALESCE((
+                        SELECT SUM(si.Quantity)
+                        FROM SalesItems si
+                        JOIN SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
+                        JOIN SalesInvoices si2 ON sii.SalesInvoiceId = si2.SalesInvoiceId
+                        WHERE si.ProductId = P.ProductId AND si2.BranchId = @BranchId
+                    ), 0)) AS TotalQuantity,
+                    pi.BranchId 
+                FROM 
+                    Products P
+                INNER JOIN 
+                    Categories C ON C.CategoryId = P.CategoryId
+                INNER JOIN 
+                    ProductTypes T ON T.ProductTypeId = P.ProductTypeId
+                LEFT JOIN 
+                    PurchaseItems pi ON P.ProductId = pi.ProductId
+                LEFT JOIN 
+                    SalesItems si ON P.ProductId = si.ProductId AND pi.SizeId = si.SizeId AND pi.ColorId = si.ColorId
+                LEFT JOIN 
+                    Colors r ON r.ColorId = pi.ColorId
+                LEFT JOIN 
+                    Sizes s ON s.SizeId = pi.SizeId
+                GROUP BY 
+                    P.ProductId, 
+                    P.ProductName, 
+                    C.CategoryName, 
+                    T.ProductTypeName,
+                    s.SizeName,
+                    r.ColorName,
+                    pi.BranchId 
+                HAVING 
+                    (COALESCE(SUM(pi.Quantity), 0) - COALESCE(SUM(si.Quantity), 0)) > 0;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -181,107 +199,48 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync(int BranchId)
         {
             var sql = @"
-            WITH Purchased AS (
-                SELECT 
-                    PI.ProductId, 
-                    PI.SizeId, 
-                    PI.ColorId, 
-                    SUM(PI.Quantity) AS PurchasedQuantity
-                FROM PurchaseItems PI
-                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
-                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
-                WHERE PInv.BranchId = @BranchId
-                GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
-            ),
-            Sold AS (
-                SELECT 
-                    SI.ProductId, 
-                    SI.SizeId, 
-                    SI.ColorId, 
-                    SUM(SI.Quantity) AS SoldQuantity
-                FROM SalesItems SI
-                INNER JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
-                INNER JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
-                WHERE SInv.BranchId = @BranchId
-                GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
-            ),
-            NetAvailable AS (
-                SELECT 
-                    P.ProductId, 
-                    P.SizeId, 
-                    P.ColorId, 
-                    (ISNULL(P.PurchasedQuantity, 0) - ISNULL(S.SoldQuantity, 0)) AS AvailableQuantity
-                FROM Purchased P
-                LEFT JOIN Sold S ON P.ProductId = S.ProductId AND P.SizeId = S.SizeId AND P.ColorId = S.ColorId
-            ),
-            TotalSellPrice AS (
-                SELECT
-                    SI.ProductId,
-                    SI.SizeId,
-                    SI.ColorId,
-                    SUM(SI.Quantity * SI.SellPrice) AS TotalSellPrice,
-                    SUM(SI.Quantity) AS TotalSoldQuantity
-                FROM SalesItems SI
-                INNER JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
-                INNER JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
-                WHERE SInv.BranchId = @BranchId
-                GROUP BY SI.ProductId, SI.SizeId, SI.ColorId
-            ),
-            TotalBuyPrice AS (
-                SELECT
-                    PI.ProductId,
-                    PI.SizeId,
-                    PI.ColorId,
-                    SUM(PI.Quantity * PI.BuyPrice) AS TotalBuyPrice
-                FROM PurchaseItems PI
-                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
-                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
-                WHERE PInv.BranchId = @BranchId
-                GROUP BY PI.ProductId, PI.SizeId, PI.ColorId
-            )
             SELECT 
-                Prod.ProductId, 
-                Prod.ProductName,
-                Prod.CategoryId, 
+                P.ProductId, 
+                P.ProductName, 
+                P.SellPrice, 
+                P.BuyPrice, 
                 C.CategoryName,
-                Prod.MinQuantity,
-                Prod.SellPrice, 
-                Prod.BuyPrice, 
-                S.SizeId,
-                S.SizeName,
-                Col.ColorId,
-                Col.ColorName,
-                NA.AvailableQuantity AS TotalQuantity,
-                Prod.Notes,
-                TS.TotalSellPrice,
-                TB.TotalBuyPrice,
-                TS.TotalSoldQuantity
-            FROM Products Prod
-            INNER JOIN Categories C ON C.CategoryId = Prod.CategoryId
-            INNER JOIN ProductTypes T ON T.ProductTypeId = Prod.ProductTypeId
-            INNER JOIN NetAvailable NA ON NA.ProductId = Prod.ProductId
-            LEFT JOIN Sizes S ON S.SizeId = NA.SizeId
-            LEFT JOIN Colors Col ON Col.ColorId = NA.ColorId
-            LEFT JOIN TotalSellPrice TS ON TS.ProductId = Prod.ProductId AND TS.SizeId = NA.SizeId AND TS.ColorId = NA.ColorId
-            LEFT JOIN TotalBuyPrice TB ON TB.ProductId = Prod.ProductId AND TB.SizeId = NA.SizeId AND TB.ColorId = NA.ColorId
+                T.ProductTypeName,
+                s.SizeName,
+                r.ColorName,
+                COALESCE(SUM(si.Quantity), 0) AS TotalSoldQuantity,
+                COALESCE(SUM(pi.BuyPrice * pi.Quantity), 0) AS TotalBuyPrice,                
+                COALESCE(SUM(si.SellPrice * si.Quantity), 0) AS TotalSellPrice,
+                (COALESCE(SUM(pi.Quantity), 0) - COALESCE(SUM(si.Quantity), 0)) AS TotalQuantity,
+                pi.BranchId
+            FROM 
+                Products P
+            INNER JOIN 
+                Categories C ON C.CategoryId = P.CategoryId
+            INNER JOIN 
+                ProductTypes T ON T.ProductTypeId = P.ProductTypeId
+            LEFT JOIN 
+                PurchaseItems pi ON P.ProductId = pi.ProductId
+            LEFT JOIN 
+                SalesItems si ON P.ProductId = si.ProductId AND pi.SizeId = si.SizeId AND pi.ColorId = si.ColorId
+            LEFT JOIN 
+                Colors r ON r.ColorId = pi.ColorId
+            LEFT JOIN 
+                Sizes s ON s.SizeId = pi.SizeId
+            WHERE 
+                pi.BranchId = @BranchId
             GROUP BY 
-                Prod.ProductId, 
-                Prod.ProductName,
-                Prod.CategoryId, 
-                C.CategoryName,
-                Prod.MinQuantity,
-                S.SizeId,
-                S.SizeName,
-                Col.ColorId,
-                Col.ColorName,    
-                Prod.SellPrice,
-                Prod.BuyPrice,
-                NA.AvailableQuantity,
-                Prod.Notes,
-                TS.TotalSellPrice,
-                TB.TotalBuyPrice,
-                TS.TotalSoldQuantity;
-            ";
+                P.ProductId, 
+                P.ProductName, 
+                P.SellPrice, 
+                P.BuyPrice, 
+                C.CategoryName, 
+                T.ProductTypeName,
+                s.SizeName,
+                r.ColorName,
+                pi.BranchId 
+            HAVING 
+                (COALESCE(SUM(pi.Quantity), 0) - COALESCE(SUM(si.Quantity), 0)) > 0;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -292,48 +251,60 @@ namespace IOMSYS.Services
         {
             var sql = @"
             SELECT 
-                Prod.ProductId,
-                Prod.ProductName,
-                COALESCE(NA.AvailableQuantity, 0) AS AvailableQty,
-                C.CategoryName,
-                Prod.MinQuantity
-            FROM Products Prod
-            INNER JOIN Categories C ON C.CategoryId = Prod.CategoryId
-            LEFT JOIN (
-                SELECT 
-                    PI.ProductId,
-                    SUM(PI.Quantity) AS PurchasedQuantity
-                FROM PurchaseItems PI
-                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
-                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
-                WHERE PInv.BranchId = @BranchId
-                GROUP BY PI.ProductId
-            ) PurchasedProducts ON PurchasedProducts.ProductId = Prod.ProductId
-            LEFT JOIN (
-                SELECT 
-                    SI.ProductId,
-                    SUM(SI.Quantity) AS SoldQuantity
-                FROM SalesItems SI
-                INNER JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
-                INNER JOIN SalesInvoices SInv ON SII.SalesInvoiceId = SInv.SalesInvoiceId
-                WHERE SInv.BranchId = @BranchId
-                GROUP BY SI.ProductId
-            ) SoldProducts ON SoldProducts.ProductId = Prod.ProductId
-            LEFT JOIN (
-                SELECT 
-                    PI.ProductId, 
-                    SUM(PI.Quantity) AS PurchasedQuantity,
-                    ISNULL(SUM(SI.Quantity), 0) AS SoldQuantity,
-                    (SUM(PI.Quantity) - ISNULL(SUM(SI.Quantity), 0)) AS AvailableQuantity
-                FROM PurchaseItems PI
-                LEFT JOIN SalesItems SI ON PI.ProductId = SI.ProductId
-                INNER JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
-                INNER JOIN PurchaseInvoices PInv ON PII.PurchaseInvoiceId = PInv.PurchaseInvoiceId
-                WHERE PInv.BranchId = @BranchId
-                GROUP BY PI.ProductId
-            ) NA ON NA.ProductId = Prod.ProductId
-            WHERE (PurchasedProducts.ProductId IS NULL OR PurchasedProducts.PurchasedQuantity < Prod.MinQuantity)
-              AND (SoldProducts.ProductId IS NULL OR SoldProducts.SoldQuantity < Prod.MinQuantity);";
+                P.ProductId, 
+                P.ProductName, 
+                C.CategoryName, 
+                T.ProductTypeName, 
+                P.SellPrice, 
+                P.BuyPrice, 
+                P.MaxDiscount, 
+                P.DiscountsOn, 
+                P.Notes, 
+                P.CategoryId, 
+                P.ProductTypeId,
+                P.MinQuantity,
+                (COALESCE(SUM(pi.Quantity), 0) - COALESCE((
+                    SELECT SUM(si.Quantity)
+                    FROM SalesItems si
+                    JOIN SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
+                    JOIN SalesInvoices si2 ON sii.SalesInvoiceId = si2.SalesInvoiceId
+                    WHERE si.ProductId = P.ProductId AND si2.BranchId = @BranchId
+                ), 0)) AS AvailableQty
+            FROM 
+                Products P
+            INNER JOIN 
+                Categories C ON C.CategoryId = P.CategoryId
+            INNER JOIN 
+                ProductTypes T ON T.ProductTypeId = P.ProductTypeId
+            LEFT JOIN 
+                PurchaseItems pi ON P.ProductId = pi.ProductId AND pi.BranchId = @BranchId
+            LEFT JOIN 
+                SalesItems si ON si.ProductId = P.ProductId
+            LEFT JOIN 
+                SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
+            LEFT JOIN 
+                SalesInvoices inv ON sii.SalesInvoiceId = inv.SalesInvoiceId AND inv.BranchId = @BranchId
+            GROUP BY 
+                P.ProductId, 
+                P.ProductName, 
+                C.CategoryName, 
+                T.ProductTypeName, 
+                P.SellPrice, 
+                P.BuyPrice, 
+                P.MaxDiscount, 
+                P.DiscountsOn, 
+                P.Notes, 
+                P.CategoryId, 
+                P.ProductTypeId,
+                P.MinQuantity
+            HAVING 
+                   (COALESCE(SUM(pi.Quantity), 0) - COALESCE((
+                    SELECT SUM(si.Quantity)
+                    FROM SalesItems si
+                    JOIN SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
+                    JOIN SalesInvoices si2 ON sii.SalesInvoiceId = si2.SalesInvoiceId
+                    WHERE si.ProductId = P.ProductId AND si2.BranchId = @BranchId
+                ), 0)) < P.MinQuantity;";
 
             using (var db = _dapperContext.CreateConnection())
             {

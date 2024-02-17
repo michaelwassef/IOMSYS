@@ -17,7 +17,7 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<PurchaseItemsModel>> GetAllPurchaseItemsAsync()
         {
             var sql = @"
-                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice
+                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice,pi.Notes,pi.BranchId,pi.Statues
                 FROM PurchaseItems pi
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
@@ -39,7 +39,10 @@ namespace IOMSYS.Services
                     c.ColorName, 
                     pi.Quantity, 
                     pi.BuyPrice,
-                    pii.PurchaseInvoiceId
+                    pii.PurchaseInvoiceId,
+                    pi.Notes,
+                    pi.BranchId,
+                    pi.Statues
                 FROM 
                     PurchaseItems pi
                     LEFT JOIN Products p ON pi.ProductId = p.ProductId
@@ -58,7 +61,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT pi.PurchaseItemId, pi.ProductId, pi.SizeId, pi.ColorId, pi.Quantity, pi.BuyPrice, 
-                       p.ProductName, s.SizeName, c.ColorName
+                       p.ProductName, s.SizeName, c.ColorName, pi.Notes, pi.BranchId, pi.Statues
                 FROM PurchaseInvoiceItems pii
                 INNER JOIN PurchaseItems pi ON pii.PurchaseItemId = pi.PurchaseItemId
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
@@ -76,8 +79,8 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertPurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {
-            var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice) 
-                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @BuyPrice);
+            var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice, Notes, BranchId, Statues) 
+                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @BuyPrice, @Notes, @BranchId, @Statues);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -89,7 +92,8 @@ namespace IOMSYS.Services
         public async Task<int> UpdatePurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {
             var sql = @"UPDATE PurchaseItems 
-                SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, BuyPrice = @BuyPrice 
+                SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, BuyPrice = @BuyPrice ,
+               Notes = @Notes , BranchId = @BranchId, Statues = @Statues
                 WHERE PurchaseItemId = @PurchaseItemId";
 
             using (var db = _dapperContext.CreateConnection())

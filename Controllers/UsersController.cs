@@ -1,4 +1,5 @@
 ﻿using IOMSYS.IServices;
+using IOMSYS.Services;
 using IOMSYS.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -49,6 +50,8 @@ namespace IOMSYS.Controllers
                 var newUser = new UsersModel();
                 JsonConvert.PopulateObject(values, newUser);
 
+                newUser.Password = PasswordHasher.HashPassword(newUser.Password);
+
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
@@ -76,10 +79,17 @@ namespace IOMSYS.Controllers
                 var values = formData["values"];
                 var User = await _UsersService.SelectUserByIdAsync(key);
 
+                var originalPassword = User.Password;
+
                 JsonConvert.PopulateObject(values, User);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
+
+                if (originalPassword != User.Password)
+                {
+                    User.Password = PasswordHasher.HashPassword(User.Password);
+                }
 
                 int updateUserResult = await _UsersService.UpdateUserAsync(User);
 

@@ -1,4 +1,5 @@
 ﻿using IOMSYS.IServices;
+using IOMSYS.Services;
 using IOMSYS.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -31,6 +32,8 @@ namespace IOMSYS.Controllers
         {
             try
             {
+                modelLogin.Password = PasswordHasher.HashPassword(modelLogin.Password);
+
                 var authenticationResult = await userService.AuthenticateUserAsync(modelLogin);
 
                 if (authenticationResult.IsAuthenticated)

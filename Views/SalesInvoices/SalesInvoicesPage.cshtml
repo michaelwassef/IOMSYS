@@ -320,6 +320,11 @@
             return; 
         }
 
+        if (quantity < 0) {
+            alert('الكمية لا يمكن أن تكون قيمة سالبة');
+            return;
+        }
+
         // Validation for discount exceeding MaxDiscount
         if (discount > maxDiscount) {
             alert(`الحد الأقصى للخصم هو ${maxDiscount}`);

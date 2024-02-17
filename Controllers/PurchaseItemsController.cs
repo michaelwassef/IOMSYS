@@ -36,33 +36,33 @@ namespace IOMSYS.Controllers
             return Json(purchaseItems);
         }
 
-        //[HttpPost]
-        //public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
-        //{
-        //    try
-        //    {
-        //        var values = formData["values"];
-        //        var newPurchaseItems = new PurchaseItemsModel();
-        //        JsonConvert.PopulateObject(values, newPurchaseItems);
+        [HttpPost]
+        public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
+        {
+            try
+            {
+                var values = formData["values"];
+                var newPurchaseItems = new PurchaseItemsModel();
+                JsonConvert.PopulateObject(values, newPurchaseItems);
 
-        //        if (!ModelState.IsValid)
-        //            return BadRequest(ModelState);
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-        //        int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
+                int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
 
-        //        if (addPurchaseItemsResult > 0)
-        //        {
-        //            await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
-        //            return Ok(new { SuccessMessage = "Successfully Added" });
-        //        }
-        //        else
-        //            return BadRequest(new { ErrorMessage = "Could Not Add" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
-        //    }
-        //}
+                if (addPurchaseItemsResult > 0)
+                {
+                    await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
+                    return Ok(new { SuccessMessage = "Successfully Added" });
+                }
+                else
+                    return BadRequest(new { ErrorMessage = "Could Not Add" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
+            }
+        }
 
         //[HttpPut]
         //public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)

@@ -209,6 +209,10 @@
             alert('برجاء ملاء بيانات الاصناف');
             return;
         }
+        if (buyPrice < sellPrice) {
+            alert('يجب ان يكون سعر البيع اكبر من الشراء');
+            return;
+        }
 
         // Add to temporary storage
         tempItems.push({ ProductId: productId, SizeId: sizeId, ColorId: colorId, Quantity: quantity, BuyPrice: buyPrice, SellPrice: sellPrice });

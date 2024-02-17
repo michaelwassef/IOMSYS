@@ -95,6 +95,15 @@ namespace IOMSYS.Controllers
                 var newProduct = new ProductsModel();
                 JsonConvert.PopulateObject(values, newProduct);
 
+                if (newProduct.BuyPrice > newProduct.SellPrice)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يمكن ان يكون سعر البيع اصغر من الشراء" });
+                }
+                if ((newProduct.SellPrice-newProduct.MaxDiscount) < newProduct.BuyPrice)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يمكن ان يكون الخصم اكبر من سعر الشراء" });
+                }
+
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
@@ -123,6 +132,15 @@ namespace IOMSYS.Controllers
                 var Product = await _ProductsService.SelectProductByIdAsync(key);
 
                 JsonConvert.PopulateObject(values, Product);
+
+                if (Product.BuyPrice > Product.SellPrice)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يمكن ان يكون سعر البيع اصغر من الشراء" });
+                }
+                if ((Product.SellPrice - Product.MaxDiscount) < Product.BuyPrice)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يمكن ان يكون الخصم اكبر من سعر الشراء" });
+                }
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);

@@ -1,82 +1,208 @@
-﻿
-@{
+﻿@{
     ViewData["Title"] = "المنتجات";
     Layout = "_DevExtremeLayout";
 }
 
 <h1>بيانات المنتجات</h1>
+<div><button class="btn btn-primary" onclick="showProductDetailsPopup()">اضافة كمية</button></div>
 
-@(
-Html.DevExtreme().DataGrid<ProductsModel>()
-      .ID("gridContainer")
-      .DataSource(d => d
-          .Mvc()
-          .Controller("Products")
-          .LoadAction("LoadProducts")
-          .InsertAction("AddNewProduct")
-          .UpdateAction("UpdateProduct")
-          .DeleteAction("DeleteProduct")
-          .Key("ProductId")
-      )
-     .OnToolbarPreparing("onToolbarPreparing")
-     .Selection(s => s.Mode(SelectionMode.Multiple))
-     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
-     .OnExporting("exporting")
-          .ColumnAutoWidth(true)
-     .AllowColumnResizing(true)
-     .Editing(e => e
-        .Mode(GridEditMode.Popup)
-        .AllowAdding(true)
-        .AllowUpdating(true)
-        .AllowDeleting(true)
-        .Popup(p => p
-                .Title("بيانات المنتج الاساسية")
-                .ShowTitle(true)
-                .Width(800)
-                .Height(705))
-    )
+@(Html.DevExtreme().DataGrid<ProductsModel>()
+    .ID("gridContainer")
+    .DataSource(d => d.Mvc().Controller("Products").LoadAction("LoadProducts").InsertAction("AddNewProduct").UpdateAction("UpdateProduct").DeleteAction("DeleteProduct").Key("ProductId"))
+    .OnToolbarPreparing("onToolbarPreparing")
+    .Selection(s => s.Mode(SelectionMode.Multiple))
+    .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+    .OnExporting("exporting")
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .Editing(e => e.Mode(GridEditMode.Popup).AllowAdding(true).AllowUpdating(true).AllowDeleting(true).Popup(p => p.Title("بيانات المنتج الاساسية").ShowTitle(true).Width(800).Height(705)))
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))
-    .Pager(p => p
-        .ShowPageSizeSelector(true)
-        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
-    )
-    .SearchPanel(s => s
-        .Visible(true)
-        .HighlightCaseSensitive(true)
-    )
+    .Pager(p => p.ShowPageSizeSelector(true).AllowedPageSizes(new[] { 10, 25, 50, 100 }))
+    .SearchPanel(s => s.Visible(true).HighlightCaseSensitive(true))
     .GroupPanel(g => g.Visible(false))
     .RowAlternationEnabled(true)
     .Width("100%")
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.ProductId).Caption("رقم المنتج");
+        columns.AddFor(m => m.ProductId).Caption("كود المنتج");
         columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
         columns.AddFor(m => m.BuyPrice).Caption("سعر شراء المنتج");
         columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
-        columns.AddFor(m => m.MinQuantity).Caption("أقل عدد في المخزن");
+        columns.AddFor(m => m.TotalQuantity).Caption("الكمية المتوفرة").AllowEditing(false);
+        columns.AddFor(m => m.MinQuantity).Caption("أقل عدد");
         columns.AddFor(m => m.MaxDiscount).Caption("اقصي قيمة خصم");
         columns.AddFor(m => m.Notes).Caption("ملاحظات");
-        columns.AddFor(m => m.CategoryId).Caption("تصنيف المنتج").Lookup(lookup => lookup
-            .DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories"))
-            .ValueExpr("CategoryId")
-            .DisplayExpr("CategoryName"));
-        columns.AddFor(m => m.ProductTypeId).Caption("نوع المنتج").Lookup(lookup => lookup
-            .DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes"))
-            .ValueExpr("ProductTypeId")
-            .DisplayExpr("ProductTypeName"));
-        columns.AddFor(m => m.ProductPhoto).Caption("صورة المنتج")
-            .EditCellTemplate(@<text>
-                @(Html.DevExtreme().FileUploader()
-                    .ID("fileUploader")
-                    .SelectButtonText("اختر صورة المنتج")
-        .Accept("image/*"))</text>);
+        columns.AddFor(m => m.CategoryId).Caption("التصنيف").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories")).ValueExpr("CategoryId").DisplayExpr("CategoryName"));
+        columns.AddFor(m => m.ProductTypeId).Caption("النوع").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes")).ValueExpr("ProductTypeId").DisplayExpr("ProductTypeName"));
+       @* columns.AddFor(m => m.ProductPhoto).Caption("صورة المنتج").EditCellTemplate(@<text>
+            @(Html.DevExtreme().FileUploader().ID("fileUploader").SelectButtonText("اختر صورة المنتج").Accept("image/*"))
+            </text>);*@
     })
     .HeaderFilter(f => f.Visible(true))
-    )
+)
+
+<div id="productDetailsPopup" style="display:none;">
+    <div class="row">
+        <div class="form-group mb-3">
+            <label for="ProductId">اسم المنتج</label>
+            <select id="ProductId" class="form-control" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="SizeId">المقاس</label>
+            <select id="SizeId" class="form-control" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="ColorId">اللون</label>
+            <select id="ColorId" class="form-control" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="BranchId">اسم الفرع</label>
+            <select id="BranchId" class="form-control" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="Quantity">الكمية</label>
+            <input type="number" id="Quantity" class="form-control" min="0" required />
+        </div>
+        <div class="form-group mb-3">
+            <label for="Notes">ملاحظات</label>
+            <input type="text" id="Notes" class="form-control" required />
+        </div>
+        <div class="form-group mb-3">
+            <button type="button" class="btn btn-primary mx-3" onclick="addItemToGrid()">إضافة</button>
+        </div>
+        <div>
+            <div id="invoiceItemsGrid" class="mb-3"></div>
+        </div>
+    </div>
+
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary mx-3" onclick="closePopup()">إغلاق</button>
+        <button type="button" class="btn btn-success" onclick="saveInvoice()">حفظ</button>
+    </div>
+</div>
 
 <script>
+    var invoiceItems = []; // Stores invoice items
+
+    $(document).ready(function () {
+        initializeItemsGrid();
+    });
+
+    function initializeItemsGrid() {
+        $("#invoiceItemsGrid").dxDataGrid({
+            dataSource: invoiceItems,
+            columns: [
+                { dataField: "ProductId", caption: "اسم المنتج" },
+                { dataField: "SizeId", caption: "المقاس" },
+                { dataField: "ColorId", caption: "اللون" },
+                { dataField: "Quantity", caption: "الكمية" }
+            ],
+        });
+    }
+
+    $(function () {
+        // Initialize product details popup
+        var productDetailsPopup = $("#productDetailsPopup").dxPopup({
+            title: "إدخال إلى المخزن",
+            visible: false,
+            width: 800,
+            height: 500,
+            onShown: function () {
+                initSelectBoxes();
+            }
+        }).dxPopup("instance");
+
+        // Array to hold invoice items
+        var invoiceItems = [];
+
+        // Initialize the grid inside the popup
+        $("#invoiceItemsGrid").dxDataGrid({
+            dataSource: invoiceItems,
+            columns: [
+                { dataField: "ProductId", caption: "اسم المنتج" },
+                { dataField: "SizeId", caption: "المقاس" },
+                { dataField: "ColorId", caption: "اللون" },
+                { dataField: "Quantity", caption: "الكمية" },
+                { dataField: "Notes", caption: "ملاحظات" }
+            ],
+            editing: {
+                allowDeleting: true,
+                texts: {
+                    confirmDeleteMessage: 'هل أنت متأكد من أنك تريد حذف هذا العنصر؟'
+                }
+            },
+            showBorders: true,
+            rtlEnabled: true
+        });
+
+        // Function to open the popup
+        window.showProductDetailsPopup = function () {
+            productDetailsPopup.show();
+        };
+
+        // Function to add an item to the grid and invoiceItems array
+        window.addItemToGrid = function () {
+            var item = {
+                ProductId: $('#ProductId').val(),
+                SizeId: $('#SizeId').val(),
+                ColorId: $('#ColorId').val(),
+                Quantity: parseInt($('#Quantity').val(), 10),
+                Notes: $('#Notes').val()
+            };
+
+            // Add item to the array
+            invoiceItems.push(item);
+            $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
+            // Clear form fields
+            $('#ProductId').val('').trigger('change');
+            $('#SizeId').val('').trigger('change');
+            $('#ColorId').val('').trigger('change');
+            $('#Quantity').val('');
+            $('#Notes').val('');
+        };
+
+        // Function to close the popup
+        window.closePopup = function () {
+            $("#productDetailsPopup").dxPopup("instance").hide(); // Use dxPopup's hide method
+            invoiceItems = []; // Clear the invoice items
+            // Reinitialize the grid's data source with the empty invoiceItems
+            $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
+        };
+
+        // Populate dropdowns
+        async function initSelectBoxes() {
+            populateDropdown('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
+            populateDropdown('/Sizes/LoadSizes', 'SizeId', 'SizeId', 'SizeName');
+            populateDropdown('/Colors/LoadColors', 'ColorId', 'ColorId', 'ColorName');
+            populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
+        }
+
+        // Generic function to populate a dropdown from an endpoint
+        async function populateDropdown(url, elementId, valueField, textField) {
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const selectElement = $(`#${elementId}`);
+                selectElement.empty().append(data.map(item => new Option(item[textField], item[valueField])));
+                selectElement.select2({
+                    placeholder: "برجاء الاختيار",
+                    allowClear: true,
+                    width: '100%'
+                });
+            } else {
+                console.error('Failed to load data for:', elementId);
+            }
+        }
+
+        // Example save function
+        window.saveInvoice = function () {
+            console.log('Saving invoice with items:', invoiceItems);
+        };
+    });
+
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
         var worksheet = workbook.addWorksheet('Products');
@@ -108,3 +234,9 @@ Html.DevExtreme().DataGrid<ProductsModel>()
         toolbarItems.push(customButton);
     }
 </script>
+
+<style>
+    .select2-container--open {
+        z-index: 9999999 !important;
+    }
+</style>
