@@ -30,6 +30,9 @@ builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IUserTypesService, UserTypesService>();
 builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
+builder.Services.AddScoped<IInventoryMovementService, InventoryMovementService>();
+builder.Services.AddScoped<IBranchInventoryService, BranchInventoryService>();
+
 
 
 builder.Services.AddAuthentication(

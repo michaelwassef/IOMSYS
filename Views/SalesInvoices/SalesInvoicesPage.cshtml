@@ -164,24 +164,24 @@
     }
 
     async function fetchAvailableSizes(productId) {
-        try {
-            const response = await fetch(`/Products/GetSizeandColorOfProduct?ProductId=${productId}`);
-            const sizes = await response.json();
-            populateDropdownWithItems('SizeId', sizes, 'SizeName', 'SizeId');
-        } catch (error) {
-            console.error('Error fetching available sizes:', error);
-        }
+    try {
+        const response = await fetch(`/Products/GetAvailableSizes?ProductId=${productId}`);
+        const data = await response.json();
+        populateDropdownWithItems('SizeId', data, 'SizeName', 'SizeId');
+    } catch (error) {
+        console.error('Error fetching available sizes:', error);
     }
+}
 
-    async function fetchAvailableColors(productId) {
-        try {
-            const response = await fetch(`/Products/GetSizeandColorOfProduct?ProductId=${productId}`);
-            const colors = await response.json();
-            populateDropdownWithItems('ColorId', colors, 'ColorName', 'ColorId');
-        } catch (error) {
-            console.error('Error fetching available colors:', error);
-        }
+async function fetchAvailableColors(productId) {
+    try {
+        const response = await fetch(`/Products/GetAvailableColors?ProductId=${productId}`);
+        const data = await response.json();
+        populateDropdownWithItems('ColorId', data, 'ColorName', 'ColorId');
+    } catch (error) {
+        console.error('Error fetching available colors:', error);
     }
+}
 
     function populateDropdownWithItems(elementId, items, textField, valueField) {
         const selectElement = document.getElementById(elementId);
@@ -233,18 +233,18 @@
     }
     }
 
-    $('#ProductId').on('change', async function () {
-        var productId = $(this).val();
-        if (productId) {
-            fetchSellPrice(productId);
-            await fetchAvailableSizes(productId);
-            await fetchAvailableColors(productId);
-        } else {
-            // Reset sizes and colors if no product is selected
-            $('#SizeId').empty().append(new Option("برجاء الاختيار", ""));
-            $('#ColorId').empty().append(new Option("برجاء الاختيار", ""));
-        }
-    });
+   $('#ProductId').on('change', async function () {
+    var productId = $(this).val();
+    if (productId) {
+        fetchSellPrice(productId);
+        fetchAvailableSizes(productId); 
+        fetchAvailableColors(productId); 
+    } else {
+        resetDropdown('SizeId'); 
+        resetDropdown('ColorId'); 
+    }
+});
+
 
     $(document).ready(function() {
     $('#ProductId, #SizeId, #ColorId, #BranchId').change(function() {

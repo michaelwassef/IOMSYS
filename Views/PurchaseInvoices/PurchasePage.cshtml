@@ -85,15 +85,12 @@
         .Columns(columns =>
         {
             columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
-
             columns.AddFor(m => m.SizeName).Caption("المقاس");
-
             columns.AddFor(m => m.ColorName).Caption("اللون");
-
             columns.AddFor(m => m.Quantity).Caption("الكمية");
-
             columns.AddFor(m => m.BuyPrice).Caption("سعر الشراء للواحد");
         })
+        .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
         .DataSource(d => d.Mvc() 
         .Controller("PurchaseItems")
         .LoadAction("LoadPurchaseItemsByInvoiceId")
@@ -108,6 +105,7 @@
         )
             </text>);
     })
+    .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>

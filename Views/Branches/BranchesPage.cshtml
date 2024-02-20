@@ -54,6 +54,7 @@
         columns.AddFor(m => m.LandlinePhone).Caption("رقم الارضي");
         columns.AddFor(m => m.Address).Caption("العنوان");
     })
+        .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>

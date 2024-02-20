@@ -15,14 +15,16 @@ namespace IOMSYS.Controllers
         private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
         private readonly IProductsService _productsService;
         private readonly IPaymentTransactionService _paymentTransactionService;
+        private readonly IBranchInventoryService _branchInventoryService;
 
-        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService)
+        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesItemsService = salesItemsService;
             _salesInvoiceItemsService = salesInvoiceItemsService;
             _productsService = productsService;
             _paymentTransactionService = paymentTransactionService;
+            _branchInventoryService = branchInventoryService;
         }
 
         public IActionResult SalesPage()
@@ -93,8 +95,10 @@ namespace IOMSYS.Controllers
                 // Insert the items and link them to the invoice and update buyprice
                 foreach (var item in model.SalesItems)
                 {
+                    item.BranchId = model.BranchId;
                     item.SalesItemId = await _salesItemsService.InsertSalesItemAsync(item);
                     await _salesInvoiceItemsService.AddSalesItemToInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, model.BranchId, -item.Quantity);
                 }
 
                 var paymentTransaction = new PaymentTransactionModel
@@ -186,6 +190,7 @@ namespace IOMSYS.Controllers
                 // Step 3: Delete items from SaleItems
                 foreach (var item in items)
                 {
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, (int) item.BranchId, item.Quantity);
                     await _salesItemsService.DeleteSalesItemAsync(item.SalesItemId);
                 }
 

@@ -1,10 +1,8 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using System.Drawing;
 
 namespace IOMSYS.Controllers
 {
@@ -31,6 +29,7 @@ namespace IOMSYS.Controllers
         {
             return View();
         }
+
         public IActionResult WarehouseDeficienciesPage()
         {
             return View();
@@ -65,16 +64,23 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetSizeandColorOfProduct([FromQuery] int ProductId)
+        public async Task<IActionResult> GetAvailableSizes([FromQuery] int ProductId)
         {
-            var Products = await _ProductsService.GetAvailableSizesAndColorsForProduct(ProductId);
+            var Products = await _ProductsService.GetAvailableSizesForProduct(ProductId);
             return Json(Products);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAvailable(int productId,int colorId,int sizeId,int BranchId)
+        public async Task<IActionResult> GetAvailableColors([FromQuery] int ProductId)
         {
-            var sizesAndColors = await _ProductsService.GetAvailableQuantity(productId,colorId,sizeId, BranchId);
+            var Products = await _ProductsService.GetAvailableColorsForProduct(ProductId);
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailable(int productId, int colorId, int sizeId, int BranchId)
+        {
+            var sizesAndColors = await _ProductsService.GetAvailableQuantity(productId, colorId, sizeId, BranchId);
             return Ok(sizesAndColors);
         }
 
@@ -99,7 +105,7 @@ namespace IOMSYS.Controllers
                 {
                     return BadRequest(new { ErrorMessage = "لا يمكن ان يكون سعر البيع اصغر من الشراء" });
                 }
-                if ((newProduct.SellPrice-newProduct.MaxDiscount) < newProduct.BuyPrice)
+                if ((newProduct.SellPrice - newProduct.MaxDiscount) < newProduct.BuyPrice)
                 {
                     return BadRequest(new { ErrorMessage = "لا يمكن ان يكون الخصم اكبر من سعر الشراء" });
                 }

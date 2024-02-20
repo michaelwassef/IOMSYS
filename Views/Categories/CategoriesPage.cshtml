@@ -49,6 +49,7 @@
     {
         columns.AddFor(m => m.CategoryName).Caption("اسم التصنيف");
     })
+        .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>

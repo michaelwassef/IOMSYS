@@ -209,7 +209,7 @@
             alert('برجاء ملاء بيانات الاصناف');
             return;
         }
-        if (buyPrice < sellPrice) {
+        if (buyPrice > sellPrice) {
             alert('يجب ان يكون سعر البيع اكبر من الشراء');
             return;
         }
@@ -371,6 +371,13 @@
                     document.getElementById('invoiceForm').reset();
                     tempItems = [];
                     refreshItemsGrid();
+
+                    var today = new Date();
+                    var dd = String(today.getDate()).padStart(2, '0');
+                    var mm = String(today.getMonth() + 1).padStart(2, '0');
+                    var yyyy = today.getFullYear();
+                    today = yyyy + '-' + mm + '-' + dd;
+                    document.getElementById('purchaseDate').value = today;
                 } else {
                     displayMessage('error', result.message);
                 }

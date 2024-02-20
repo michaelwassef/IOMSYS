@@ -11,7 +11,7 @@
         public decimal SellPrice { get; set; }
         public decimal ItemDiscount { get; set; }
         public int? DiscountId { get; set; }
-
+        public int? BranchId { get; set; }
         //for joins
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }

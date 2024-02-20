@@ -10,14 +10,14 @@ namespace IOMSYS.Controllers
         private readonly ISalesInvoicesService _salesInvoicesService;
         private readonly ISalesItemsService _salesItemsService;
         private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
-        private readonly IProductsService _productsService;
+        private readonly IBranchInventoryService _branchInventoryService;
 
-        public SalesItemsController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IProductsService productsService)
+        public SalesItemsController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IBranchInventoryService branchInventoryService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesInvoiceItemsService = salesInvoiceItemsService;
             _salesItemsService = salesItemsService;
-            _productsService = productsService;
+            _branchInventoryService = branchInventoryService;
         }
 
         [HttpGet]
@@ -43,7 +43,7 @@ namespace IOMSYS.Controllers
                 // Assume formData contains both the sales item ID and the associated invoice ID
                 var salesItemId = Convert.ToInt32(formData["key"]);
                 var salesInvoiceIdModel = await _salesItemsService.GetSalesItemByIdAsync(salesItemId);
-                var salesInvoiceId = salesInvoiceIdModel.SalesInvoiceId;
+                int salesInvoiceId = salesInvoiceIdModel.SalesInvoiceId;
 
                 // Step 1: Remove the connection between the invoice and the item
                 var removeConnectionResult = await _salesInvoiceItemsService.RemoveSalesItemFromInvoiceAsync(new SalesInvoiceItemsModel
@@ -56,6 +56,7 @@ namespace IOMSYS.Controllers
                 int deletesalesItemsResult = await _salesItemsService.DeleteSalesItemAsync(salesItemId);
                 if (deletesalesItemsResult > 0)
                 {
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(salesInvoiceIdModel.ProductId, salesInvoiceIdModel.SizeId, salesInvoiceIdModel.ColorId, (int)salesInvoiceIdModel.BranchId, salesInvoiceIdModel.Quantity);
                     await RecalculateInvoiceTotal(salesInvoiceId);
                     await DeleteInvoiceIfNoItems(salesInvoiceId);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });

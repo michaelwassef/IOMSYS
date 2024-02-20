@@ -48,6 +48,7 @@
     {
         columns.AddFor(m => m.PaymentMethodName).Caption("اسم طريقة الدفع");
     })
+        .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
 )
 

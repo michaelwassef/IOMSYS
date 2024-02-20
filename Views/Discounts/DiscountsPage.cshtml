@@ -53,6 +53,7 @@
         columns.AddFor(m => m.FromDate).Caption("تاريخ بداية الخصم");
         columns.AddFor(m => m.ToDate).Caption("تاريخ نهاية الخصم");
     })
+        .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
 )
 

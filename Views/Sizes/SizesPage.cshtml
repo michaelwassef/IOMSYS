@@ -48,6 +48,7 @@
     {
         columns.AddFor(m => m.SizeName).Caption("اسم المقاس");
     })
+    .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>

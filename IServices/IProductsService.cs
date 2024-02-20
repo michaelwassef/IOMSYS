@@ -13,7 +13,8 @@ namespace IOMSYS.IServices
         Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync();
         Task<IEnumerable<ProductsModel>> GetAllProductsInWarehouseAsync(int BranchId);
         Task<IEnumerable<ProductsModel>> GetMinQuantityProductsInWarehouseAsync(int BranchId);
-        Task<IEnumerable<ProductsModel>> GetAvailableSizesAndColorsForProduct(int productId);
+        Task<IEnumerable<ProductsModel>> GetAvailableColorsForProduct(int productId);
+        Task<IEnumerable<ProductsModel>> GetAvailableSizesForProduct(int productId);
         Task<int> GetAvailableQuantity(int productId, int colorId, int sizeId,int branchId);
     }
 }

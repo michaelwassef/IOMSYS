@@ -13,13 +13,15 @@ namespace IOMSYS.Controllers
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
         private readonly IProductsService _ProductsService;
+        private readonly IBranchInventoryService _branchInventoryService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService)
         {
             _PurchaseItemsService = PurchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
             _purchaseInvoicesService = purchaseInvoicesService;
             _ProductsService = productsService;
+            _branchInventoryService = branchInventoryService;
         }
 
         [HttpGet]
@@ -44,7 +46,7 @@ namespace IOMSYS.Controllers
                 var values = formData["values"];
                 var newPurchaseItems = new PurchaseItemsModel();
                 JsonConvert.PopulateObject(values, newPurchaseItems);
-
+                
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
@@ -52,47 +54,77 @@ namespace IOMSYS.Controllers
 
                 if (addPurchaseItemsResult > 0)
                 {
-                    await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
-                    return Ok(new { SuccessMessage = "Successfully Added" });
+                    if(newPurchaseItems.SellPrice != 0 || newPurchaseItems.BuyPrice != 0)
+                    {
+                        await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
+                    }
+
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(
+                           newPurchaseItems.ProductId,
+                           newPurchaseItems.SizeId,
+                           newPurchaseItems.ColorId,
+                           newPurchaseItems.BranchId, 
+                           newPurchaseItems.Quantity);
+
+                    return Json(new { success = true, message = "تم الادخال بنجاح وتم تحديث المخزون." });
                 }
                 else
-                    return BadRequest(new { ErrorMessage = "Could Not Add" });
+                    return Json(new { success = false, message = "حدث خطأ اثناء الادخال" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
+                return Json(new { success = false, message = "Could not add", ExceptionMessage = ex.Message });
             }
         }
 
-        //[HttpPut]
-        //public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)
-        //{
-        //    try
-        //    {
-        //        var key = Convert.ToInt32(formData["key"]);
-        //        var values = formData["values"];
-        //        var PurchaseItems = await _PurchaseItemsService.GetPurchaseItemByIdAsync(key);
-        //        JsonConvert.PopulateObject(values, PurchaseItems);
+        [HttpPut]
+        public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)
+        {
+            try
+            {
+                var key = Convert.ToInt32(formData["key"]);
+                var values = formData["values"];
+                var existingPurchaseItem = await _PurchaseItemsService.GetPurchaseItemByIdAsync(key);
+                if (existingPurchaseItem == null)
+                {
+                    return NotFound(new { ErrorMessage = "Purchase item not found." });
+                }
 
-        //        if (!ModelState.IsValid)
-        //            return BadRequest(ModelState);
+                var newPurchaseItem = new PurchaseItemsModel();
+                JsonConvert.PopulateObject(values, newPurchaseItem);
 
-        //        int updatePurchaseItemsResult = await _PurchaseItemsService.UpdatePurchaseItemAsync(PurchaseItems);
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-        //        if (updatePurchaseItemsResult > 0)
-        //        {
-        //            return Ok(new { SuccessMessage = "Updated Successfully" });
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(new { ErrorMessage = "Could Not Update" });
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseItems.", ExceptionMessage = ex.Message });
-        //    }
-        //}
+                int quantityDifference = newPurchaseItem.Quantity - existingPurchaseItem.Quantity;
+
+                int updatePurchaseItemsResult = await _PurchaseItemsService.UpdatePurchaseItemAsync(newPurchaseItem);
+
+                if (updatePurchaseItemsResult > 0)
+                {
+                    if (quantityDifference != 0)
+                    {
+                        await _branchInventoryService.AdjustInventoryQuantityAsync(
+                            newPurchaseItem.ProductId,
+                            newPurchaseItem.SizeId,
+                            newPurchaseItem.ColorId,
+                            newPurchaseItem.BranchId,
+                            quantityDifference);
+                    }
+
+                    return Ok(new { SuccessMessage = "Updated Successfully, inventory adjusted." });
+                }
+                else
+                {
+                    return BadRequest(new { ErrorMessage = "Could Not Update" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseItems.", ExceptionMessage = ex.Message });
+            }
+        }
+
 
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]
@@ -100,28 +132,40 @@ namespace IOMSYS.Controllers
         {
             try
             {
-                // Assume formData contains both the purchase item ID and the associated invoice ID
                 var purchaseItemId = Convert.ToInt32(formData["key"]);
-                var purchaseInvoiceIdModel = await _PurchaseItemsService.GetPurchaseItemByIdAsync(purchaseItemId);
-                var purchaseInvoiceId = purchaseInvoiceIdModel.PurchaseInvoiceId;
+                var purchaseItem = await _PurchaseItemsService.GetPurchaseItemByIdAsync(purchaseItemId);
+                var purchaseInvoiceId = purchaseItem.PurchaseInvoiceId;
 
-                // Step 1: Remove the connection between the invoice and the item
+                if (purchaseItem == null)
+                {
+                    return NotFound(new { ErrorMessage = "Purchase item not found." });
+                }
+
                 var removeConnectionResult = await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel
                 {
                     PurchaseInvoiceId = purchaseInvoiceId,
                     PurchaseItemId = purchaseItemId
                 });
 
-                // Step 2: Delete the purchase item
                 int deletePurchaseItemsResult = await _PurchaseItemsService.DeletePurchaseItemAsync(purchaseItemId);
                 if (deletePurchaseItemsResult > 0)
                 {
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(
+                        purchaseItem.ProductId,
+                        purchaseItem.SizeId,
+                        purchaseItem.ColorId,
+                        purchaseItem.BranchId,
+                        -purchaseItem.Quantity);
+
                     await RecalculateInvoiceTotal(purchaseInvoiceId);
                     await DeleteInvoiceIfNoItems(purchaseInvoiceId);
-                    return Ok(new { SuccessMessage = "Deleted Successfully" });
+
+                    return Ok(new { SuccessMessage = "Deleted Successfully, inventory adjusted." });
                 }
                 else
+                {
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
+                }
             }
             catch (Exception ex)
             {

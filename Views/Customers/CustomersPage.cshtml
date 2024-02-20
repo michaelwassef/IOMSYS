@@ -52,6 +52,7 @@
         columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف العميل");
         columns.AddFor(m => m.Address).Caption("عنوان العميل");
     })
+    .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>

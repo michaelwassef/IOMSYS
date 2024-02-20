@@ -17,7 +17,7 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesItemsModel>> GetAllSalesItemsAsync()
         {
             var sql = @"
-                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.SellPrice, si.ItemDiscount, si.DiscountId
+                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId,si.SellPrice, si.ItemDiscount, si.DiscountId
                 FROM SalesItems si
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
@@ -32,7 +32,7 @@ namespace IOMSYS.Services
         public async Task<SalesItemsModel> GetSalesItemByIdAsync(int salesItemId)
         {
             var sql = @"
-                SELECT sii.SalesInvoiceId, si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.SellPrice, si.ItemDiscount, si.DiscountId
+                SELECT sii.SalesInvoiceId, si.SalesItemId, p.ProductId, p.ProductName, s.SizeId ,s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.BranchId,si.SellPrice, si.ItemDiscount, si.DiscountId
                 FROM SalesItems si
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
@@ -49,7 +49,7 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesItemsModel>> GetSaleItemsByInvoiceIdAsync(int SalesInvoiceId)
         {
             var sql = @"
-                SELECT sii.SalesInvoiceId,si.SalesItemId, p.ProductId, p.ProductName, s.SizeId, s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.SellPrice, si.ItemDiscount, si.DiscountId
+                SELECT sii.SalesInvoiceId,si.SalesItemId, p.ProductId, p.ProductName, s.SizeId, s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId
                 FROM SalesInvoiceItems sii
                 INNER JOIN SalesItems si ON sii.SalesItemId = si.SalesItemId
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
@@ -67,8 +67,8 @@ namespace IOMSYS.Services
         public async Task<int> InsertSalesItemAsync(SalesItemsModel salesItem)
         {
             var sql = @"
-                INSERT INTO SalesItems (ProductId, SizeId, ColorId, Quantity, SellPrice, ItemDiscount, DiscountId) 
-                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @SellPrice, @ItemDiscount, @DiscountId);
+                INSERT INTO SalesItems (ProductId, SizeId, ColorId, Quantity, SellPrice, ItemDiscount, DiscountId, BranchId) 
+                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @SellPrice, @ItemDiscount, @DiscountId, @BranchId);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -80,7 +80,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 UPDATE SalesItems 
-                SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, SellPrice = @SellPrice , ItemDiscount = @ItemDiscount, DiscountId = @DiscountId
+                SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, SellPrice = @SellPrice , ItemDiscount = @ItemDiscount, DiscountId = @DiscountId, BranchId = @BranchId
                 WHERE SalesItemId = @SalesItemId";
 
             using (var db = _dapperContext.CreateConnection())

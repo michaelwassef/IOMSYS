@@ -34,8 +34,11 @@ namespace IOMSYS.Services
             var sql = @"
                 SELECT 
                     pi.PurchaseItemId, 
-                    p.ProductName, 
-                    s.SizeName, 
+                    p.ProductId,
+                    p.ProductName,
+                    s.SizeId,
+                    s.SizeName,
+                    c.ColorId,
                     c.ColorName, 
                     pi.Quantity, 
                     pi.BuyPrice,

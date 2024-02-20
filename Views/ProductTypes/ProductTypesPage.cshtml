@@ -47,6 +47,7 @@
     {
         columns.AddFor(m => m.ProductTypeName).Caption("اسم نوع المنتجات");
     })
+    .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
 )
 

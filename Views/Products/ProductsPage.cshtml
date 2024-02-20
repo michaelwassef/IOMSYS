@@ -4,7 +4,11 @@
 }
 
 <h1>بيانات المنتجات</h1>
-<div><button class="btn btn-primary" onclick="showProductDetailsPopup()">اضافة كمية</button></div>
+<div>
+    <button class="btn btn-primary mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
+    <button class="btn btn-primary mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
+</div>
+
 
 @(Html.DevExtreme().DataGrid<ProductsModel>()
     .ID("gridContainer")
@@ -40,6 +44,7 @@
             @(Html.DevExtreme().FileUploader().ID("fileUploader").SelectButtonText("اختر صورة المنتج").Accept("image/*"))
             </text>);*@
     })
+    .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
 )
 
@@ -73,23 +78,150 @@
             <button type="button" class="btn btn-primary mx-3" onclick="addItemToGrid()">إضافة</button>
         </div>
         <div>
-            <div id="invoiceItemsGrid" class="mb-3"></div>
+            <div id="invoiceItemsGrid" class="my-3"></div>
         </div>
     </div>
 
+    <div class="mb-3" id="alertPlaceholder"></div>
 
-    <div class="modal-footer">
+    <div class="my-3">
         <button type="button" class="btn btn-secondary mx-3" onclick="closePopup()">إغلاق</button>
         <button type="button" class="btn btn-success" onclick="saveInvoice()">حفظ</button>
+    </div>
+
+</div>
+
+<div id="moveInventoryPopup" style="display:none;">
+    <div>
+        <form id="moveInventoryForm">
+            <div class="form-group">
+                <label for="fromBranch">من فرع:</label>
+                <select id="fromBranch" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label for="toBranch">إلى فرع:</label>
+                <select id="toBranch" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label for="productId">المنتج:</label>
+                <select id="productId" class="form-control" onchange="productChanged()"></select>
+            </div>
+            <div class="form-group">
+                <label for="sizeId">المقاس:</label>
+                <select id="sizeId" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label for="colorId">اللون:</label>
+                <select id="colorId" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label for="quantity">الكمية:</label>
+                <input type="number" id="quantity" class="form-control" min="1" required>
+            </div>
+            <div class="my-3">
+                <button type="button" class="btn btn-secondary mx-3" onclick="closePopup2()">إغلاق</button>
+                <button type="button" class="btn btn-success" onclick="moveInventory()">تأكيد النقل</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-    var invoiceItems = []; // Stores invoice items
+    window.closePopup2 = function () {
+        $("#moveInventoryPopup").dxPopup("hide");
+    };
+
+    //////////
+    // Generic function to populate a dropdown from an endpoint
+    async function populateDropdown(url, elementId, valueField, textField) {
+        const response = await fetch(url);
+        if (response.ok) {
+            const data = await response.json();
+            const selectElement = $(`#${elementId}`);
+            selectElement.empty().append(data.map(item => new Option(item[textField], item[valueField])));
+            selectElement.select2({
+                placeholder: "برجاء الاختيار",
+                allowClear: true,
+                width: '100%'
+            });
+        } else {
+            console.error('Failed to load data for:', elementId);
+        }
+    }
+
+    $(function () {
+        $("#moveInventoryPopup").dxPopup({
+            title: "نقل المخزون",
+            visible: false,
+            width: 600,
+            height: 500,
+        });
+        populateDropdown('/Branches/LoadBranches', 'fromBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
+    });
+
+    function showMoveInventoryPopup() {
+        $("#moveInventoryPopup").dxPopup("show");
+        populateDropdown('/Branches/LoadBranches', 'fromBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
+    }
+
+
+    function productChanged() {
+        var productId = $('#productId').val();
+        populateDropdown(`/Products/GetAvailableSizes?ProductId=${productId}`, 'sizeId', 'SizeId', 'SizeName');
+        populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'colorId', 'ColorId', 'ColorName');
+    }
+
+
+    async function moveInventory() {
+        var data = {
+            fromBranchId: $('#fromBranch').val(),
+            toBranchId: $('#toBranch').val(),
+            productId: $('#productId').val(),
+            sizeId: $('#sizeId').val(),
+            colorId: $('#colorId').val(),
+            quantity: $('#quantity').val()
+        };
+
+        const response = await fetch('/InventoryMovement/AddNewinventoryMovement', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            alert("تم نقل الكمية بنجاح.");
+            $("#moveInventoryPopup").dxPopup("hide");
+        } else {
+            alert("حدث خطأ أثناء نقل الكمية.");
+        }
+    }
+
+    //////////
+    var invoiceItems = []; 
 
     $(document).ready(function () {
         initializeItemsGrid();
     });
+
+    function displayMessage(type, message) {
+        console.log('Displaying message:', type, message); // Add this line for debugging
+        const messageContainer = document.createElement("div");
+        messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+        messageContainer.role = "alert";
+        messageContainer.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+
+        const alertPlaceholder = document.getElementById("alertPlaceholder");
+        alertPlaceholder.innerHTML = '';
+        alertPlaceholder.appendChild(messageContainer);
+    }
+
 
     function initializeItemsGrid() {
         $("#invoiceItemsGrid").dxDataGrid({
@@ -98,9 +230,25 @@
                 { dataField: "ProductId", caption: "اسم المنتج" },
                 { dataField: "SizeId", caption: "المقاس" },
                 { dataField: "ColorId", caption: "اللون" },
-                { dataField: "Quantity", caption: "الكمية" }
+                { dataField: "Quantity", caption: "الكمية" },
+                { dataField: "BranchId", caption: "الفرع" }
             ],
         });
+    }
+
+    // Function to validate item fields
+    function validateItem(item) {
+        return item.ProductId && item.SizeId && item.ColorId && item.BranchId && !isNaN(item.Quantity) && item.Quantity > 0;
+    }
+
+    // Function to clear form fields after adding an item
+    function clearFormFields() {
+        $('#ProductId').val('').trigger('change');
+        $('#SizeId').val('').trigger('change');
+        $('#ColorId').val('').trigger('change');
+        $('#BranchId').val('').trigger('change');
+        $('#Quantity').val('');
+        $('#Notes').val('');
     }
 
     $(function () {
@@ -126,6 +274,7 @@
                 { dataField: "SizeId", caption: "المقاس" },
                 { dataField: "ColorId", caption: "اللون" },
                 { dataField: "Quantity", caption: "الكمية" },
+                { dataField: "BranchId", caption: "الفرع" },
                 { dataField: "Notes", caption: "ملاحظات" }
             ],
             editing: {
@@ -143,32 +292,32 @@
             productDetailsPopup.show();
         };
 
-        // Function to add an item to the grid and invoiceItems array
         window.addItemToGrid = function () {
+            // Collect item details from form fields
             var item = {
                 ProductId: $('#ProductId').val(),
                 SizeId: $('#SizeId').val(),
                 ColorId: $('#ColorId').val(),
+                BranchId: $('#BranchId').val(), 
                 Quantity: parseInt($('#Quantity').val(), 10),
                 Notes: $('#Notes').val()
             };
 
-            // Add item to the array
-            invoiceItems.push(item);
-            $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
-            // Clear form fields
-            $('#ProductId').val('').trigger('change');
-            $('#SizeId').val('').trigger('change');
-            $('#ColorId').val('').trigger('change');
-            $('#Quantity').val('');
-            $('#Notes').val('');
+            var isValid = validateItem(item);
+
+            if (isValid) {
+                invoiceItems.push(item);
+                $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
+                clearFormFields();
+            } else {
+                alert('برجاء ملاء جميع الحقول');
+            }
         };
 
         // Function to close the popup
         window.closePopup = function () {
-            $("#productDetailsPopup").dxPopup("instance").hide(); // Use dxPopup's hide method
-            invoiceItems = []; // Clear the invoice items
-            // Reinitialize the grid's data source with the empty invoiceItems
+            $("#productDetailsPopup").dxPopup("instance").hide(); 
+            invoiceItems = []; 
             $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
 
@@ -197,10 +346,42 @@
             }
         }
 
-        // Example save function
-        window.saveInvoice = function () {
-            console.log('Saving invoice with items:', invoiceItems);
+        window.saveInvoice = async function () {
+            if (invoiceItems.length === 0) {
+                displayMessage('error', "يرجى إضافة منتج واحد على الأقل قبل الحفظ.");
+                return;
+            }
+
+            for (let item of invoiceItems) {
+                let formData = new FormData();
+                formData.append("values", JSON.stringify(item));
+
+                try {
+                    const response = await fetch('/PurchaseItems/AddNewPurchaseItem', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+
+                    if (!result.success) {
+                        displayMessage('error', result.message);
+                        return; 
+                    }
+                } catch (error) {
+                    console.error('Could not save the invoice item:', error);
+                    displayMessage('error', "حدث خطأ أثناء الحفظ، يرجى المحاولة مرة أخرى.");
+                    return; 
+                }
+            }
+
+            displayMessage('success', "تم الادخال بنجاح لجميع العناصر.");
+            invoiceItems = []; 
+            $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
+
+
+
     });
 
     function exporting(e) {

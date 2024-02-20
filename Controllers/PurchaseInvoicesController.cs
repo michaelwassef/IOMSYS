@@ -14,14 +14,16 @@ namespace IOMSYS.Controllers
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
         private readonly IProductsService _ProductsService;
         private readonly IPaymentTransactionService _paymentTransactionService;
+        private readonly IBranchInventoryService _branchInventoryService;
 
-        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService)
+        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService)
         {
             _purchaseInvoicesService = purchaseInvoicesService;
             _purchaseItemsService = purchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
             _ProductsService = productsService;
             _paymentTransactionService = paymentTransactionService;
+            _branchInventoryService = branchInventoryService;
         }
 
         public IActionResult PurchasePage()
@@ -96,6 +98,12 @@ namespace IOMSYS.Controllers
                     item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
                     await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                     await _ProductsService.UpdateProductBuyandSellPriceAsync(item.ProductId, item.BuyPrice, item.SellPrice);
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(
+                        item.ProductId,
+                        item.SizeId,
+                        item.ColorId,
+                        model.BranchId,
+                        item.Quantity);
                 }
 
                 var paymentTransaction = new PaymentTransactionModel
@@ -123,7 +131,6 @@ namespace IOMSYS.Controllers
         {
             try
             {
-                //return items and sum of (qty*buyprice) and compare by new totalinvoice if not equal return ("اجمالي الفاتورة لا يتوافق مع اجمالي الاصناف")
                 var key = Convert.ToInt32(formData["key"]);
                 var values = formData["values"];
                 var purchaseInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(key);
@@ -184,6 +191,13 @@ namespace IOMSYS.Controllers
                 // Step 2: Remove links from PurchaseInvoiceItems
                 foreach (var item in items)
                 {
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(
+                        item.ProductId,
+                        item.SizeId,
+                        item.ColorId,
+                        item.BranchId,
+                        -item.Quantity);
+
                     await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                 }
 
