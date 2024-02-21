@@ -14,14 +14,16 @@ namespace IOMSYS.Controllers
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
         private readonly IProductsService _ProductsService;
         private readonly IBranchInventoryService _branchInventoryService;
+        private readonly IPaymentTransactionService _paymentTransactionService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService)
         {
             _PurchaseItemsService = PurchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
             _purchaseInvoicesService = purchaseInvoicesService;
             _ProductsService = productsService;
             _branchInventoryService = branchInventoryService;
+            _paymentTransactionService = paymentTransactionService;
         }
 
         [HttpGet]
@@ -46,7 +48,7 @@ namespace IOMSYS.Controllers
                 var values = formData["values"];
                 var newPurchaseItems = new PurchaseItemsModel();
                 JsonConvert.PopulateObject(values, newPurchaseItems);
-                
+
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
@@ -54,7 +56,7 @@ namespace IOMSYS.Controllers
 
                 if (addPurchaseItemsResult > 0)
                 {
-                    if(newPurchaseItems.SellPrice != 0 || newPurchaseItems.BuyPrice != 0)
+                    if (newPurchaseItems.SellPrice != 0 || newPurchaseItems.BuyPrice != 0)
                     {
                         await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
                     }
@@ -63,7 +65,7 @@ namespace IOMSYS.Controllers
                            newPurchaseItems.ProductId,
                            newPurchaseItems.SizeId,
                            newPurchaseItems.ColorId,
-                           newPurchaseItems.BranchId, 
+                           newPurchaseItems.BranchId,
                            newPurchaseItems.Quantity);
 
                     return Json(new { success = true, message = "تم الادخال بنجاح وتم تحديث المخزون." });
@@ -124,7 +126,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred while updating the PurchaseItems.", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]
@@ -206,6 +207,16 @@ namespace IOMSYS.Controllers
                 int deleteResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
                 if (deleteResult > 0)
                 {
+                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
+                    if (paymentTransaction != null)
+                    {
+                        // Delete the payment transaction
+                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+                        if (deleteTransactionResult <= 0)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                        }
+                    }
                     return Ok(new { SuccessMessage = "Invoice deleted successfully." });
                 }
                 else

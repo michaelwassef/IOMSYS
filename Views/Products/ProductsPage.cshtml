@@ -95,28 +95,34 @@
     <div>
         <form id="moveInventoryForm">
             <div class="form-group">
-                <label for="fromBranch">من فرع:</label>
-                <select id="fromBranch" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label for="toBranch">إلى فرع:</label>
-                <select id="toBranch" class="form-control"></select>
-            </div>
-            <div class="form-group">
-                <label for="productId">المنتج:</label>
+                <label for="ProductId">المنتج:</label>
                 <select id="productId" class="form-control" onchange="productChanged()"></select>
             </div>
             <div class="form-group">
-                <label for="sizeId">المقاس:</label>
+                <label for="SizeId">المقاس:</label>
                 <select id="sizeId" class="form-control"></select>
             </div>
             <div class="form-group">
-                <label for="colorId">اللون:</label>
+                <label for="ColorId">اللون:</label>
                 <select id="colorId" class="form-control"></select>
             </div>
             <div class="form-group">
-                <label for="quantity">الكمية:</label>
+                <label for="FromBranchId">من فرع:</label>
+                <select id="fromBranch" class="form-control"></select>
+                <div id="availableQtyDisplay" class="text-primary mt-2"></div>
+            </div>
+            <div class="form-group">
+                <label for="ToBranchId">إلى فرع:</label>
+                <select id="toBranch" class="form-control"></select>
+                <div id="availableQtyDisplay2" class="text-primary mt-2"></div>
+            </div>
+            <div class="form-group">
+                <label for="Quantity">الكمية:</label>
                 <input type="number" id="quantity" class="form-control" min="1" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="Notes">ملاحظات</label>
+                <input type="text" id="notes" class="form-control" required />
             </div>
             <div class="my-3">
                 <button type="button" class="btn btn-secondary mx-3" onclick="closePopup2()">إغلاق</button>
@@ -131,14 +137,69 @@
         $("#moveInventoryPopup").dxPopup("hide");
     };
 
-    //////////
-    // Generic function to populate a dropdown from an endpoint
-    async function populateDropdown(url, elementId, valueField, textField) {
+    $(document).ready(function () {
+        // Shared event handler for product, size, color changes
+        $('#productId, #sizeId, #colorId').change(function () {
+            // Fetch for both branches if they are selected
+            var productId = $('#productId').val();
+            var sizeId = $('#sizeId').val();
+            var colorId = $('#colorId').val();
+            var fromBranchId = $('#fromBranch').val();
+            var toBranchId = $('#toBranch').val();
+
+            // Fetch available quantity for the fromBranch if all necessary selections are made
+            if (productId && sizeId && colorId && fromBranchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, fromBranchId, '#availableQtyDisplay');
+            } else {
+                $('#availableQtyDisplay').text(`الكمية المتاحة: 0`);
+            }
+
+            // Fetch available quantity for the toBranch if all necessary selections are made
+            if (productId && sizeId && colorId && toBranchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, toBranchId, '#availableQtyDisplay2');
+            } else {
+                $('#availableQtyDisplay2').text(`الكمية المتاحة: 0`);
+            }
+        });
+
+        // Change event for fromBranch and toBranch to update their available quantity display
+        $('#fromBranch, #toBranch').change(function () {
+            // Trigger the change event for the product to re-fetch for both branches
+            $('#productId').change();
+        });
+    });
+
+    // Updated function to fetch available quantity and specify the display element
+    async function fetchAvailableQuantity(productId, sizeId, colorId, branchId, displayElement) {
+        try {
+            const response = await fetch(`/Products/GetAvailable?productId=${productId}&sizeId=${sizeId}&colorId=${colorId}&branchId=${branchId}`);
+            const data = await response.json();
+            $(displayElement).text(`الكمية المتاحة: ${data}`);
+        } catch (error) {
+            console.error('Error fetching available quantity:', error);
+            $(displayElement).text(`الكمية المتاحة: 0`);
+        }
+    }
+
+    async function populateDropdown(url, elementId, valueField, textField, prevSelectedValue) {
         const response = await fetch(url);
         if (response.ok) {
             const data = await response.json();
             const selectElement = $(`#${elementId}`);
-            selectElement.empty().append(data.map(item => new Option(item[textField], item[valueField])));
+            selectElement.empty();
+            data.forEach(item => {
+                const option = new Option(item[textField], item[valueField]);
+                selectElement.append(option);
+            });
+
+            // If previous value still exists, reselect it
+            if (prevSelectedValue && selectElement.find(`option[value="${prevSelectedValue}"]`).length > 0) {
+                selectElement.val(prevSelectedValue).trigger('change');
+            } else {
+                selectElement.val(null).trigger('change'); // Reset or set to a placeholder if no previous value
+            }
+
+            // Reinitialize select2 if used
             selectElement.select2({
                 placeholder: "برجاء الاختيار",
                 allowClear: true,
@@ -148,6 +209,7 @@
             console.error('Failed to load data for:', elementId);
         }
     }
+
 
     $(function () {
         $("#moveInventoryPopup").dxPopup({
@@ -166,45 +228,119 @@
         populateDropdown('/Branches/LoadBranches', 'fromBranch', 'BranchId', 'BranchName');
         populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
         populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
-    }
 
+        setTimeout(() => {
+            var productId = $('#productId').val();
+            productChanged()
+            var sizeId = $('#sizeId').val();
+            var colorId = $('#colorId').val();
+            var fromBranchId = $('#fromBranch').val();
+            var toBranchId = $('#toBranch').val();
+            if (productId && sizeId && colorId && fromBranchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, fromBranchId, '#availableQtyDisplay');
+            }
+            if (productId && sizeId && colorId && toBranchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, toBranchId, '#availableQtyDisplay2');
+            }
+        }, 100);
+    }
 
     function productChanged() {
         var productId = $('#productId').val();
-        populateDropdown(`/Products/GetAvailableSizes?ProductId=${productId}`, 'sizeId', 'SizeId', 'SizeName');
-        populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'colorId', 'ColorId', 'ColorName');
+        var prevSizeId = $('#sizeId').val();
+        var prevColorId = $('#colorId').val();
+
+        populateDropdown(`/Products/GetAvailableSizes?ProductId=${productId}`, 'sizeId', 'SizeId', 'SizeName', prevSizeId);
+        populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'colorId', 'ColorId', 'ColorName', prevColorId);
     }
 
 
     async function moveInventory() {
-        var data = {
-            fromBranchId: $('#fromBranch').val(),
-            toBranchId: $('#toBranch').val(),
-            productId: $('#productId').val(),
-            sizeId: $('#sizeId').val(),
-            colorId: $('#colorId').val(),
-            quantity: $('#quantity').val()
-        };
+        var fromBranchId = $('#fromBranch').val();
+        var toBranchId = $('#toBranch').val();
+        var productId = $('#productId').val();
+        var sizeId = $('#sizeId').val();
+        var colorId = $('#colorId').val();
+        var quantity = $('#quantity').val();
+        var notes = $('#notes').val();
 
+        // Ensure all required fields have values
+        if (!fromBranchId || !toBranchId || !productId || !sizeId || !colorId || !quantity || !notes) {
+            alert('برجاء ملاء جميع الحقول الضرورية.');
+            return;
+        }
+
+        // Check if quantity is greater than 0
+        if (parseInt(quantity, 10) <= 0) {
+            alert('الكمية يجب أن تكون أكثر من 0.');
+            return;
+        }
+
+        // Check if fromBranch and toBranch are the same
+        if (fromBranchId === toBranchId) {
+            alert('فرع المنشأ وفرع الوجهة يجب أن يكونا مختلفين.');
+            return;
+        }
+
+        // Directly fetch and check available quantity before proceeding
+        try {
+            const response = await fetch(`/Products/GetAvailable?productId=${productId}&sizeId=${sizeId}&colorId=${colorId}&branchId=${fromBranchId}`);
+            const availableQtyFromBranch = await response.json();
+
+            if (availableQtyFromBranch < quantity) {
+                alert('الكمية المتاحة في فرع المنشأ غير كافية لإتمام عملية النقل.');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('fromBranchId', fromBranchId);
+            formData.append('toBranchId', toBranchId);
+            formData.append('productId', productId);
+            formData.append('sizeId', sizeId);
+            formData.append('colorId', colorId);
+            formData.append('quantity', quantity);
+            formData.append('notes', notes);
+            submitTransfer(formData);
+        } catch (error) {
+            console.error('Error fetching available quantity:', error);
+            alert('حدث خطأ أثناء تحقق من الكمية المتاحة.');
+        }
+    }
+    async function submitTransfer(formData) {
         const response = await fetch('/InventoryMovement/AddNewinventoryMovement', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: formData
         });
 
-        if (response.ok) {
+        const responseData = await response.json();
+
+        if (responseData.success) {
             alert("تم نقل الكمية بنجاح.");
             $("#moveInventoryPopup").dxPopup("hide");
         } else {
-            alert("حدث خطأ أثناء نقل الكمية.");
+            alert(responseData.message || "حدث خطأ أثناء نقل الكمية.");
         }
     }
+
 
     //////////
     var invoiceItems = []; 
 
     $(document).ready(function () {
         initializeItemsGrid();
+         $('#ProductId, #SizeId, #ColorId, #fromBranch').change(function () {
+                // Get the current selected values
+                var productId = $('#ProductId').val();
+                var sizeId = $('#SizeId').val();
+                var colorId = $('#ColorId').val();
+                var branchId = $('#fromBranch').val();
+
+                if (productId && sizeId && colorId && branchId) {
+                    fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+                } else {
+                    $('#availableQtyDisplay').text('');
+                }
+          });
     });
 
     function displayMessage(type, message) {
@@ -379,9 +515,6 @@
             invoiceItems = []; 
             $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
-
-
-
     });
 
     function exporting(e) {

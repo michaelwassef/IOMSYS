@@ -11,5 +11,6 @@
         public string? Details { get; set; }
         public DateTime? ModifiedDate { get; set; }
         public int? ModifiedUser { get; set; }
+        public int? InvoiceId { get; set; }
     }
 }

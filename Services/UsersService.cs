@@ -16,7 +16,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<UsersModel>> GetAllUsersAsync()
         {
-            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName ,U.UserTypeId FROM Users U
+            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName ,U.UserTypeId, U.IsActive FROM Users U
                         INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId";
             using (var db = _dapperContext.CreateConnection())
             {
@@ -26,7 +26,7 @@ namespace IOMSYS.Services
 
         public async Task<UsersModel?> SelectUserByIdAsync(int userId)
         {
-            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName, U.UserTypeId FROM Users U
+            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName, U.UserTypeId, U.IsActive FROM Users U
                         INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId
                         WHERE UserId = @UserId";
             using (var db = _dapperContext.CreateConnection())
@@ -37,14 +37,14 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertUserAsync(UsersModel user)
         {
-            var sql = @"INSERT INTO Users (UserName, PhoneNumber, Password, UserTypeId) 
-                        VALUES (@UserName, @PhoneNumber, @Password, @UserTypeId);
+            var sql = @"INSERT INTO Users (UserName, PhoneNumber, Password, UserTypeId, IsActive) 
+                        VALUES (@UserName, @PhoneNumber, @Password, @UserTypeId, @IsActive);
                         SELECT CAST(SCOPE_IDENTITY() as int);";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteScalarAsync<int>(sql, new { user.UserName, user.PhoneNumber, user.Password, user.UserTypeId }).ConfigureAwait(false);
+                    return await db.ExecuteScalarAsync<int>(sql, new { user.UserName, user.PhoneNumber, user.Password, user.UserTypeId,user.IsActive }).ConfigureAwait(false);
                 }
             }
             catch
@@ -55,12 +55,12 @@ namespace IOMSYS.Services
 
         public async Task<int> UpdateUserAsync(UsersModel user)
         {
-            var sql = @"UPDATE Users SET UserName = @UserName, PhoneNumber = @PhoneNumber, Password = @Password, UserTypeId = @UserTypeId WHERE UserId = @UserId";
+            var sql = @"UPDATE Users SET UserName = @UserName, PhoneNumber = @PhoneNumber, Password = @Password, UserTypeId = @UserTypeId, IsActive = @IsActive WHERE UserId = @UserId";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteAsync(sql, new { user.UserName, user.PhoneNumber, user.Password, user.UserTypeId, user.UserId }).ConfigureAwait(false);
+                    return await db.ExecuteAsync(sql, new { user.UserName, user.PhoneNumber, user.Password, user.UserTypeId, user.UserId, user.IsActive }).ConfigureAwait(false);
                 }
             }
             catch

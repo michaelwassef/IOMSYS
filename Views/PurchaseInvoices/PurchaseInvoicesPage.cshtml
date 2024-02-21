@@ -146,13 +146,15 @@
         const response = await fetch(`/Products/LoadProductById?ProductId=${productId}`);
         if (response.ok) {
             const data = await response.json();
-            document.getElementById('SellPrice').value = data.SellPrice;
+                document.getElementById('SellPrice').value = data.SellPrice;
+                document.getElementById('BuyPrice').value = data.BuyPrice;
         } else {
-            document.getElementById('SellPrice').value = '';
+                document.getElementById('SellPrice').value = '';
+                document.getElementById('BuyPrice').value = '';
         }
     } catch (error) {
-        console.error('Error fetching SellPrice for:', productId, error);
-        document.getElementById('SellPrice').value = '';
+            document.getElementById('SellPrice').value = '';
+            document.getElementById('BuyPrice').value = '';
     }
     }
 
@@ -180,6 +182,7 @@
                 fetchSellPrice(productId);
             } else {
                 document.getElementById('SellPrice').value = '';
+                document.getElementById('BuyPrice').value = '';
             }
         });
 

@@ -6,7 +6,9 @@ namespace IOMSYS.IServices
     {
         Task<IEnumerable<PaymentTransactionModel>> GetAllPaymentTransactionsAsync();
         Task<IEnumerable<PaymentTransactionModel>> LoadPaymentTransactionsByBranchAsync(int branchId);
+        Task<IEnumerable<TransactionDetailModel>> LoadDetailsPaymentTransactionsByBranchAsync(int branchId);
         Task<PaymentTransactionModel> GetPaymentTransactionByIdAsync(int transactionId);
+        Task<PaymentTransactionModel> GetPaymentTransactionByInvoiceIdAsync(int InvoiceId);
         Task<decimal> GetBranchAccountBalanceAsync(int branchId);
         Task<int> InsertPaymentTransactionAsync(PaymentTransactionModel transaction);
         Task<int> UpdatePaymentTransactionAsync(PaymentTransactionModel transaction);

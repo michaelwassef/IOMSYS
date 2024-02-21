@@ -10,7 +10,7 @@
         public int FromBranchId { get; set; }
         public int ToBranchId { get; set; }
         public bool IsApproved { get; set; } 
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
         public DateTime MovementDate { get; set; }
     }
 }

@@ -11,13 +11,15 @@ namespace IOMSYS.Controllers
         private readonly ISalesItemsService _salesItemsService;
         private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
         private readonly IBranchInventoryService _branchInventoryService;
+        private readonly IPaymentTransactionService _paymentTransactionService;
 
-        public SalesItemsController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IBranchInventoryService branchInventoryService)
+        public SalesItemsController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesInvoiceItemsService = salesInvoiceItemsService;
             _salesItemsService = salesItemsService;
             _branchInventoryService = branchInventoryService;
+            _paymentTransactionService = paymentTransactionService;
         }
 
         [HttpGet]
@@ -103,6 +105,16 @@ namespace IOMSYS.Controllers
                 int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
                 if (deleteResult > 0)
                 {
+                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
+                    if (paymentTransaction != null)
+                    {
+                        // Delete the payment transaction
+                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+                        if (deleteTransactionResult <= 0)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                        }
+                    }
                     return Ok(new { SuccessMessage = "Invoice deleted successfully." });
                 }
                 else

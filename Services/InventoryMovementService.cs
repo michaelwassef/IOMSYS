@@ -32,7 +32,7 @@ namespace IOMSYS.Services
                 try
                 {
                     var movementId = await db.ExecuteScalarAsync<int>(
-                        @"INSERT INTO InventoryMovement (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate) 
+                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate) 
                         VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate);
                         SELECT CAST(SCOPE_IDENTITY() as int);",
                         movement).ConfigureAwait(false);

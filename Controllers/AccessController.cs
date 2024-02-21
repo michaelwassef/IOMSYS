@@ -72,9 +72,17 @@ namespace IOMSYS.Controllers
                     //        }
                     //}
                 }
-
-                TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور او نوع المستخدم.";
-                return View(modelLogin); // Pass modelLogin back to the view to retain input data
+                else if (!authenticationResult.IsActive)
+                {
+                    TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور او نوع المستخدم.";
+                    return View(modelLogin);
+                }
+                else
+                {
+                    // Handle authentication failure
+                    TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور او نوع المستخدم.";
+                    return View(modelLogin);
+                }
             }
             catch (SqlException)
             {

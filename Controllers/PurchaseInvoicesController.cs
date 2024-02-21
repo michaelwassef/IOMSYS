@@ -114,7 +114,8 @@ namespace IOMSYS.Controllers
                     TransactionType = "خصم",
                     TransactionDate = model.PurchaseDate,
                     ModifiedUser = model.UserId,
-                    ModifiedDate = DateTime.Now
+                    ModifiedDate = DateTime.Now,
+                    InvoiceId = invoiceId,
                 };
                 await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
 
@@ -166,10 +167,34 @@ namespace IOMSYS.Controllers
 
                 // Update the invoice
                 int updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(purchaseInvoice);
-                if (updateResult <= 0)
-                    return BadRequest(new { ErrorMessage = "Could Not Update" });
+                if (updateResult > 0)
+                {
+                    // Retrieve the payment transaction associated with this invoice
+                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(purchaseInvoice.PurchaseInvoiceId);
+                    if (paymentTransaction != null)
+                    {
+                        // Update transaction details as necessary
+                        paymentTransaction.Amount = purchaseInvoice.TotalAmount;
+                        paymentTransaction.BranchId = purchaseInvoice.BranchId;
+                        paymentTransaction.PaymentMethodId = purchaseInvoice.PaymentMethodId;
 
-                return Ok(new { SuccessMessage = "Updated Successfully" });
+                        var updateTransactionResult = await _paymentTransactionService.UpdatePaymentTransactionAsync(paymentTransaction);
+                        if (updateTransactionResult <= 0)
+                        {
+                            return BadRequest(new { ErrorMessage = "Could not update the related payment transaction." });
+                        }
+                    }
+                    else
+                    {
+                        return BadRequest(new { ErrorMessage = "No related payment transaction found for update." });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new { ErrorMessage = "Could Not Update Invoice" });
+                }
+
+                return Ok(new { SuccessMessage = "Invoice and related payment transaction updated successfully." });
             }
             catch (Exception ex)
             {
@@ -211,6 +236,16 @@ namespace IOMSYS.Controllers
                 int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
                 if (deletePurchaseInvoicesResult > 0)
                 {
+                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
+                    if (paymentTransaction != null)
+                    {
+                        // Delete the payment transaction
+                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+                        if (deleteTransactionResult <= 0)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                        }
+                    }
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 }
                 else

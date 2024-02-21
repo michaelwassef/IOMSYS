@@ -37,6 +37,13 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> LoadDeitalsPaymentTransactionsByBranch(int branchId)
+        {
+            var paymentTransactions = await _paymentTransactionService.LoadDetailsPaymentTransactionsByBranchAsync(branchId);
+            return Json(paymentTransactions);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetBranchAccountBalance(int BranchId)
         {
             var paymentTransactions = await _paymentTransactionService.GetBranchAccountBalanceAsync(BranchId);

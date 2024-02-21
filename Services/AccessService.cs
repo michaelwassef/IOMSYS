@@ -24,16 +24,18 @@ namespace IOMSYS.Services
 
         public async Task<AuthenticationResultModel> AuthenticateUserAsync(AccessModel accessmodel)
         {
-            var sql = @"SELECT UserId FROM Users WHERE UserName = @Username AND Password = @Password AND UserTypeId = @UserTypeId";
-            var userId = await _db.QuerySingleOrDefaultAsync<string>(sql, new { accessmodel.UserName, accessmodel.Password, accessmodel.UserTypeId });
+            var sql = @"SELECT UserId, IsActive FROM Users WHERE UserName = @Username AND Password = @Password AND UserTypeId = @UserTypeId";
+            var user = await _db.QuerySingleOrDefaultAsync<(string UserId, bool IsActive)>(sql, new { accessmodel.UserName, accessmodel.Password, accessmodel.UserTypeId });
 
-            var isAuthenticated = !string.IsNullOrEmpty(userId);
+            var isAuthenticated = !string.IsNullOrEmpty(user.UserId) && user.IsActive;
 
             return new AuthenticationResultModel
             {
                 IsAuthenticated = isAuthenticated,
-                UserId = userId
+                UserId = user.UserId,
+                IsActive = user.IsActive 
             };
         }
+
     }
 }

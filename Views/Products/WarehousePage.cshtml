@@ -43,18 +43,14 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-@*        columns.AddFor(m => m.ProductId).Caption("كود المنتج");
-*@        columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
+        columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
         columns.AddFor(m => m.SizeName).Caption("المقاس");
         columns.AddFor(m => m.ColorName).Caption("اللون");
         columns.AddFor(m => m.CategoryName).Caption("التصنيف");
-        columns.AddFor(m => m.SellPrice).Caption("سعر البيع للواحد");
-        columns.AddFor(m => m.BuyPrice).Caption("سعر الشراء للواحد");
+        columns.AddFor(m => m.ProductName).Caption("نوع المنتج");
         columns.AddFor(m => m.TotalQuantity).Caption("الكمية المتوفرة");
-        columns.AddFor(m => m.TotalBuyPrice).Caption("اجمالي مبلغ الشراء");
         columns.AddFor(m => m.TotalSellPrice).Caption("اجمالي مبلغ البيع");
         columns.AddFor(m => m.TotalSoldQuantity).Caption("الكمية المباعة");
-        columns.AddFor(m => m.Notes).Caption("ملاحظات");
     })
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary

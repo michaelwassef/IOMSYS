@@ -1,14 +1,12 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
     public class InventoryMovementController : Controller
     {
         private readonly IInventoryMovementService _inventoryMovementService;
-
 
         public InventoryMovementController(IInventoryMovementService inventoryMovementService)
         {
@@ -23,13 +21,12 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewinventoryMovement([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewinventoryMovement([FromForm] InventoryMovementModel model)
         {
             try
             {
-                var values = formData["values"];
-                var model = new InventoryMovementModel();
-                JsonConvert.PopulateObject(values, model);
+                model.MovementDate = DateTime.Now;
+                model.IsApproved = false;
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);

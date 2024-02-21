@@ -7,7 +7,8 @@
 
 <h1>الحسابات</h1>
 
-@(Html.DevExtreme().DataGrid<UsersModel>()
+@(
+Html.DevExtreme().DataGrid<UsersModel>()
     .ID("gridContainer")
     .DataSource(d => d
         .Mvc()
@@ -33,7 +34,7 @@
                 .Title("بيانات المستخدم")
                 .ShowTitle(true)
                 .Width(700)
-                .Height(370))
+                .Height(450))
     )
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))
@@ -51,14 +52,14 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.UserName).Caption("اسم المستخدم");
-        columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف المستخدم");
-        columns.AddFor(m => m.Password).Caption("كلمة المرور");
-        columns.AddFor(m => m.UserTypeId).Caption("نوع المستخدم").Lookup(lookup => lookup
-       .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUserTypes"))
-       .ValueExpr("UserTypeId")
-       .DisplayExpr("UserTypeName")
-   );
+    columns.AddFor(m => m.UserName).Caption("اسم المستخدم");
+    columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف المستخدم");
+    columns.AddFor(m => m.Password).Caption("كلمة المرور");
+    columns.AddFor(m => m.UserTypeId).Caption("نوع المستخدم").Lookup(lookup => lookup
+   .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUserTypes"))
+   .ValueExpr("UserTypeId")
+   .DisplayExpr("UserTypeName"));
+    columns.AddFor(m => m.IsActive).Caption("هل الحساب مفعل ؟");
     })
     .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))

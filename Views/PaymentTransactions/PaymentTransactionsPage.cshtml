@@ -15,9 +15,13 @@
         <div class="form-group col-md-5 mb-3" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
     </div>
 </div>
+<div class="form-group">
+    <button id="filterTodayBtn" class="btn btn-primary mx-1">عرض بيانات اليوم</button>
+    <button id="showAllBtn" class="btn btn-primary mx-1">عرض جميع البيانات</button>
+</div>
 
 
-@(Html.DevExtreme().DataGrid<PaymentTransactionModel>()
+@(Html.DevExtreme().DataGrid<TransactionDetailModel>()
     .ID("gridContainer")
     .DataSource(d => d
         .Mvc()
@@ -34,9 +38,9 @@
      .ColumnAutoWidth(true)
     .Editing(e => e
         .Mode(GridEditMode.Popup)
-        .AllowAdding(true)
+@*        .AllowAdding(true)
         .AllowUpdating(true)
-        .AllowDeleting(true)
+        .AllowDeleting(true)*@
         .Popup(p => p
                 .Title("بيانات المعاملة")
                 .ShowTitle(true)
@@ -60,6 +64,9 @@
     .Columns(columns =>
     {
         columns.AddFor(m => m.TransactionId).Caption("كود العملية");
+        columns.AddFor(m => m.InvoiceType).Caption("اسم العملية");
+        columns.AddFor(m => m.InvoiceId).Caption("رقم الفاتورة");
+        columns.AddFor(m => m.InvoiceDetail).Caption("تفاصيل الفاتورة");
         columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
           .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
           .ValueExpr("BranchId")
@@ -69,24 +76,52 @@
         .ValueExpr("PaymentMethodId")
         .DisplayExpr("PaymentMethodName"));
         columns.AddFor(m => m.TransactionType).Caption("نوع المعاملة");
-        columns.AddFor(m => m.TransactionDate).Caption("تاريخ المعاملة");
+        columns.AddFor(m => m.InvoiceDate).Caption("تاريخ المعاملة");
         columns.AddFor(m => m.Amount).Caption("القيمة");
         columns.AddFor(m => m.Details).Caption("ملاحظات");
+        columns.AddFor(m => m.EntityName).Caption("خاص ب");
         columns.AddFor(m => m.ModifiedDate).Caption("تاريخ الادخال");
         columns.AddFor(m => m.ModifiedUser).Caption("مدخل البيانات").AllowEditing(false).Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
        .ValueExpr("UserId")
-       .DisplayExpr("UserName")); 
+       .DisplayExpr("UserName"));
+       
     })
-        .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
+    @*.MasterDetail(md =>
+    {
+        md.Enabled(true);
+        md.Template(@<text>
+            @(Html.DevExtreme().DataGrid<PurchaseItemsModel>()
+        .ColumnAutoWidth(true)
+        .ShowBorders(true)
+        .Columns(columns =>
+        {
+            columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
+        })
+        .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
+        .DataSource(d => d.Mvc()
+        .Controller("PurchaseItems")
+        .LoadAction("LoadPurchaseItemsByInvoiceId")
+        .Key("PurchaseItemId")
+        .DeleteAction("DeletePurchaseItem")
+        .LoadParams(new { purchaseInvoiceId = new JS("data.PurchaseInvoiceId") }))
+        .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowDeleting(true)
+        )
+        .RtlEnabled(true)
+        )
+            </text>);
+    })*@
+     .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>
         {
             items.Add()
-                .Column("اسم الفرع")
-                .SummaryType(SummaryType.Count)
-                .DisplayFormat("عدد الفروع : {0}");
+                .Column("القيمة")
+                .SummaryType(SummaryType.Sum)
+                .DisplayFormat("الاجمالي : {0}");
 
             // Add more summaries as needed
         })
@@ -94,6 +129,21 @@
 )
 
 <script>
+    function toIsoDateString(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    document.getElementById('filterTodayBtn').addEventListener('click', function () {
+        var gridInstance = $("#gridContainer").dxDataGrid("instance");
+        var today = new Date();
+        var todayStart = new Date(today.setHours(0, 0, 0, 0));
+        var todayEnd = new Date(today.setHours(23, 59, 59, 999));
+
+        // Assuming 'InvoiceDate' is the field name for transaction dates in your data model.
+        // Adjust the field name if it's different.
+        gridInstance.filter(["InvoiceDate", ">=", todayStart], "and", ["InvoiceDate", "<=", todayEnd]);
+    });
+
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
         var worksheet = workbook.addWorksheet('Branches');
@@ -129,14 +179,14 @@
             // Set the default branch to the first option
             const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
             if (defaultBranchId) {
-                const loadUrl = `/PaymentTransactions/LoadPaymentTransactionsByBranch?branchId=${defaultBranchId}`;
+                const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${defaultBranchId}`;
                 loadSalesInvoices(loadUrl);
             }
 
             // Event listener for branch selection change
             $('#BranchId').change(async function () {
                 const branchId = $(this).val();
-                const loadUrl = `/PaymentTransactions/LoadPaymentTransactionsByBranch?branchId=${branchId}`;
+                const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${branchId}`;
                 loadSalesInvoices(loadUrl);
                 await fetchBranchAccountBalance(branchId);
             });
@@ -144,7 +194,12 @@
         } catch (error) {
             console.error('Error loading data:', error);
         }
-    });
+        // Button click event to show all data
+        $("#showAllBtn").click(function() {
+            const dataGrid = $("#gridContainer").dxDataGrid("instance");
+            dataGrid.clearFilter();
+        });
+        });
 
 
     async function fetchBranchAccountBalance(branchId) {
