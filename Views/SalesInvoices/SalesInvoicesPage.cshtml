@@ -10,6 +10,9 @@
 <form id="invoiceForm">
     <div id="invoiceDetailsForm" style="margin-top: 20px;">
         <div class="row">
+             <div class="col-md-1">
+                <button type="button" id="btnAddCustomer" class="btn btn-secondary">اضافة عميل جديد</button>
+            </div>
             <div class="form-group col-md-3 mb-3">
                 <label for="customerId">اسم العميل</label>
                 <select id="CustomerId" class="form-control" required></select>
@@ -21,6 +24,32 @@
         </div>
     </div>
 </form>
+
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addCustomerModalLabel">اضافة عميل جديد</h5>
+      </div>
+      <div class="modal-body">
+        <form id="formAddCustomer">
+          <div class="form-group">
+            <label for="CustomerName">اسم العميل</label>
+               <input type="text" class="form-control" id="CustomerName" name="CustomerName" required>
+          </div>
+          <div class="form-group">
+             <label for="PhoneNumber">رقم الهاتف</label>
+            <input type="text" class="form-control" id="PhoneNumber" name="PhoneNumber">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" form="formAddCustomer">حفظ</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="itemForm">
     <h3>اضافة الاصناف</h3>
@@ -105,6 +134,49 @@
 </form>
 
   <script>
+    $(document).ready(function () {
+        // Open the modal
+        $('#btnAddCustomer').click(function () {
+            $('#addCustomerModal').modal('show');
+        });
+
+        $('.btn-secondary').click(function() {
+            $('#addCustomerModal').modal('hide');
+        });
+
+        $('#formAddCustomer').submit(function (event) {
+            event.preventDefault(); // Prevent the form from submitting via the browser.
+
+            var customerData = JSON.stringify({
+                CustomerName: $('#CustomerName').val(),
+                PhoneNumber: $('#PhoneNumber').val()
+            });
+
+            $.ajax({
+                type: 'POST',
+                url: '/Customers/AddFastNewCustomer', // Make sure the URL is correct
+                contentType: 'application/json', // This specifies that you're sending JSON
+                data: customerData, // The data needs to be a JSON string
+                success: function(response) {
+                    alert(response.SuccessMessage);
+                    $('#addCustomerModal').modal('hide');
+    
+                    // Reload the customer dropdown
+                    loadCustomers(function() {
+                        // Select the newly added customer
+                        $('#CustomerId').val(response.CustomerId).trigger('change');
+                    });
+                },
+                error: function (xhr, status, error) {
+                    // Adjusted error handling
+                    var errorMessage = xhr.status + ': ' + xhr.statusText;
+                    alert('Error - ' + errorMessage);
+                }
+            });
+        });
+    });
+
+
     async function populateDropdown(url, elementId, valueField, textField) {
         try {
             const response = await fetch(url);
@@ -112,7 +184,6 @@
                 const data = await response.json();
                 const selectElement = document.getElementById(elementId);
                 selectElement.innerHTML = '';
-                selectElement.add(new Option("برجاء الاختيار", ""));
                 data.forEach(item => {
                     const option = new Option(item[textField], item[valueField]);
                     selectElement.add(option);
@@ -133,7 +204,6 @@
                 const selectElement = $(`#${elementId}`);
                 let options = [];
 
-                options.push(new Option("برجاء الاختيار", "", true, true));
 
                 data.forEach(item => {
                     const optionText = `${item[valueField]} - ${item[textField]}`;
@@ -149,12 +219,26 @@
                 });
 
                 selectElement.data('select2').$container.addClass('custom-font-size');
+
+                if (elementId === 'ProductId') {
+                    const firstProductId = data[0] ? data[0][valueField] : null;
+                    if (firstProductId) {
+                        await fetchAvailableSizes(firstProductId);
+                        await fetchAvailableColors(firstProductId);
+                    }
+                }
+
             } else {
                 console.error('Failed to load data for:', elementId);
             }
         } catch (error) {
             console.error('Error fetching data for:', elementId, error);
         }
+    }
+
+    async function populateProductsAndTriggerChange() {
+        await populateDropdownSEARCH('/Products/GetAllProductsInWarehouse', 'ProductId', 'ProductId', 'ProductName');
+        $('#ProductId').trigger('change');
     }
 
     async function fetchAvailableSizes(productId) {
@@ -166,29 +250,30 @@
         console.error('Error fetching available sizes:', error);
     }
 }
-
-async function fetchAvailableColors(productId) {
-    try {
-        const response = await fetch(`/Products/GetAvailableColors?ProductId=${productId}`);
-        const data = await response.json();
-        populateDropdownWithItems('ColorId', data, 'ColorName', 'ColorId');
-    } catch (error) {
-        console.error('Error fetching available colors:', error);
+    async function fetchAvailableColors(productId) {
+        try {
+            // Correct the URL parameter to 'ProductId'
+            const response = await fetch(`/Products/GetAvailableColors?ProductId=${productId}`);
+            const data = await response.json();
+            populateDropdownWithItems('ColorId', data, 'ColorName', 'ColorId');
+        } catch (error) {
+            console.error('Error fetching available colors:', error);
+        }
     }
-}
 
     function populateDropdownWithItems(elementId, items, textField, valueField) {
         const selectElement = document.getElementById(elementId);
-        selectElement.innerHTML = '<option value="">برجاء الاختيار</option>'; 
-        items.forEach(item => {
+        selectElement.innerHTML = ''; // clear existing options if needed
+        items.forEach((item, index) => {
             const option = new Option(item[textField], item[valueField]);
             selectElement.add(option);
+            // Select the first option by default
+            if (index === 0) selectElement.selectedIndex = 0;
         });
     }
 
     function resetDropdown(elementId) {
         const selectElement = document.getElementById(elementId);
-        selectElement.innerHTML = '<option value="">برجاء الاختيار</option>';
     }
 
     // Function to fetch available quantity
@@ -227,17 +312,26 @@ async function fetchAvailableColors(productId) {
     }
     }
 
-   $('#ProductId').on('change', async function () {
+$('#ProductId').on('change', async function () {
     var productId = $(this).val();
+    var branchId = $('#BranchId').val(); 
+
     if (productId) {
-        fetchSellPrice(productId);
-        fetchAvailableSizes(productId); 
-        fetchAvailableColors(productId); 
+        await fetchSellPrice(productId);
+        await fetchAvailableSizes(productId); 
+        await fetchAvailableColors(productId);
     } else {
         resetDropdown('SizeId'); 
         resetDropdown('ColorId'); 
+        $('#availableQtyDisplay').text('');
     }
-});
+    var sizeId = $('#SizeId').val();
+    var colorId = $('#ColorId').val();
+
+    if(productId && branchId && sizeId && colorId) {
+        fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+    }
+    });
 
 
     $(document).ready(function() {
@@ -248,11 +342,15 @@ async function fetchAvailableColors(productId) {
         var colorId = $('#ColorId').val();
         var branchId = $('#BranchId').val();
 
-        if(productId && sizeId && colorId && branchId) {
-            fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+
+        var sizeId = $('#SizeId').val(); 
+        var colorId = $('#ColorId').val();
+            if (productId && sizeId && colorId && branchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, branchId);
         } else {
             $('#availableQtyDisplay').text('');
         }
+
     });
 });
     document.addEventListener('DOMContentLoaded', function () {
@@ -262,6 +360,8 @@ async function fetchAvailableColors(productId) {
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
         document.getElementById('paidUp').addEventListener('input', calculateTotals);
         document.getElementById('totalDiscount').addEventListener('input', calculateDiscounts);
+        
+        populateProductsAndTriggerChange();
 
         refreshItemsGrid();
 
@@ -295,10 +395,7 @@ async function fetchAvailableColors(productId) {
 
     function addItem() {
         // Get item details
-        //var productId = document.getElementById('ProductId').value;
-        //var sizeId = document.getElementById('SizeId').value;
-        //var colorId = document.getElementById('ColorId').value;
-        //var quantity = parseInt(document.getElementById('Quantity').value);
+
         var sellPrice = parseFloat(document.getElementById('SellPrice').value);
         var discount = parseFloat(document.getElementById('discount').value);
         var DiscountId = null;
@@ -359,9 +456,9 @@ async function fetchAvailableColors(productId) {
         $('#ProductId').val(null).trigger('change');
         document.getElementById('SizeId').value = '';
         document.getElementById('ColorId').value = '';
-        document.getElementById('Quantity').value = '';
+        document.getElementById('Quantity').value = '0';
         document.getElementById('SellPrice').value = '';
-        document.getElementById('discount').value = '';
+        document.getElementById('discount').value = '0';
 
         // Refresh the grid
         refreshItemsGrid();
@@ -458,6 +555,9 @@ async function fetchAvailableColors(productId) {
         // Update totalAmount input
         document.getElementById('totalAmount').value = totalAmount.toFixed(2);
 
+        // Set paidUp to totalAmount by default
+        document.getElementById('paidUp').value = totalAmount.toFixed(2);
+
         // Calculate remainder
         const paidUp = parseFloat(document.getElementById('paidUp').value) || 0;
         const remainder = totalAmount - paidUp;
@@ -525,6 +625,8 @@ async function fetchAvailableColors(productId) {
                     document.getElementById('invoiceForm').reset();
                     tempItems = [];
                     refreshItemsGrid();
+                    document.getElementById('totalAmount').value = '0';
+                    document.getElementById('paidUp').value = '0';
                 } else {
                     displayMessage('error', result.message);
                 }
@@ -566,7 +668,7 @@ async function fetchAvailableColors(productId) {
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
 
-            const pdfWindow = window.open(url, "_blank");
+            const pdfWindow = window.open(url, "_blank"); populateDropdownWithItems
             if (!pdfWindow) {
                 throw new Error('Failed to open new window.');
             }

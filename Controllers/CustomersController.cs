@@ -54,6 +54,27 @@ namespace IOMSYS.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<IActionResult> AddFastNewCustomer([FromBody] CustomersModel newCustomer)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
+
+                if (addCustomerResult > 0)
+                    return Ok(new { SuccessMessage = "Successfully Added" });
+                else
+                    return BadRequest(new { ErrorMessage = "Could Not Add" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
+            }
+        }
+
 
         [HttpPut]
         public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
