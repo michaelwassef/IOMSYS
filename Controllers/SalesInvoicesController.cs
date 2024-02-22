@@ -255,7 +255,7 @@ namespace IOMSYS.Controllers
         {
             try
             {
-                var report = new SaleInvoice();
+                var report = new invoice();
                 report.Parameters["InvoiceId"].Value = invoiceId;
                 report.CreateDocument();
                 MemoryStream memoryStream = new MemoryStream();
@@ -268,6 +268,20 @@ namespace IOMSYS.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { ErrorMessage = "An error occurred while generating the report.", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetLastInvoiceId()
+        {
+            try
+            {
+                var lastInvoiceId = await _salesInvoicesService.GetLastInvoiceIdAsync();
+                return Json(new { success = true, lastInvoiceId });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error retrieving last invoice ID: " + ex.Message });
             }
         }
     }

@@ -38,17 +38,6 @@
             this.sqlDataSource1 = new DevExpress.DataAccess.Sql.SqlDataSource(this.components);
             this.Detail = new DevExpress.XtraReports.UI.DetailBand();
             this.xrLine1 = new DevExpress.XtraReports.UI.XRLine();
-            this.detailTable = new DevExpress.XtraReports.UI.XRTable();
-            this.detailTableRow1 = new DevExpress.XtraReports.UI.XRTableRow();
-            this.lineTotal = new DevExpress.XtraReports.UI.XRTableCell();
-            this.unitPrice = new DevExpress.XtraReports.UI.XRTableCell();
-            this.quantity = new DevExpress.XtraReports.UI.XRTableCell();
-            this.productName = new DevExpress.XtraReports.UI.XRTableCell();
-            this.detailTableRow2 = new DevExpress.XtraReports.UI.XRTableRow();
-            this.detailTableCell5 = new DevExpress.XtraReports.UI.XRTableCell();
-            this.detailTableCell2 = new DevExpress.XtraReports.UI.XRTableCell();
-            this.detailTableCell1 = new DevExpress.XtraReports.UI.XRTableCell();
-            this.productDescription = new DevExpress.XtraReports.UI.XRTableCell();
             this.TopMargin = new DevExpress.XtraReports.UI.TopMarginBand();
             this.BottomMargin = new DevExpress.XtraReports.UI.BottomMarginBand();
             this.GroupHeader2 = new DevExpress.XtraReports.UI.GroupHeaderBand();
@@ -93,20 +82,31 @@
             this.xrTableCell3 = new DevExpress.XtraReports.UI.XRTableCell();
             this.xrTableCell6 = new DevExpress.XtraReports.UI.XRTableCell();
             this.GroupHeader1 = new DevExpress.XtraReports.UI.GroupHeaderBand();
-            this.xrPanel3 = new DevExpress.XtraReports.UI.XRPanel();
-            this.headerTable = new DevExpress.XtraReports.UI.XRTable();
-            this.headerTableRow = new DevExpress.XtraReports.UI.XRTableRow();
-            this.lineTotalCaption = new DevExpress.XtraReports.UI.XRTableCell();
-            this.unitPriceCaption = new DevExpress.XtraReports.UI.XRTableCell();
-            this.quantityCaption = new DevExpress.XtraReports.UI.XRTableCell();
-            this.productNameCaption = new DevExpress.XtraReports.UI.XRTableCell();
             this.baseControlStyle = new DevExpress.XtraReports.UI.XRControlStyle();
-            ((System.ComponentModel.ISupportInitialize)(this.detailTable)).BeginInit();
+            this.productDescription = new DevExpress.XtraReports.UI.XRTableCell();
+            this.detailTableCell1 = new DevExpress.XtraReports.UI.XRTableCell();
+            this.detailTableCell2 = new DevExpress.XtraReports.UI.XRTableCell();
+            this.detailTableCell5 = new DevExpress.XtraReports.UI.XRTableCell();
+            this.detailTableRow2 = new DevExpress.XtraReports.UI.XRTableRow();
+            this.productName = new DevExpress.XtraReports.UI.XRTableCell();
+            this.quantity = new DevExpress.XtraReports.UI.XRTableCell();
+            this.unitPrice = new DevExpress.XtraReports.UI.XRTableCell();
+            this.lineTotal = new DevExpress.XtraReports.UI.XRTableCell();
+            this.detailTableRow1 = new DevExpress.XtraReports.UI.XRTableRow();
+            this.detailTable = new DevExpress.XtraReports.UI.XRTable();
+            this.productNameCaption = new DevExpress.XtraReports.UI.XRTableCell();
+            this.quantityCaption = new DevExpress.XtraReports.UI.XRTableCell();
+            this.unitPriceCaption = new DevExpress.XtraReports.UI.XRTableCell();
+            this.lineTotalCaption = new DevExpress.XtraReports.UI.XRTableCell();
+            this.headerTableRow = new DevExpress.XtraReports.UI.XRTableRow();
+            this.headerTable = new DevExpress.XtraReports.UI.XRTable();
+            this.xrPanel3 = new DevExpress.XtraReports.UI.XRPanel();
             ((System.ComponentModel.ISupportInitialize)(this.vendorTable)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.customerTable)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.invoiceInfoTable)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.invoiceTotalTable)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.totalTable)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.detailTable)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.headerTable)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this)).BeginInit();
             // 
@@ -158,150 +158,6 @@
             this.xrLine1.Name = "xrLine1";
             this.xrLine1.SizeF = new System.Drawing.SizeF(699.9998F, 2F);
             this.xrLine1.StylePriority.UseForeColor = false;
-            // 
-            // detailTable
-            // 
-            this.detailTable.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.detailTable.LocationFloat = new DevExpress.Utils.PointFloat(25.00006F, 0F);
-            this.detailTable.Name = "detailTable";
-            this.detailTable.Rows.AddRange(new DevExpress.XtraReports.UI.XRTableRow[] {
-            this.detailTableRow1,
-            this.detailTableRow2});
-            this.detailTable.SizeF = new System.Drawing.SizeF(650.0001F, 70F);
-            this.detailTable.StylePriority.UseBorderColor = false;
-            this.detailTable.StylePriority.UseBorders = false;
-            this.detailTable.StylePriority.UseFont = false;
-            // 
-            // detailTableRow1
-            // 
-            this.detailTableRow1.Cells.AddRange(new DevExpress.XtraReports.UI.XRTableCell[] {
-            this.lineTotal,
-            this.unitPrice,
-            this.quantity,
-            this.productName});
-            this.detailTableRow1.Name = "detailTableRow1";
-            this.detailTableRow1.Weight = 10.58D;
-            // 
-            // lineTotal
-            // 
-            this.lineTotal.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[TotalSellPrice]")});
-            this.lineTotal.Font = new DevExpress.Drawing.DXFont("Segoe UI", 11F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.lineTotal.Name = "lineTotal";
-            this.lineTotal.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 5, 0, 100F);
-            this.lineTotal.RowSpan = 2;
-            this.lineTotal.StylePriority.UseBackColor = false;
-            this.lineTotal.StylePriority.UseBorders = false;
-            this.lineTotal.StylePriority.UseFont = false;
-            this.lineTotal.StylePriority.UseForeColor = false;
-            this.lineTotal.StylePriority.UsePadding = false;
-            this.lineTotal.StylePriority.UseTextAlignment = false;
-            this.lineTotal.Text = "ج.م‏000";
-            this.lineTotal.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
-            this.lineTotal.Weight = 0.35182792450819356D;
-            // 
-            // unitPrice
-            // 
-            this.unitPrice.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[SellPricePerItem]")});
-            this.unitPrice.Font = new DevExpress.Drawing.DXFont("Segoe UI", 11F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.unitPrice.Name = "unitPrice";
-            this.unitPrice.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 5, 0, 100F);
-            this.unitPrice.RowSpan = 2;
-            this.unitPrice.StylePriority.UseBackColor = false;
-            this.unitPrice.StylePriority.UseBorders = false;
-            this.unitPrice.StylePriority.UseFont = false;
-            this.unitPrice.StylePriority.UsePadding = false;
-            this.unitPrice.StylePriority.UseTextAlignment = false;
-            this.unitPrice.Text = "ج.م‏000";
-            this.unitPrice.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
-            this.unitPrice.Weight = 0.28243175251138408D;
-            // 
-            // quantity
-            // 
-            this.quantity.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[Quantity]")});
-            this.quantity.Font = new DevExpress.Drawing.DXFont("Segoe UI", 11F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.quantity.Name = "quantity";
-            this.quantity.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 5, 0, 100F);
-            this.quantity.RowSpan = 2;
-            this.quantity.StylePriority.UseBackColor = false;
-            this.quantity.StylePriority.UseBorders = false;
-            this.quantity.StylePriority.UseFont = false;
-            this.quantity.StylePriority.UsePadding = false;
-            this.quantity.StylePriority.UseTextAlignment = false;
-            this.quantity.Text = "1";
-            this.quantity.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
-            this.quantity.Weight = 0.32770048361588039D;
-            // 
-            // productName
-            // 
-            this.productName.Borders = DevExpress.XtraPrinting.BorderSide.None;
-            this.productName.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[ProductName]")});
-            this.productName.Font = new DevExpress.Drawing.DXFont("Segoe UI", 15F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.productName.Name = "productName";
-            this.productName.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 15, 0, 100F);
-            this.productName.StylePriority.UseBackColor = false;
-            this.productName.StylePriority.UseBorders = false;
-            this.productName.StylePriority.UseFont = false;
-            this.productName.StylePriority.UsePadding = false;
-            this.productName.StylePriority.UseTextAlignment = false;
-            this.productName.Text = "ProductName";
-            this.productName.TextAlignment = DevExpress.XtraPrinting.TextAlignment.BottomLeft;
-            this.productName.Weight = 0.9119883570370696D;
-            // 
-            // detailTableRow2
-            // 
-            this.detailTableRow2.Cells.AddRange(new DevExpress.XtraReports.UI.XRTableCell[] {
-            this.detailTableCell5,
-            this.detailTableCell2,
-            this.detailTableCell1,
-            this.productDescription});
-            this.detailTableRow2.Name = "detailTableRow2";
-            this.detailTableRow2.Weight = 10.58D;
-            // 
-            // detailTableCell5
-            // 
-            this.detailTableCell5.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.detailTableCell5.Name = "detailTableCell5";
-            this.detailTableCell5.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
-            this.detailTableCell5.StylePriority.UseFont = false;
-            this.detailTableCell5.StylePriority.UsePadding = false;
-            this.detailTableCell5.StylePriority.UseTextAlignment = false;
-            this.detailTableCell5.Weight = 0.35182792450819356D;
-            // 
-            // detailTableCell2
-            // 
-            this.detailTableCell2.Name = "detailTableCell2";
-            this.detailTableCell2.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
-            this.detailTableCell2.StylePriority.UsePadding = false;
-            this.detailTableCell2.StylePriority.UseTextAlignment = false;
-            this.detailTableCell2.Weight = 0.282431752511384D;
-            // 
-            // detailTableCell1
-            // 
-            this.detailTableCell1.Name = "detailTableCell1";
-            this.detailTableCell1.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
-            this.detailTableCell1.StylePriority.UsePadding = false;
-            this.detailTableCell1.StylePriority.UseTextAlignment = false;
-            this.detailTableCell1.Weight = 0.32770039563378878D;
-            // 
-            // productDescription
-            // 
-            this.productDescription.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[dispcrtion]")});
-            this.productDescription.Font = new DevExpress.Drawing.DXFont("Segoe UI", 12F);
-            this.productDescription.ForeColor = System.Drawing.Color.Gray;
-            this.productDescription.Name = "productDescription";
-            this.productDescription.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 15, 100F);
-            this.productDescription.StylePriority.UseBackColor = false;
-            this.productDescription.StylePriority.UseBorders = false;
-            this.productDescription.StylePriority.UseFont = false;
-            this.productDescription.StylePriority.UseForeColor = false;
-            this.productDescription.StylePriority.UsePadding = false;
-            this.productDescription.Text = "ProductDescription";
-            this.productDescription.Weight = 0.91198844501916121D;
             // 
             // TopMargin
             // 
@@ -799,51 +655,178 @@
             this.GroupHeader1.RepeatEveryPage = true;
             this.GroupHeader1.StyleName = "baseControlStyle";
             // 
-            // xrPanel3
+            // baseControlStyle
             // 
-            this.xrPanel3.AnchorHorizontal = ((DevExpress.XtraReports.UI.HorizontalAnchorStyles)((DevExpress.XtraReports.UI.HorizontalAnchorStyles.Left | DevExpress.XtraReports.UI.HorizontalAnchorStyles.Right)));
-            this.xrPanel3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(243)))), ((int)(((byte)(245)))));
-            this.xrPanel3.Controls.AddRange(new DevExpress.XtraReports.UI.XRControl[] {
-            this.headerTable});
-            this.xrPanel3.LocationFloat = new DevExpress.Utils.PointFloat(0F, 0F);
-            this.xrPanel3.Name = "xrPanel3";
-            this.xrPanel3.SizeF = new System.Drawing.SizeF(700F, 45F);
-            this.xrPanel3.StylePriority.UseBackColor = false;
+            this.baseControlStyle.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F);
+            this.baseControlStyle.Name = "baseControlStyle";
+            this.baseControlStyle.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 100F);
             // 
-            // headerTable
+            // productDescription
             // 
-            this.headerTable.Font = new DevExpress.Drawing.DXFont("Segoe UI", 10F);
-            this.headerTable.LocationFloat = new DevExpress.Utils.PointFloat(25.00003F, 10.00001F);
-            this.headerTable.Name = "headerTable";
-            this.headerTable.Rows.AddRange(new DevExpress.XtraReports.UI.XRTableRow[] {
-            this.headerTableRow});
-            this.headerTable.SizeF = new System.Drawing.SizeF(650F, 35F);
-            this.headerTable.StylePriority.UseFont = false;
-            this.headerTable.StylePriority.UsePadding = false;
+            this.productDescription.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[dispcrtion]")});
+            this.productDescription.Font = new DevExpress.Drawing.DXFont("Segoe UI", 12F);
+            this.productDescription.ForeColor = System.Drawing.Color.Gray;
+            this.productDescription.Name = "productDescription";
+            this.productDescription.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 15, 100F);
+            this.productDescription.StylePriority.UseBackColor = false;
+            this.productDescription.StylePriority.UseBorders = false;
+            this.productDescription.StylePriority.UseFont = false;
+            this.productDescription.StylePriority.UseForeColor = false;
+            this.productDescription.StylePriority.UsePadding = false;
+            this.productDescription.Text = "ProductDescription";
+            this.productDescription.Weight = 0.91198844501916121D;
             // 
-            // headerTableRow
+            // detailTableCell1
             // 
-            this.headerTableRow.Cells.AddRange(new DevExpress.XtraReports.UI.XRTableCell[] {
-            this.lineTotalCaption,
-            this.unitPriceCaption,
-            this.quantityCaption,
-            this.productNameCaption});
-            this.headerTableRow.Name = "headerTableRow";
-            this.headerTableRow.Weight = 11.5D;
+            this.detailTableCell1.Name = "detailTableCell1";
+            this.detailTableCell1.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
+            this.detailTableCell1.StylePriority.UsePadding = false;
+            this.detailTableCell1.StylePriority.UseTextAlignment = false;
+            this.detailTableCell1.Weight = 0.32770039563378878D;
             // 
-            // lineTotalCaption
+            // detailTableCell2
             // 
-            this.lineTotalCaption.BorderColor = System.Drawing.Color.White;
-            this.lineTotalCaption.Name = "lineTotalCaption";
-            this.lineTotalCaption.StylePriority.UseBackColor = false;
-            this.lineTotalCaption.StylePriority.UseBorderColor = false;
-            this.lineTotalCaption.StylePriority.UseBorders = false;
-            this.lineTotalCaption.StylePriority.UseFont = false;
-            this.lineTotalCaption.StylePriority.UseForeColor = false;
-            this.lineTotalCaption.StylePriority.UseTextAlignment = false;
-            this.lineTotalCaption.Text = "اجمالي الصنف";
-            this.lineTotalCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
-            this.lineTotalCaption.Weight = 0.30785032120391059D;
+            this.detailTableCell2.Name = "detailTableCell2";
+            this.detailTableCell2.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
+            this.detailTableCell2.StylePriority.UsePadding = false;
+            this.detailTableCell2.StylePriority.UseTextAlignment = false;
+            this.detailTableCell2.Weight = 0.282431752511384D;
+            // 
+            // detailTableCell5
+            // 
+            this.detailTableCell5.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F, DevExpress.Drawing.DXFontStyle.Bold);
+            this.detailTableCell5.Name = "detailTableCell5";
+            this.detailTableCell5.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
+            this.detailTableCell5.StylePriority.UseFont = false;
+            this.detailTableCell5.StylePriority.UsePadding = false;
+            this.detailTableCell5.StylePriority.UseTextAlignment = false;
+            this.detailTableCell5.Weight = 0.35182792450819356D;
+            // 
+            // detailTableRow2
+            // 
+            this.detailTableRow2.Cells.AddRange(new DevExpress.XtraReports.UI.XRTableCell[] {
+            this.detailTableCell5,
+            this.detailTableCell2,
+            this.detailTableCell1,
+            this.productDescription});
+            this.detailTableRow2.Name = "detailTableRow2";
+            this.detailTableRow2.Weight = 10.58D;
+            // 
+            // productName
+            // 
+            this.productName.Borders = DevExpress.XtraPrinting.BorderSide.None;
+            this.productName.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[ProductName]")});
+            this.productName.Font = new DevExpress.Drawing.DXFont("Segoe UI", 15F, DevExpress.Drawing.DXFontStyle.Bold);
+            this.productName.Name = "productName";
+            this.productName.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 15, 0, 100F);
+            this.productName.StylePriority.UseBackColor = false;
+            this.productName.StylePriority.UseBorders = false;
+            this.productName.StylePriority.UseFont = false;
+            this.productName.StylePriority.UsePadding = false;
+            this.productName.StylePriority.UseTextAlignment = false;
+            this.productName.Text = "ProductName";
+            this.productName.TextAlignment = DevExpress.XtraPrinting.TextAlignment.BottomLeft;
+            this.productName.Weight = 0.9119883570370696D;
+            // 
+            // quantity
+            // 
+            this.quantity.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[Quantity]")});
+            this.quantity.Font = new DevExpress.Drawing.DXFont("Segoe UI", 11F, DevExpress.Drawing.DXFontStyle.Bold);
+            this.quantity.Name = "quantity";
+            this.quantity.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 5, 0, 100F);
+            this.quantity.RowSpan = 2;
+            this.quantity.StylePriority.UseBackColor = false;
+            this.quantity.StylePriority.UseBorders = false;
+            this.quantity.StylePriority.UseFont = false;
+            this.quantity.StylePriority.UsePadding = false;
+            this.quantity.StylePriority.UseTextAlignment = false;
+            this.quantity.Text = "1";
+            this.quantity.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.quantity.Weight = 0.32770048361588039D;
+            // 
+            // unitPrice
+            // 
+            this.unitPrice.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[SellPricePerItem]")});
+            this.unitPrice.Font = new DevExpress.Drawing.DXFont("Segoe UI", 11F, DevExpress.Drawing.DXFontStyle.Bold);
+            this.unitPrice.Name = "unitPrice";
+            this.unitPrice.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 5, 0, 100F);
+            this.unitPrice.RowSpan = 2;
+            this.unitPrice.StylePriority.UseBackColor = false;
+            this.unitPrice.StylePriority.UseBorders = false;
+            this.unitPrice.StylePriority.UseFont = false;
+            this.unitPrice.StylePriority.UsePadding = false;
+            this.unitPrice.StylePriority.UseTextAlignment = false;
+            this.unitPrice.Text = "ج.م‏000";
+            this.unitPrice.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.unitPrice.Weight = 0.28243175251138408D;
+            // 
+            // lineTotal
+            // 
+            this.lineTotal.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query_1].[TotalSellPrice]")});
+            this.lineTotal.Font = new DevExpress.Drawing.DXFont("Segoe UI", 11F, DevExpress.Drawing.DXFontStyle.Bold);
+            this.lineTotal.Name = "lineTotal";
+            this.lineTotal.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 5, 0, 100F);
+            this.lineTotal.RowSpan = 2;
+            this.lineTotal.StylePriority.UseBackColor = false;
+            this.lineTotal.StylePriority.UseBorders = false;
+            this.lineTotal.StylePriority.UseFont = false;
+            this.lineTotal.StylePriority.UseForeColor = false;
+            this.lineTotal.StylePriority.UsePadding = false;
+            this.lineTotal.StylePriority.UseTextAlignment = false;
+            this.lineTotal.Text = "ج.م‏000";
+            this.lineTotal.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.lineTotal.Weight = 0.35182792450819356D;
+            // 
+            // detailTableRow1
+            // 
+            this.detailTableRow1.Cells.AddRange(new DevExpress.XtraReports.UI.XRTableCell[] {
+            this.lineTotal,
+            this.unitPrice,
+            this.quantity,
+            this.productName});
+            this.detailTableRow1.Name = "detailTableRow1";
+            this.detailTableRow1.Weight = 10.58D;
+            // 
+            // detailTable
+            // 
+            this.detailTable.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F, DevExpress.Drawing.DXFontStyle.Bold);
+            this.detailTable.LocationFloat = new DevExpress.Utils.PointFloat(25.00006F, 0F);
+            this.detailTable.Name = "detailTable";
+            this.detailTable.Rows.AddRange(new DevExpress.XtraReports.UI.XRTableRow[] {
+            this.detailTableRow1,
+            this.detailTableRow2});
+            this.detailTable.SizeF = new System.Drawing.SizeF(650.0001F, 70F);
+            this.detailTable.StylePriority.UseBorderColor = false;
+            this.detailTable.StylePriority.UseBorders = false;
+            this.detailTable.StylePriority.UseFont = false;
+            // 
+            // productNameCaption
+            // 
+            this.productNameCaption.Name = "productNameCaption";
+            this.productNameCaption.StylePriority.UseBackColor = false;
+            this.productNameCaption.StylePriority.UseFont = false;
+            this.productNameCaption.StylePriority.UseForeColor = false;
+            this.productNameCaption.StylePriority.UsePadding = false;
+            this.productNameCaption.StylePriority.UseTextAlignment = false;
+            this.productNameCaption.Text = "المنتج";
+            this.productNameCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleLeft;
+            this.productNameCaption.Weight = 0.79799195925756D;
+            // 
+            // quantityCaption
+            // 
+            this.quantityCaption.Name = "quantityCaption";
+            this.quantityCaption.StylePriority.UseBackColor = false;
+            this.quantityCaption.StylePriority.UseFont = false;
+            this.quantityCaption.StylePriority.UseForeColor = false;
+            this.quantityCaption.StylePriority.UseTextAlignment = false;
+            this.quantityCaption.Text = "الكمية";
+            this.quantityCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.quantityCaption.Weight = 0.28673902243541904D;
             // 
             // unitPriceCaption
             // 
@@ -859,34 +842,51 @@
             this.unitPriceCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
             this.unitPriceCaption.Weight = 0.24712879323622328D;
             // 
-            // quantityCaption
+            // lineTotalCaption
             // 
-            this.quantityCaption.Name = "quantityCaption";
-            this.quantityCaption.StylePriority.UseBackColor = false;
-            this.quantityCaption.StylePriority.UseFont = false;
-            this.quantityCaption.StylePriority.UseForeColor = false;
-            this.quantityCaption.StylePriority.UseTextAlignment = false;
-            this.quantityCaption.Text = "الكمية";
-            this.quantityCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
-            this.quantityCaption.Weight = 0.28673902243541904D;
+            this.lineTotalCaption.BorderColor = System.Drawing.Color.White;
+            this.lineTotalCaption.Name = "lineTotalCaption";
+            this.lineTotalCaption.StylePriority.UseBackColor = false;
+            this.lineTotalCaption.StylePriority.UseBorderColor = false;
+            this.lineTotalCaption.StylePriority.UseBorders = false;
+            this.lineTotalCaption.StylePriority.UseFont = false;
+            this.lineTotalCaption.StylePriority.UseForeColor = false;
+            this.lineTotalCaption.StylePriority.UseTextAlignment = false;
+            this.lineTotalCaption.Text = "اجمالي الصنف";
+            this.lineTotalCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.lineTotalCaption.Weight = 0.30785032120391059D;
             // 
-            // productNameCaption
+            // headerTableRow
             // 
-            this.productNameCaption.Name = "productNameCaption";
-            this.productNameCaption.StylePriority.UseBackColor = false;
-            this.productNameCaption.StylePriority.UseFont = false;
-            this.productNameCaption.StylePriority.UseForeColor = false;
-            this.productNameCaption.StylePriority.UsePadding = false;
-            this.productNameCaption.StylePriority.UseTextAlignment = false;
-            this.productNameCaption.Text = "المنتج";
-            this.productNameCaption.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleLeft;
-            this.productNameCaption.Weight = 0.79799195925756D;
+            this.headerTableRow.Cells.AddRange(new DevExpress.XtraReports.UI.XRTableCell[] {
+            this.lineTotalCaption,
+            this.unitPriceCaption,
+            this.quantityCaption,
+            this.productNameCaption});
+            this.headerTableRow.Name = "headerTableRow";
+            this.headerTableRow.Weight = 11.5D;
             // 
-            // baseControlStyle
+            // headerTable
             // 
-            this.baseControlStyle.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F);
-            this.baseControlStyle.Name = "baseControlStyle";
-            this.baseControlStyle.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 100F);
+            this.headerTable.Font = new DevExpress.Drawing.DXFont("Segoe UI", 10F);
+            this.headerTable.LocationFloat = new DevExpress.Utils.PointFloat(25.00003F, 10.00001F);
+            this.headerTable.Name = "headerTable";
+            this.headerTable.Rows.AddRange(new DevExpress.XtraReports.UI.XRTableRow[] {
+            this.headerTableRow});
+            this.headerTable.SizeF = new System.Drawing.SizeF(650F, 35F);
+            this.headerTable.StylePriority.UseFont = false;
+            this.headerTable.StylePriority.UsePadding = false;
+            // 
+            // xrPanel3
+            // 
+            this.xrPanel3.AnchorHorizontal = ((DevExpress.XtraReports.UI.HorizontalAnchorStyles)((DevExpress.XtraReports.UI.HorizontalAnchorStyles.Left | DevExpress.XtraReports.UI.HorizontalAnchorStyles.Right)));
+            this.xrPanel3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(243)))), ((int)(((byte)(245)))));
+            this.xrPanel3.Controls.AddRange(new DevExpress.XtraReports.UI.XRControl[] {
+            this.headerTable});
+            this.xrPanel3.LocationFloat = new DevExpress.Utils.PointFloat(0F, 0F);
+            this.xrPanel3.Name = "xrPanel3";
+            this.xrPanel3.SizeF = new System.Drawing.SizeF(700F, 45F);
+            this.xrPanel3.StylePriority.UseBackColor = false;
             // 
             // SaleInvoice
             // 
@@ -906,12 +906,12 @@
             this.StyleSheet.AddRange(new DevExpress.XtraReports.UI.XRControlStyle[] {
             this.baseControlStyle});
             this.Version = "23.2";
-            ((System.ComponentModel.ISupportInitialize)(this.detailTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.vendorTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.customerTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.invoiceInfoTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.invoiceTotalTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.totalTable)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.detailTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.headerTable)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this)).EndInit();
 
@@ -923,17 +923,6 @@
         private DevExpress.DataAccess.Sql.SqlDataSource sqlDataSource1;
         private DevExpress.XtraReports.UI.DetailBand Detail;
         private DevExpress.XtraReports.UI.XRLine xrLine1;
-        private DevExpress.XtraReports.UI.XRTable detailTable;
-        private DevExpress.XtraReports.UI.XRTableRow detailTableRow1;
-        private DevExpress.XtraReports.UI.XRTableCell lineTotal;
-        private DevExpress.XtraReports.UI.XRTableCell unitPrice;
-        private DevExpress.XtraReports.UI.XRTableCell quantity;
-        private DevExpress.XtraReports.UI.XRTableCell productName;
-        private DevExpress.XtraReports.UI.XRTableRow detailTableRow2;
-        private DevExpress.XtraReports.UI.XRTableCell detailTableCell5;
-        private DevExpress.XtraReports.UI.XRTableCell detailTableCell2;
-        private DevExpress.XtraReports.UI.XRTableCell detailTableCell1;
-        private DevExpress.XtraReports.UI.XRTableCell productDescription;
         private DevExpress.XtraReports.UI.TopMarginBand TopMargin;
         private DevExpress.XtraReports.UI.BottomMarginBand BottomMargin;
         private DevExpress.XtraReports.UI.GroupHeaderBand GroupHeader2;
@@ -978,6 +967,18 @@
         private DevExpress.XtraReports.UI.XRTableCell xrTableCell3;
         private DevExpress.XtraReports.UI.XRTableCell xrTableCell6;
         private DevExpress.XtraReports.UI.GroupHeaderBand GroupHeader1;
+        private DevExpress.XtraReports.UI.XRControlStyle baseControlStyle;
+        private DevExpress.XtraReports.UI.XRTable detailTable;
+        private DevExpress.XtraReports.UI.XRTableRow detailTableRow1;
+        private DevExpress.XtraReports.UI.XRTableCell lineTotal;
+        private DevExpress.XtraReports.UI.XRTableCell unitPrice;
+        private DevExpress.XtraReports.UI.XRTableCell quantity;
+        private DevExpress.XtraReports.UI.XRTableCell productName;
+        private DevExpress.XtraReports.UI.XRTableRow detailTableRow2;
+        private DevExpress.XtraReports.UI.XRTableCell detailTableCell5;
+        private DevExpress.XtraReports.UI.XRTableCell detailTableCell2;
+        private DevExpress.XtraReports.UI.XRTableCell detailTableCell1;
+        private DevExpress.XtraReports.UI.XRTableCell productDescription;
         private DevExpress.XtraReports.UI.XRPanel xrPanel3;
         private DevExpress.XtraReports.UI.XRTable headerTable;
         private DevExpress.XtraReports.UI.XRTableRow headerTableRow;
@@ -985,6 +986,5 @@
         private DevExpress.XtraReports.UI.XRTableCell unitPriceCaption;
         private DevExpress.XtraReports.UI.XRTableCell quantityCaption;
         private DevExpress.XtraReports.UI.XRTableCell productNameCaption;
-        private DevExpress.XtraReports.UI.XRControlStyle baseControlStyle;
     }
 }

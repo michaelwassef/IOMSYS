@@ -10,5 +10,6 @@ namespace IOMSYS.IServices
         Task<int> InsertSalesInvoiceAsync(SalesInvoicesModel salesInvoice);
         Task<int> UpdateSalesInvoiceAsync(SalesInvoicesModel salesInvoice);
         Task<int> DeleteSalesInvoiceAsync(int salesInvoiceId);
+        Task<int> GetLastInvoiceIdAsync();
     }
 }

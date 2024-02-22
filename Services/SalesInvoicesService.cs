@@ -2,7 +2,6 @@
 using IOMSYS.Dapper;
 using IOMSYS.IServices;
 using IOMSYS.Models;
-using Microsoft.CodeAnalysis.Operations;
 
 namespace IOMSYS.Services
 {
@@ -101,6 +100,15 @@ namespace IOMSYS.Services
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.ExecuteAsync(sql, new { SalesInvoiceId = salesInvoiceId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<int> GetLastInvoiceIdAsync()
+        {
+            var sql = "SELECT TOP 1 SalesInvoiceId FROM SalesInvoices ORDER BY SalesInvoiceId DESC";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.ExecuteScalarAsync<int>(sql).ConfigureAwait(false);
             }
         }
     }

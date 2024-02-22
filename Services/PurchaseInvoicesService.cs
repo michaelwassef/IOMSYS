@@ -94,5 +94,14 @@ namespace IOMSYS.Services
                 return await db.ExecuteAsync(sql, new { PurchaseInvoiceId = purchaseInvoiceId }).ConfigureAwait(false);
             }
         }
+        public async Task<int> GetLastInvoiceIdAsync()
+        {
+            var sql = "SELECT TOP 1 PurchaseInvoiceId FROM PurchaseInvoices ORDER BY PurchaseInvoiceId DESC";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.ExecuteScalarAsync<int>(sql).ConfigureAwait(false);
+            }
+        }
+
     }
 }

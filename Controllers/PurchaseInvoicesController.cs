@@ -128,19 +128,14 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdatePurchaseInvoice([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdatePurchaseInvoice([FromBody] PurchaseInvoicesModel purchaseInvoice)
         {
             try
             {
-                var key = Convert.ToInt32(formData["key"]);
-                var values = formData["values"];
-                var purchaseInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(key);
-                JsonConvert.PopulateObject(values, purchaseInvoice);
-
                 purchaseInvoice.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
+                //if (!ModelState.IsValid)
+                //    return BadRequest(ModelState);
 
                 decimal totalAmount = purchaseInvoice.TotalAmount;
 
@@ -169,6 +164,9 @@ namespace IOMSYS.Controllers
                 int updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(purchaseInvoice);
                 if (updateResult > 0)
                 {
+                    // Retrieve the complete updated purchase invoice
+                    var updatedInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(purchaseInvoice.PurchaseInvoiceId);
+
                     // Retrieve the payment transaction associated with this invoice
                     var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(purchaseInvoice.PurchaseInvoiceId);
                     if (paymentTransaction != null)
@@ -188,13 +186,13 @@ namespace IOMSYS.Controllers
                     {
                         return BadRequest(new { ErrorMessage = "No related payment transaction found for update." });
                     }
+
+                    return Ok(new { SuccessMessage = "Invoice and related payment transaction updated successfully.", UpdatedInvoice = updatedInvoice });
                 }
                 else
                 {
                     return BadRequest(new { ErrorMessage = "Could Not Update Invoice" });
                 }
-
-                return Ok(new { SuccessMessage = "Invoice and related payment transaction updated successfully." });
             }
             catch (Exception ex)
             {
@@ -204,12 +202,10 @@ namespace IOMSYS.Controllers
 
         [HttpDelete]
         [Authorize(Roles = "GenralManager")]
-        public async Task<IActionResult> DeletePurchaseInvoice([FromForm] IFormCollection formData)
+        public async Task<IActionResult> DeletePurchaseInvoice(int invoiceId)
         {
             try
             {
-                var invoiceId = Convert.ToInt32(formData["key"]);
-
                 // Step 1: Retrieve all items associated with the invoice
                 var items = await _purchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
 
@@ -265,6 +261,5 @@ namespace IOMSYS.Controllers
             var totalAmount = items.Sum(item => item.Quantity * item.BuyPrice);
             return totalAmount;
         }
-
     }
 }

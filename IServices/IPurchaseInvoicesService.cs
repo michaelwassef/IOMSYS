@@ -10,5 +10,6 @@ namespace IOMSYS.IServices
         Task<int> InsertPurchaseInvoiceAsync(PurchaseInvoicesModel purchaseInvoice);
         Task<int> UpdatePurchaseInvoiceAsync(PurchaseInvoicesModel purchaseInvoice);
         Task<int> DeletePurchaseInvoiceAsync(int purchaseInvoiceId);
+        Task<int> GetLastInvoiceIdAsync();
     }
 }

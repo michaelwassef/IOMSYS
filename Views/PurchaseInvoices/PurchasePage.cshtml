@@ -13,7 +13,10 @@
     </div>
 </div>
 
-@(Html.DevExtreme().DataGrid<PurchaseInvoicesModel>()
+<div id="gridContainer"></div>
+
+
+@*@(Html.DevExtreme().DataGrid<PurchaseInvoicesModel>()
     .ID("gridContainer")
     .DataSource(d => d
         .Mvc()
@@ -131,13 +134,209 @@
            .DisplayFormat("اجمالي المتبقي : {0}");
         })
     )
-)
-
+)*@
 <script>
+    $(function () {
+        // Initial load of branches into the dropdown
+        $.getJSON('/Branches/LoadBranches', function (data) {
+            var branchSelect = $('#BranchId');
+            $.each(data, function () {
+                branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
+            });
+        });
+
+        // Initialize the DataGrid
+        $("#gridContainer").dxDataGrid({
+            dataSource: new DevExpress.data.CustomStore({
+                key: "PurchaseInvoiceId",
+                load: function (loadOptions) {
+                    var d = $.Deferred();
+                    var params = { branchId: $('#BranchId').val() };
+
+                    $.getJSON('/PurchaseInvoices/LoadPurchaseInvoicesByBranch', params)
+                        .done(function (result) { d.resolve(result); })
+                        .fail(function () { d.reject("Data Loading Error"); });
+
+                    return d.promise();
+                },
+                onRowUpdating: function (e) {
+                    var oldData = e.oldData;
+                    var newData = e.newData;
+                    e.newData = Object.assign({}, oldData, newData);
+                },
+                update: function (key, values) {
+                    return $.ajax({
+                        url: '/PurchaseInvoices/UpdatePurchaseInvoice',
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            ...values,
+                            PurchaseInvoiceId: key,
+                        })
+                    });
+                },
+                remove: function (key) {
+                    return $.ajax({
+                        url: '/PurchaseInvoices/DeletePurchaseInvoice?invoiceId=' + encodeURIComponent(key),
+                        method: 'DELETE'
+                    });
+                }
+            }),
+            onToolbarPreparing: onToolbarPreparing,
+            selection: { mode: "multiple" },
+            export: { enabled: true, allowExportSelectedData: true },
+            onExporting: exporting,
+            columnAutoWidth: true,
+            editing: {
+                mode: "popup",
+                allowUpdating: true,
+                allowDeleting: true,
+                popup: {
+                    title: "فاتورة مشتريات",
+                    showTitle: true,
+                    width: 800,
+                    height: 700
+                }
+            },
+            rtlEnabled: true,
+            paging: { pageSize: 10 },
+            pager: {
+                showPageSizeSelector: true,
+                allowedPageSizes: [10, 25, 50, 100]
+            },
+            searchPanel: { visible: true, highlightCaseSensitive: true },
+            groupPanel: { visible: false },
+            rowAlternationEnabled: true,
+            width: "100%",
+            showBorders: true,
+            columns: [
+                {
+                    dataField: "PurchaseInvoiceId",
+                    caption: "رقم الفاتورة",
+                    allowEditing: false
+                },
+                {
+                    dataField: "TotalAmount",
+                    caption: "اجمالي الفاتورة",
+                    allowEditing: false
+                },
+                {
+                    dataField: "PaidUp",
+                    caption: "المدفوع من الفاتورة"
+                },
+                {
+                    dataField: "Remainder",
+                    caption: "الباقي من المبلغ"
+                },
+                {
+                    dataField: "SupplierId",
+                    caption: "اسم المورد",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "SupplierId",
+                            loadUrl: "/Suppliers/LoadSuppliers"
+                        }),
+                        valueExpr: "SupplierId",
+                        displayExpr: "SupplierName"
+                    }
+                },
+                {
+                    dataField: "BranchId",
+                    caption: "اسم الفرع",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "BranchId",
+                            loadUrl: "/Branches/LoadBranches"
+                        }),
+                        valueExpr: "BranchId",
+                        displayExpr: "BranchName"
+                    }
+                },
+                {
+                    dataField: "PaymentMethodId",
+                    caption: "طريقة الدفع",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "PaymentMethodId",
+                            loadUrl: "/PaymentMethods/LoadPaymentMethods"
+                        }),
+                        valueExpr: "PaymentMethodId",
+                        displayExpr: "PaymentMethodName"
+                    }
+                },
+                {
+                    dataField: "PurchaseDate",
+                    caption: "تاريخ الفاتورة",
+                    dataType: "date"
+                },
+                {
+                    dataField: "UserId",
+                    caption: "مدخل الفاتورة",
+                    allowEditing: false,
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "UserId",
+                            loadUrl: "/Users/LoadUsers"
+                        }),
+                        valueExpr: "UserId",
+                        displayExpr: "UserName"
+                    }
+                }
+            ],
+            columnFixing: {
+                enabled: true
+            },
+            masterDetail: {
+                enabled: true,
+                template: function (container, options) {
+                    $("<div>")
+                        .addClass("master-detail-grid")
+                        .dxDataGrid({
+                            columnAutoWidth: true,
+                            showBorders: true,
+                            columns: [
+                                { dataField: "ProductName", caption: "اسم المنتج" },
+                                { dataField: "SizeName", caption: "المقاس" },
+                                { dataField: "ColorName", caption: "اللون" },
+                                { dataField: "Quantity", caption: "الكمية" },
+                                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
+                            ],
+                            dataSource: new DevExpress.data.CustomStore({
+                                load: function (loadOptions) {
+                                    return $.getJSON('/PurchaseItems/LoadPurchaseItemsByInvoiceId', {
+                                        purchaseInvoiceId: options.key
+                                    });
+                                }
+                            })
+                        }).appendTo(container);
+                }
+            }
+        });
+
+        // Change event for the Branch dropdown to reload the DataGrid
+        $('#BranchId').change(function () {
+            $("#gridContainer").dxDataGrid("instance").refresh();
+        });
+    });
+
+    function onToolbarPreparing(e) {
+        var toolbarItems = e.toolbarOptions.items;
+        toolbarItems.push({
+            widget: 'dxButton',
+            options: {
+                icon: 'fas fa-plus',
+                text: 'اضافة فاتوره مشتريات جديده',
+                onClick: function () {
+                    window.location.href = '@Url.Action("PurchaseInvoicesPage", "PurchaseInvoices")';
+                }
+            },
+            location: 'after'
+        });
+    }
+
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
         var worksheet = workbook.addWorksheet('PurchaseInvoices');
-
         DevExpress.excelExporter.exportDataGrid({
             component: e.component,
             worksheet: worksheet,
@@ -147,82 +346,5 @@
                 saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'PurchaseInvoices.xlsx');
             });
         });
-    }
-
-    function onToolbarPreparing(e) {
-        var toolbarItems = e.toolbarOptions.items;
-        var customButton = {
-            widget: 'dxButton',
-            options: {
-                icon: 'fas fa-plus',
-                text: 'اضافة فاتوره مشتريات جديده',
-                onClick: function () {
-                    window.location.href = '@Url.Action("PurchaseInvoicesPage", "PurchaseInvoices")';
-                }
-            },
-            location: 'after',
-            name: 'customButton'
-        };
-        toolbarItems.push(customButton);
-    } 
-
-    document.addEventListener('DOMContentLoaded', async function () {
-        try {
-            // Load branches data
-            const branchesResponse = await fetch('/Branches/LoadBranches');
-            if (!branchesResponse.ok) {
-                console.error('Failed to load branches data');
-                return;
-            }
-            const branchesData = await branchesResponse.json();
-
-            // Populate branches dropdown
-            populateDropdownData(branchesData);
-
-            // Set the default branch to the first option
-            const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
-            if (defaultBranchId) {
-                const loadUrl = `/PurchaseInvoices/LoadPurchaseInvoicesByBranch?branchId=${defaultBranchId}`;
-                loadSalesInvoices(loadUrl);
-            }
-
-            // Event listener for branch selection change
-            $('#BranchId').change(function () {
-                const branchId = $(this).val();
-                const loadUrl = `/PurchaseInvoices/LoadPurchaseInvoicesByBranch?branchId=${branchId}`;
-                loadSalesInvoices(loadUrl);
-            });
-        } catch (error) {
-            console.error('Error loading data:', error);
-        }
-    });
-
-    function populateDropdownData(data) {
-        const selectElement = document.getElementById('BranchId');
-        selectElement.innerHTML = '';
-        data.forEach(item => {
-            const option = new Option(item['BranchName'], item['BranchId']);
-            selectElement.add(option);
-        });
-    }
-
-    async function loadSalesInvoices(url) {
-        try {
-            const salesInvoicesResponse = await fetch(url);
-            if (!salesInvoicesResponse.ok) {
-                console.error('Failed to load sales invoices data');
-                return;
-            }
-            const salesInvoicesData = await salesInvoicesResponse.json();
-
-            $("#gridContainer").dxDataGrid("instance").option("dataSource", {
-                load: function () {
-                    return salesInvoicesData;
-                },
-                key: "PurchaseInvoiceId"
-            });
-        } catch (error) {
-            console.error('Error loading sales invoices:', error);
-        }
     }
 </script>

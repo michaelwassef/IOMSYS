@@ -96,7 +96,10 @@
                 <label for="saleDate">تاريخ الفاتورة</label>
                 <input type="date" id="saleDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required />
             </div>
-            <button type="button" onclick="saveInvoice()" class="btn btn-success">حفظ الفاتورة</button>
+                <div class="row">
+                     <button type="button" onclick="saveAndPrintInvoice()" class="btn btn-primary col-md-5  mx-3">حفظ وطباعة الفاتورة</button>
+                     <button type="button" onclick="saveInvoice()" class="btn btn-success col-md-5 mx-3">حفظ الفاتورة</button>
+                </div>
         </div>
     </div>
 </form>
@@ -532,6 +535,48 @@ async function fetchAvailableColors(productId) {
         }
     }
     refreshItemsGrid();
+
+    async function saveAndPrintInvoice() {
+        try {
+            // Save the invoice
+            await saveInvoice();
+
+            // After saving, get the invoice ID
+            const response = await fetch('/SalesInvoices/GetLastInvoiceId');
+            if (!response.ok) {
+                throw new Error('Failed to retrieve the last invoice ID');
+            }
+            const data = await response.json();
+            const invoiceId = data.lastInvoiceId;
+
+            // Print the invoice by ID
+            printInvoiceById(invoiceId);
+        } catch (error) {
+            console.error('Error:', error);
+            // Handle error appropriately
+        }
+    }
+
+    async function printInvoiceById(invoiceId) {
+        try {
+            const response = await fetch(`/SalesInvoices/SaleInvoiceReport?invoiceId=${invoiceId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch PDF content: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            const pdfWindow = window.open(url, "_blank");
+            if (!pdfWindow) {
+                throw new Error('Failed to open new window.');
+            }
+            pdfWindow.onload = function () {
+                pdfWindow.print();
+            };
+        } catch (error) {
+            console.error('Error printing invoice:', error);
+        }
+    }
 </script>
 
 <style>
