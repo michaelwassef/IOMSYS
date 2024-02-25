@@ -1,5 +1,7 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Reports;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -10,14 +12,15 @@ namespace IOMSYS.Controllers
     public class ProductsController : Controller
     {
         private readonly IProductsService _ProductsService;
-        private readonly ICategoriesService _categoriesService;
-        private readonly IProductTypesService _producttypesService;
-
-        public ProductsController(IProductsService productsService, ICategoriesService categoriesService, IProductTypesService producttypesService)
+        private readonly IInventoryMovementService _inventoryMovementService;
+        private readonly IBranchInventoryService _branchInventoryService;
+        private readonly IPurchaseItemsService _PurchaseItemsService;
+        public ProductsController(IProductsService productsService, IInventoryMovementService inventoryMovementService, IBranchInventoryService branchInventoryService, IPurchaseItemsService purchaseItemsService)
         {
             _ProductsService = productsService;
-            _categoriesService = categoriesService;
-            _producttypesService = producttypesService;
+            _inventoryMovementService = inventoryMovementService;
+            _branchInventoryService = branchInventoryService;
+            _PurchaseItemsService = purchaseItemsService;
         }
 
         public IActionResult ProductsPage()
@@ -26,6 +29,11 @@ namespace IOMSYS.Controllers
         }
 
         public IActionResult WarehousePage()
+        {
+            return View();
+        }
+
+        public IActionResult WarehouseMovementsPage()
         {
             return View();
         }
@@ -53,6 +61,13 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> GetAllProductsInWarehouseByBranch(int branchId)
         {
             var Products = await _ProductsService.GetAllProductsInWarehouseAsync(branchId);
+            return Json(Products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllWarehouseMovementsByBranch(int branchId)
+        {
+            var Products = await _ProductsService.WarehouseMovementsAsync(branchId);
             return Json(Products);
         }
 
@@ -186,6 +201,65 @@ namespace IOMSYS.Controllers
             {
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TotalBranchInventoryReport(int BranchId)
+        {
+            try
+            {
+                var report = new TotalBranchInventoryReport();
+                report.Parameters["BranchId"].Value = BranchId;
+                report.CreateDocument();
+                MemoryStream memoryStream = new MemoryStream();
+                report.ExportToPdf(memoryStream);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                // Return the PDF file to the client
+                return File(memoryStream, "application/pdf", "TotalBranchReport.pdf");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred while generating the report.", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeleteInventoryItem(int id)
+        {
+            // First, check if ID exists in PurchaseItems
+            var purchaseItem = await _PurchaseItemsService.GetPurchaseItemsByIDitemAsync(id);
+            if (purchaseItem != null)
+            {
+                // It's a purchase item
+                var result = await _PurchaseItemsService.DeletePurchaseItemAsync(id);
+                if (result > 0)
+                {
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(
+                        purchaseItem.ProductId, purchaseItem.SizeId, purchaseItem.ColorId, purchaseItem.BranchId, -purchaseItem.Quantity);
+                    return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
+                return result == 0 ? NotFound() : BadRequest();
+            }
+            else
+            {
+                var movement = await _inventoryMovementService.SelectInventoryMovementByIdAsync(id);
+                if (movement != null)
+                {
+                    // It's an inventory movement
+                    var result = await _inventoryMovementService.DeleteMovementAsync(id);
+                    if (result > 0)
+                    {
+                        await _branchInventoryService.AdjustInventoryQuantityAsync(
+                            movement.ProductId, movement.SizeId, movement.ColorId, movement.ToBranchId, -movement.Quantity);
+                        return Ok(new { SuccessMessage = "Deleted Successfully" });
+                    }
+                    return result == 0 ? NotFound() : BadRequest();
+                }
+            }
+
+            // If we reach here, the ID was not found in either table
+            return NotFound();
         }
 
     }

@@ -53,6 +53,10 @@
         columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف");
         columns.AddFor(m => m.LandlinePhone).Caption("رقم الارضي");
         columns.AddFor(m => m.Address).Caption("العنوان");
+        columns.AddFor(m => m.BranchMangerId).Caption("مسئول المخزن").Lookup(lookup => lookup
+        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
+        .ValueExpr("UserId")
+        .DisplayExpr("UserName"));
     })
         .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))

@@ -17,7 +17,7 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<PurchaseItemsModel>> GetAllPurchaseItemsAsync()
         {
             var sql = @"
-                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice,pi.Notes,pi.BranchId,pi.Statues
+                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate
                 FROM PurchaseItems pi
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
@@ -26,6 +26,21 @@ namespace IOMSYS.Services
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<PurchaseItemsModel>(sql).ConfigureAwait(false);
+            }
+        }
+        public async Task<PurchaseItemsModel> GetPurchaseItemsByIDitemAsync(int id)
+        {
+            var sql = @"
+                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate
+                FROM PurchaseItems pi
+                LEFT JOIN Products p ON pi.ProductId = p.ProductId
+                LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
+                LEFT JOIN Colors c ON pi.ColorId = c.ColorId
+                WHERE pi.PurchaseItemId = @PurchaseItemId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseItemId = id }).ConfigureAwait(false);
             }
         }
 
@@ -45,7 +60,8 @@ namespace IOMSYS.Services
                     pii.PurchaseInvoiceId,
                     pi.Notes,
                     pi.BranchId,
-                    pi.Statues
+                    pi.Statues,
+                    pi.ModDate
                 FROM 
                     PurchaseItems pi
                     LEFT JOIN Products p ON pi.ProductId = p.ProductId
@@ -64,7 +80,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT pi.PurchaseItemId, pi.ProductId, pi.SizeId, pi.ColorId, pi.Quantity, pi.BuyPrice, 
-                       p.ProductName, s.SizeName, c.ColorName, pi.Notes, pi.BranchId, pi.Statues
+                       p.ProductName, s.SizeName, c.ColorName, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate
                 FROM PurchaseInvoiceItems pii
                 INNER JOIN PurchaseItems pi ON pii.PurchaseItemId = pi.PurchaseItemId
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
@@ -82,8 +98,8 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertPurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {
-            var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice, Notes, BranchId, Statues) 
-                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @BuyPrice, @Notes, @BranchId, @Statues);
+            var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice, Notes, BranchId, Statues, ModDate) 
+                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @BuyPrice, @Notes, @BranchId, @Statues, @ModDate);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -96,7 +112,7 @@ namespace IOMSYS.Services
         {
             var sql = @"UPDATE PurchaseItems 
                 SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, BuyPrice = @BuyPrice ,
-               Notes = @Notes , BranchId = @BranchId, Statues = @Statues
+               Notes = @Notes , BranchId = @BranchId, Statues = @Statues , ModDate = @ModDate
                 WHERE PurchaseItemId = @PurchaseItemId";
 
             using (var db = _dapperContext.CreateConnection())

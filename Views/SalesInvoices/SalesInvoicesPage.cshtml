@@ -659,26 +659,34 @@ $('#ProductId').on('change', async function () {
         }
     }
 
+ 
     async function printInvoiceById(invoiceId) {
-        try {
-            const response = await fetch(`/SalesInvoices/SaleInvoiceReport?invoiceId=${invoiceId}`);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch PDF content: ${response.statusText}`);
-            }
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-
-            const pdfWindow = window.open(url, "_blank"); populateDropdownWithItems
-            if (!pdfWindow) {
-                throw new Error('Failed to open new window.');
-            }
-            pdfWindow.onload = function () {
-                pdfWindow.print();
-            };
-        } catch (error) {
-            console.error('Error printing invoice:', error);
+    try {
+        const response = await fetch(`/SalesInvoices/SaleInvoiceReport?invoiceId=${invoiceId}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch PDF content: ${response.statusText}`);
         }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        // Open the PDF in a new window or tab
+        const pdfWindow = window.open(url, "_blank");
+        if (!pdfWindow) {
+            throw new Error('Failed to open new window. Please check your popup blocker settings.');
+        }
+
+        pdfWindow.addEventListener('load', function() {
+            try {
+                pdfWindow.print();
+            } catch (e) {
+                console.error("Error attempting to print:", e);
+            }
+        }, false);
+    } catch (error) {
+        console.error('Error printing invoice:', error);
     }
+}
+
 </script>
 
 <style>

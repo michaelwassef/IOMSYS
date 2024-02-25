@@ -228,6 +228,66 @@ namespace IOMSYS.Services
             }
         }
 
+        //تحركات المخزن
+        public async Task<IEnumerable<ProductsModel>> WarehouseMovementsAsync(int BranchId)
+        {
+            var sql = @"
+           SELECT
+                PI.ProductId,
+                PI.PurchaseItemId as ID,
+                P.ProductName,
+                S.SizeName,
+                C.ColorName,
+                PT.ProductTypeName,
+                C1.CategoryName,
+                PI.Quantity,
+                PI.BuyPrice,
+                PI.Notes,
+                PI.BranchId,
+                PI.Statues,
+                PI.ModDate AS DateAdded,
+                'مدخلات' AS RecordType
+            FROM PurchaseItems PI
+            JOIN Products P ON PI.ProductId = P.ProductId
+            JOIN Sizes S ON PI.SizeId = S.SizeId
+            JOIN Colors C ON PI.ColorId = C.ColorId
+            JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+            JOIN Categories C1 ON P.CategoryId = C1.CategoryId
+            WHERE PI.BranchId = @BranchId
+
+            UNION ALL
+
+            SELECT
+                IM.ProductId,
+                IM.MovementId as ID,
+                PR.ProductName,
+                SZ.SizeName,
+                CLR.ColorName,
+                PTY.ProductTypeName,
+                CAT.CategoryName,
+                IM.Quantity,
+                NULL AS BuyPrice,
+                IM.Notes,
+                IM.ToBranchId,
+                NULL AS Statues,
+                IM.MovementDate AS DateAdded,
+                'منقول من فرع' AS RecordType
+            FROM InventoryMovements IM
+            JOIN Products PR ON IM.ProductId = PR.ProductId
+            JOIN Sizes SZ ON IM.SizeId = SZ.SizeId
+            JOIN Colors CLR ON IM.ColorId = CLR.ColorId
+            JOIN ProductTypes PTY ON PR.ProductTypeId = PTY.ProductTypeId
+            JOIN Categories CAT ON PR.CategoryId = CAT.CategoryId
+            WHERE IM.ToBranchId = @BranchId
+
+            ORDER BY DateAdded DESC;";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ProductsModel>(sql, new { BranchId }).ConfigureAwait(false);
+            }
+        }
+
         //النواقص
         public async Task<IEnumerable<ProductsModel>> GetMinQuantityProductsInWarehouseAsync(int BranchId)
         {

@@ -25,5 +25,10 @@
         public decimal? TotalBuyPrice { get; set; }
         public decimal? TotalSellPrice { get; set; }
         public int? TotalSoldQuantity { get; set; }
+        public DateTime? DateAdded { get; set; }
+        public string? RecordType { get; set; }
+        public int? Quantity { get; set; }
+        //ID OF MOVE OR PurchaseItemId
+        public int? ID { get; set; }
     }
 }

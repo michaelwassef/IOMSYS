@@ -13,6 +13,34 @@
     </div>
 </div>
 
+<button type="button" class="btn btn-primary col-md-3" data-toggle="modal" data-target="#dataGridPopup">
+   المخزن المعلق <span id="dataCountBadge" class="custom-badge-danger mx-1"></span>
+</button>
+<button type="button" onclick="printreportofwarehouse()" class="btn btn-primary col-md-3 mx-3">عرض الجرد المجمع اليومي</button>
+
+
+
+<!-- Popup Modal -->
+<div class="modal fade" id="dataGridPopup" tabindex="-1" role="dialog" aria-labelledby="dataGridPopupLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dataGridPopupLabel">طلبات مرسلة الي الفرع المسئول عنه وتنتظر القبول</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Placeholder for DataGrid -->
+                <div id="inventoryMovementsGrid"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @(Html.DevExtreme().DataGrid<ProductsModel>()
     .ID("gridContainer")
     .DataSource(d => d
@@ -47,7 +75,7 @@
         columns.AddFor(m => m.SizeName).Caption("المقاس");
         columns.AddFor(m => m.ColorName).Caption("اللون");
         columns.AddFor(m => m.CategoryName).Caption("التصنيف");
-        columns.AddFor(m => m.ProductName).Caption("نوع المنتج");
+        columns.AddFor(m => m.ProductTypeName).Caption("نوع المنتج");
         columns.AddFor(m => m.TotalQuantity).Caption("الكمية المتوفرة");
         columns.AddFor(m => m.TotalSellPrice).Caption("اجمالي مبلغ البيع");
         columns.AddFor(m => m.TotalSoldQuantity).Caption("الكمية المباعة");
@@ -75,6 +103,134 @@
 )
 
 <script>
+    async function printreportofwarehouse() {
+        try {
+            // Assuming the branchId select element has the ID "BranchId"
+            const branchId = document.getElementById('BranchId').value;
+            if (!branchId) {
+                alert('Please select a branch first.');
+                return;
+            }
+
+            const response = await fetch(`/Products/TotalBranchInventoryReport?BranchId=${branchId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch PDF content: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            const pdfWindow = window.open(url, "_blank");
+            if (pdfWindow) {
+                pdfWindow.onload = function () {
+                    try {
+                        pdfWindow.focus(); 
+                        pdfWindow.print();
+                    } catch (e) {
+                        console.error("Error attempting to print:", e);
+                    }
+                };
+            } else {
+                throw new Error('Failed to open new window. Please check your popup blocker settings.');
+            }
+        } catch (error) {
+            console.error('Error printing report:', error);
+            alert('An error occurred while trying to print the report. Please try again.');
+        }
+    }
+    $(function () {
+        $("#inventoryMovementsGrid").dxDataGrid({
+            dataSource: new DevExpress.data.CustomStore({
+                key: "MovementId",
+                load: function () {
+                    return $.getJSON("/InventoryMovement/LoadHangingWarehouse").then(function (data) {
+                        updateDataCountBadge(data.length);
+                        return data;
+                    });
+                }
+            }),
+            width: "100%",
+            columns: [
+                { dataField: "ProductName", caption: "اسم المنتج" },
+                { dataField: "SizeName", caption: "المقاس" },
+                { dataField: "ColorName", caption: "اللون" },
+                { dataField: "Quantity", caption: "الكمية" },
+                { dataField: "FromBranchName", caption: "من فرع" },
+                { dataField: "ToBranchName", caption: "الي فرع" },
+                { dataField: "IsApproved", caption: "هل موافق عليه؟" },
+                { dataField: "Notes", caption: "ملاحظات" },
+                { dataField: "MovementDate", caption: "تاريخ النقل", dataType: "date" },
+                {
+                caption: "الإجراءات",
+                    cellTemplate: function (container, options) {
+                        $('<button/>').addClass('btn btn-success btn-sm mx-1')
+                            .text('قبول')
+                            .on('click', function () {
+                                approveOrRejectMovement(options.data.MovementId, true);
+                            })
+                            .appendTo(container);
+
+                        $('<button/>').addClass('btn btn-danger btn-sm')
+                            .text('رفض')
+                            .on('click', function () {
+                                approveOrRejectMovement(options.data.MovementId, false);
+                            })
+                            .appendTo(container);
+                    }
+                }
+            ],
+            allowColumnResizing: true,
+            columnAutoWidth: true,
+            rtlEnabled: true
+        });
+
+        // Use the 'shown.bs.modal' event to trigger column auto-sizing
+        $('#dataGridPopup').on('shown.bs.modal', function () {
+            // Now get the DataGrid instance and call updateDimensions or repaint
+            var dataGrid = $("#inventoryMovementsGrid").dxDataGrid("instance");
+            dataGrid.updateDimensions(); // Or dataGrid.repaint();
+        });
+
+        function updateDataCountBadge(count) {
+            if (count > 0) {
+                $("#dataCountBadge").text(count).show();
+            } else {
+                $("#dataCountBadge").hide();
+            }
+        }
+    });
+
+    function approveOrRejectMovement(movementId, isApproved) {
+        var formData = new FormData();
+        formData.append('movementId', movementId);
+        formData.append('isApproved', isApproved);
+
+        $.ajax({
+            url: '/InventoryMovement/ApproveOrRejectMovement',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.success) {
+                    DevExpress.ui.notify({
+                        message: response.message,
+                        position: {
+                            my: "center top",
+                            at: "center top"
+                        }
+                    }, "success", 3000);
+
+                    // Refresh the DataGrid
+                    $("#inventoryMovementsGrid").dxDataGrid("instance").refresh();
+                } else {
+                    DevExpress.ui.notify(response.message, "error", 3000);
+                }
+            },
+            error: function () {
+                DevExpress.ui.notify("Error processing your request", "error", 3000);
+            }
+        });
+    }
     document.addEventListener('DOMContentLoaded', async function () {
         try {
             // Load branches data
@@ -149,3 +305,14 @@
         });
     }
 </script>
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<style>
+    .custom-badge-danger {
+        background-color: #dc3545; /* Bootstrap's danger color */
+        color: white;
+        border-radius: 100%; /* Makes the badge circular */
+        padding: 0.25em 0.6em; /* Adjusts the padding to ensure the circle shape */
+        font-size: 0.75em; /* Adjusts the font size */
+    }
+</style>

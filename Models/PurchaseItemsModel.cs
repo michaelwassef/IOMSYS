@@ -16,5 +16,6 @@
         public string? Notes { get; set; }
         public int BranchId { get; set; }
         public int Statues { get; set; }
+        public DateTime ModDate { get; set; } 
     }
 }

@@ -15,8 +15,9 @@ namespace IOMSYS.Controllers
         private readonly IProductsService _ProductsService;
         private readonly IBranchInventoryService _branchInventoryService;
         private readonly IPaymentTransactionService _paymentTransactionService;
+        private readonly IBranchesService _branchesService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService, IBranchesService branchesService)
         {
             _PurchaseItemsService = PurchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
@@ -24,6 +25,7 @@ namespace IOMSYS.Controllers
             _ProductsService = productsService;
             _branchInventoryService = branchInventoryService;
             _paymentTransactionService = paymentTransactionService;
+            _branchesService = branchesService;
         }
 
         [HttpGet]
@@ -49,8 +51,18 @@ namespace IOMSYS.Controllers
                 var newPurchaseItems = new PurchaseItemsModel();
                 JsonConvert.PopulateObject(values, newPurchaseItems);
 
+                newPurchaseItems.ModDate = DateTime.Now;
+
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
+
+                int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+                int? BranchId = await _branchesService.SelectBranchIdByManagerIdAsync(userId);
+
+                if (newPurchaseItems.BranchId != BranchId)
+                {
+                    return Json(new { success = false, message = "ليس لديك صلاحية للاضافة لهذا الفرع" });
+                }
 
                 int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
 
@@ -94,6 +106,8 @@ namespace IOMSYS.Controllers
 
                 var newPurchaseItem = new PurchaseItemsModel();
                 JsonConvert.PopulateObject(values, newPurchaseItem);
+
+                newPurchaseItem.ModDate = DateTime.Now;
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);

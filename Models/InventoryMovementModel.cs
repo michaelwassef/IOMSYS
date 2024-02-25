@@ -9,8 +9,15 @@
         public int Quantity { get; set; }
         public int FromBranchId { get; set; }
         public int ToBranchId { get; set; }
-        public bool IsApproved { get; set; } 
+        public bool IsApproved { get; set; }
         public string? Notes { get; set; }
         public DateTime MovementDate { get; set; }
+
+        //for join 
+        public string? ProductName { get; set; }
+        public string? SizeName { get; set; }
+        public string? ColorName { get; set; }
+        public string? FromBranchName { get; set; }
+        public string? ToBranchName { get; set; }
     }
 }

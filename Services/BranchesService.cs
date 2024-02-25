@@ -16,7 +16,8 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<BranchesModel>> GetAllBranchesAsync()
         {
-            var sql = @"SELECT * FROM Branches";
+            var sql = @"SELECT B.*,U.UserName FROM Branches B
+                        LEFT JOIN Users U ON B.BranchMangerId = U.UserId";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<BranchesModel>(sql).ConfigureAwait(false);
@@ -25,23 +26,37 @@ namespace IOMSYS.Services
 
         public async Task<BranchesModel?> SelectBranchByIdAsync(int branchId)
         {
-            var sql = @"SELECT * FROM Branches WHERE BranchId = @BranchId";
+            var sql = @" SELECT B.*,U.UserName FROM Branches B 
+                         LEFT JOIN Users U ON B.BranchMangerId = U.UserId
+                         WHERE B.BranchId = @BranchId";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QuerySingleOrDefaultAsync<BranchesModel>(sql, new { BranchId = branchId }).ConfigureAwait(false);
             }
         }
 
+        public async Task<int?> SelectBranchIdByManagerIdAsync(int BranchMangerId)
+        {
+            var sql = @"SELECT B.BranchId 
+                FROM Branches B 
+                WHERE B.BranchMangerId = @BranchMangerId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QuerySingleOrDefaultAsync<int?>(sql, new { BranchMangerId }).ConfigureAwait(false);
+            }
+        }
+
+
         public async Task<int> InsertBranchAsync(BranchesModel branch)
         {
-            var sql = @"INSERT INTO Branches (BranchName, PhoneNumber, LandlinePhone, Address) 
-                        VALUES (@BranchName, @PhoneNumber, @LandlinePhone, @Address);
+            var sql = @"INSERT INTO Branches (BranchName, PhoneNumber, LandlinePhone, Address, BranchLogo, BranchMangerId) 
+                        VALUES (@BranchName, @PhoneNumber, @LandlinePhone, @Address, @BranchLogo, @BranchMangerId);
                         SELECT CAST(SCOPE_IDENTITY() as int);";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteScalarAsync<int>(sql, new { branch.BranchName, branch.PhoneNumber, branch.LandlinePhone, branch.Address }).ConfigureAwait(false);
+                    return await db.ExecuteScalarAsync<int>(sql, new { branch.BranchName,branch.PhoneNumber,branch.LandlinePhone,branch.Address,branch.BranchLogo,branch.BranchMangerId  }).ConfigureAwait(false);
                 }
             }
             catch
@@ -52,12 +67,13 @@ namespace IOMSYS.Services
 
         public async Task<int> UpdateBranchAsync(BranchesModel branch)
         {
-            var sql = @"UPDATE Branches SET BranchName = @BranchName, PhoneNumber = @PhoneNumber, LandlinePhone = @LandlinePhone, Address = @Address WHERE BranchId = @BranchId";
+            var sql = @"UPDATE Branches SET BranchName = @BranchName, PhoneNumber = @PhoneNumber, LandlinePhone = @LandlinePhone,
+                        Address = @Address, BranchLogo = @BranchLogo, BranchMangerId = @BranchMangerId WHERE BranchId = @BranchId";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteAsync(sql, new { branch.BranchName, branch.PhoneNumber, branch.LandlinePhone, branch.Address, branch.BranchId }).ConfigureAwait(false);
+                    return await db.ExecuteAsync(sql, new { branch.BranchName, branch.PhoneNumber, branch.LandlinePhone, branch.Address, branch.BranchLogo, branch.BranchMangerId, branch.BranchId }).ConfigureAwait(false);
                 }
             }
             catch

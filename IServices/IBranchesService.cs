@@ -6,6 +6,7 @@ namespace IOMSYS.IServices
     {
         Task<IEnumerable<BranchesModel>> GetAllBranchesAsync();
         Task<BranchesModel?> SelectBranchByIdAsync(int branchId);
+        Task<int?> SelectBranchIdByManagerIdAsync(int BranchMangerId);
         Task<int> InsertBranchAsync(BranchesModel branch);
         Task<int> UpdateBranchAsync(BranchesModel branch);
         Task<int> DeleteBranchAsync(int branchId);
