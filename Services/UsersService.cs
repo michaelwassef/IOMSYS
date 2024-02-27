@@ -16,6 +16,13 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<UsersModel>> GetAllUsersAsync()
         {
+            //var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName, U.UserTypeId, U.IsActive 
+            //            FROM Users U
+            //            INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId
+            //            ORDER BY U.UserId
+            //            OFFSET 1 ROWS
+            //            FETCH NEXT 9999999 ROWS ONLY";
+
             var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName ,U.UserTypeId, U.IsActive FROM Users U
                         INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId";
             using (var db = _dapperContext.CreateConnection())
@@ -44,7 +51,7 @@ namespace IOMSYS.Services
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteScalarAsync<int>(sql, new { user.UserName, user.PhoneNumber, user.Password, user.UserTypeId,user.IsActive }).ConfigureAwait(false);
+                    return await db.ExecuteScalarAsync<int>(sql, new { user.UserName, user.PhoneNumber, user.Password, user.UserTypeId, user.IsActive }).ConfigureAwait(false);
                 }
             }
             catch
@@ -82,6 +89,59 @@ namespace IOMSYS.Services
             catch
             {
                 return -1;
+            }
+        }
+
+        public async Task<IEnumerable<PermissionModel>> GetAllPermissions()
+        {
+            var sql = @"SELECT * FROM Permissions";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<PermissionModel>(sql).ConfigureAwait(false);
+            }
+
+        }
+
+        public async Task<IEnumerable<int>> GetPermissionsForUserAsync(int userId)
+        {
+            var sql = @"SELECT PermissionId FROM UserPermissions WHERE UserId = @UserId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<int>(sql, new { UserId = userId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<bool> AddPermissionToUserAsync(UserPermissionModel newpermission)
+        {
+            var sql = @"INSERT INTO UserPermissions (UserId, PermissionId) VALUES (@UserId, @PermissionId)";
+            try
+            {
+                using (var db = _dapperContext.CreateConnection())
+                {
+                    var affectedRows = await db.ExecuteAsync(sql, new { newpermission.UserId, newpermission.PermissionId }).ConfigureAwait(false);
+                    return affectedRows > 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> RemovePermissionFromUserAsync(UserPermissionModel permission)
+        {
+            var sql = @"DELETE FROM UserPermissions WHERE UserId = @UserId AND PermissionId = @PermissionId";
+            try
+            {
+                using (var db = _dapperContext.CreateConnection())
+                {
+                    var affectedRows = await db.ExecuteAsync(sql, new { permission.UserId, permission.PermissionId }).ConfigureAwait(false);
+                    return affectedRows > 0;
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
     }

@@ -6,19 +6,23 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class PaymentMethodsController : Controller
     {
         private readonly IPaymentMethodsService _paymentMethodsService;
+        private readonly IPermissionsService _permissionsService;
 
-        public PaymentMethodsController(IPaymentMethodsService paymentMethodsService)
+        public PaymentMethodsController(IPaymentMethodsService paymentMethodsService, IPermissionsService permissionsService)
         {
             _paymentMethodsService = paymentMethodsService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult PaymentMethodsPage()
+        public async Task<IActionResult> PaymentMethodsPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PaymentMethods", "PaymentMethodsPage");
+            if (!hasPermission){ return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
@@ -30,9 +34,11 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewPaymentMethod([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PaymentMethods", "AddNewPaymentMethod");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var values = formData["values"];
@@ -57,9 +63,11 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdatePaymentMethod([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PaymentMethods", "UpdatePaymentMethod");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -89,9 +97,11 @@ namespace IOMSYS.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePaymentMethod([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PaymentMethods", "DeletePaymentMethod");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

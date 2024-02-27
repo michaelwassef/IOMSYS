@@ -1,0 +1,100 @@
+﻿
+@{
+    ViewData["Title"] = "ReturnSalesPage";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>مرتجعات الفروع</h1>
+
+<div class="row">
+    <div class="form-group col-md-3 mb-3">
+        <label for="branchId">اسم الفرع</label>
+        <select id="BranchId" class="form-control"></select>
+    </div>
+</div>
+
+<div id="gridContainer"></div>
+
+<script>
+    $(function () {
+        loadBranches();
+
+        $('#BranchId').change(function () {
+            const branchId = $(this).val();
+            loadGridData(branchId);
+        });
+
+        function loadBranches() {
+            fetch('/Branches/LoadBranches')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('BranchId');
+                    data.forEach(branch => {
+                        let option = new Option(branch.BranchName, branch.BranchId);
+                        select.add(option);
+                    });
+                    if (data.length > 0) {
+                        loadGridData(data[0].BranchId); // Load grid for the first branch initially
+                    }
+                })
+                .catch(error => console.error('Unable to load branches.', error));
+        }
+
+        function loadGridData(branchId) {
+            $("#gridContainer").dxDataGrid({
+                dataSource: new DevExpress.data.CustomStore({
+                    key: "SalesInvoiceId",
+                    load: () => {
+                        return fetch(`/SalesItems/LoadReturnSalesItems?branchId=${branchId}`)
+                            .then(response => response.json())
+                            .catch(() => { throw 'Data loading error'; });
+                    },
+                }),
+                selection: { mode: "multiple" },
+                export: { enabled: true, allowExportSelectedData: true },
+                onExporting: exporting,
+                columnAutoWidth: true,
+                allowColumnResizing: true,
+                editing: {
+                    mode: "popup"
+                    //allowDeleting: true
+                },
+                rtlEnabled: true,
+                paging: { pageSize: 10 },
+                pager: {
+                    showPageSizeSelector: true,
+                    allowedPageSizes: [10, 25, 50, 100]
+                },
+                searchPanel: { visible: true, highlightCaseSensitive: true },
+                groupPanel: { visible: false },
+                rowAlternationEnabled: true,
+                showBorders: true,
+                columns: [
+                    { dataField: "ProductId", caption: "كود المنتج" },
+                    { dataField: "ProductName", caption: "اسم المنتج" },
+                    { dataField: "SizeName", caption: "المقاس" },
+                    { dataField: "ColorName", caption: "اللون" },
+                    { dataField: "Quantity", caption: "الكمية المرتجعه" },
+                    { dataField: "SellPrice", caption: "مبلغ المسترجع" },
+                    { dataField: "ItemDiscount", caption: "الخصم علي القعطه" },
+                    { dataField: "ReturnDate", caption: "تاريخ الاسترجاع", dataType: "date" }
+                ]
+            });
+        }
+
+        function exporting(e) {
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Products');
+
+            DevExpress.excelExporter.exportDataGrid({
+                component: e.component,
+                worksheet: worksheet,
+                autoFilterEnabled: true
+            }).then(() => {
+                workbook.xlsx.writeBuffer().then((buffer) => {
+                    saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'WarehouseMovements.xlsx');
+                });
+            });
+        }
+    });
+</script>

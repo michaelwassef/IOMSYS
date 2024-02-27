@@ -85,21 +85,35 @@ Html.DevExtreme().DataGrid<UsersModel>()
             var toolbarItems = e.toolbarOptions.items;
 
             // Custom button configuration
-            var customButton = {
+            var customButton1 = {
                 widget: 'dxButton',
                 options: {
                     icon: 'fas fa-plus',
                     text: 'اضافة فرع لحساب',
                     onClick: function () {
-                        // Define what happens when you click the button
                         window.location.href = '@Url.Action("AssignBranches", "UserBranches")';
                     }
                 },
                 location: 'after',
-                name: 'customButton'
+                name: 'customButton1'
+            };
+
+            // Custom button configuration
+            var customButton2 = {
+                widget: 'dxButton',
+                options: {
+                    icon: 'fas fa-plus',
+                    text: 'اضافة صلاحيات',
+                    onClick: function () {
+                    window.location.href = '@Url.Action("AssignPermission", "UserPermissions")';
+                    }
+                },
+                location: 'after',
+                name: 'customButton2'
             };
 
             // Add the custom button to the toolbar
-            toolbarItems.push(customButton);
+        toolbarItems.push(customButton1);
+        toolbarItems.push(customButton2);
         }
 </script>

@@ -6,19 +6,26 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class BranchesController : Controller
     {
         private readonly IBranchesService _branchesService;
+        private readonly IPermissionsService _permissionsService;
 
-        public BranchesController(IBranchesService branchesService)
+        public BranchesController(IBranchesService branchesService, IPermissionsService permissionsService)
         {
             _branchesService = branchesService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager")]
-        public IActionResult BranchesPage()
+        public async Task<IActionResult> BranchesPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Branches", "BranchesPage");
+            if (!hasPermission)
+            {
+                return RedirectToAction("AccessDenied", "Access");
+            }
             return View();
         }
 
@@ -30,9 +37,14 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> AddNewBranch([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Branches", "AddNewBranch");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var values = formData["values"];
@@ -57,9 +69,14 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> UpdateBranch([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Branches", "UpdateBranch");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -88,11 +105,15 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteBranch([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Branches", "DeleteBranch");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

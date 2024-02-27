@@ -18,12 +18,13 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
-                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
+                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId, u.UserName
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
-                LEFT JOIN Users u ON si.UserId = u.UserId";
+                LEFT JOIN Users u ON si.UserId = u.UserId
+                WHERE si.IsReturn = 0 ";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -41,7 +42,7 @@ namespace IOMSYS.Services
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON si.UserId = u.UserId
-                WHERE si.BranchId = @BranchId";
+                WHERE si.BranchId = @BranchId AND si.IsReturn = 0 ";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -59,7 +60,7 @@ namespace IOMSYS.Services
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON si.UserId = u.UserId
-                WHERE si.SalesInvoiceId = @SalesInvoiceId";
+                WHERE si.SalesInvoiceId = @SalesInvoiceId AND si.IsReturn = 0 ";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -69,9 +70,10 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertSalesInvoiceAsync(SalesInvoicesModel salesInvoice)
         {
+            salesInvoice.IsReturn = false;
             var sql = @"
-                INSERT INTO SalesInvoices (CustomerId, TotalAmount, PaidUp, Remainder, BranchId, PaymentMethodId, UserId, SaleDate, TotalDiscount) 
-                VALUES (@CustomerId, @TotalAmount, @PaidUp, @Remainder, @BranchId, @PaymentMethodId, @UserId, @SaleDate, @TotalDiscount);
+                INSERT INTO SalesInvoices (CustomerId, TotalAmount, PaidUp, Remainder, BranchId, PaymentMethodId, UserId, SaleDate, TotalDiscount, IsReturn, ReturnDate) 
+                VALUES (@CustomerId, @TotalAmount, @PaidUp, @Remainder, @BranchId, @PaymentMethodId, @UserId, @SaleDate, @TotalDiscount, @IsReturn, @ReturnDate);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -93,6 +95,16 @@ namespace IOMSYS.Services
                 return await db.ExecuteAsync(sql, salesInvoice).ConfigureAwait(false);
             }
         }
+        public async Task<int> UpdateReturnSalesInvoiceAsync(int SalesInvoiceId)
+        {
+            var sql = @"UPDATE SalesInvoices SET IsReturn = 1, ReturnDate = @ReturnDate WHERE SalesInvoiceId = @SalesInvoiceId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.ExecuteAsync(sql, new { ReturnDate = DateTime.Now, SalesInvoiceId}).ConfigureAwait(false);
+            }
+        }
+
         public async Task<int> DeleteSalesInvoiceAsync(int salesInvoiceId)
         {
             var sql = @"DELETE FROM SalesInvoices WHERE SalesInvoiceId = @SalesInvoiceId";

@@ -4,5 +4,15 @@
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
+    <h1 class="display-4" id="userNameDisplay">Welcome</h1>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('@Url.Action("UserOpenSession", "Users")')
+            .then(response => response.text())
+            .then(username => {
+                document.getElementById('userNameDisplay').innerText = "Welcome " + username;
+            })
+            .catch(error => console.error('Error fetching username:', error));
+    });
+</script>

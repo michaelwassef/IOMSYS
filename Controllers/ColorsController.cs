@@ -6,24 +6,30 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class ColorsController : Controller
     {
         private readonly IColorsService _colorsService;
+        private readonly IPermissionsService _permissionsService;
 
-        public ColorsController(IColorsService colorsService)
+        public ColorsController(IColorsService colorsService, IPermissionsService permissionsService)
         {
             _colorsService = colorsService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult ColorsPage()
+        public async Task<IActionResult> ColorsPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Colors", "ColorsPage");
+            if (!hasPermission)
+            {
+                return RedirectToAction("AccessDenied", "Access");
+            }
             return View();
         }
 
         [HttpGet]
-        [Authorize(Roles = "GenralManager,BranchManager,Employee")]
         public async Task<IActionResult> LoadColors()
         {
             var Colors = await _colorsService.GetAllColorsAsync();
@@ -31,9 +37,14 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewColor([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Colors", "AddNewColor");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var values = formData["values"];
@@ -58,9 +69,14 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateColor([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Colors", "UpdateColor");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -91,9 +107,14 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteColor([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Colors", "DeleteColor");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

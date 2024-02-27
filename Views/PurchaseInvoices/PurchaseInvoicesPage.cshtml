@@ -81,7 +81,7 @@
                 <label for="purchaseDate">تاريخ الفاتورة</label>
                 <input type="date" id="purchaseDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required/>
             </div>
-               <button type="button" onclick="saveInvoice()" class="btn btn-success">حفظ الفاتورة</button>
+               <button type="button" onclick="saveInvoice()" class="btn btn-success my-3">حفظ الفاتورة</button>
         </div>
     </div>
 </form>
@@ -328,18 +328,25 @@
     }
 
     function displayMessage(type, message) {
-        const messageContainer = document.createElement("div");
-        messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
-        messageContainer.role = "alert";
-        messageContainer.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
+    const messageContainer = document.createElement("div");
+    messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    messageContainer.role = "alert";
+    messageContainer.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
 
-        const alertPlaceholder = document.getElementById("alertPlaceholder");
-        alertPlaceholder.innerHTML = '';
-        alertPlaceholder.appendChild(messageContainer);
-    }
+    const alertPlaceholder = document.getElementById("alertPlaceholder");
+    alertPlaceholder.innerHTML = '';
+    alertPlaceholder.appendChild(messageContainer);
+
+    setTimeout(() => {
+        $(messageContainer).fadeOut('slow', () => {
+            messageContainer.remove();
+        });
+    }, 5000);
+}
+
 
 
     async function saveInvoice() {

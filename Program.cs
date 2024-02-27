@@ -33,6 +33,8 @@ builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<IInventoryMovementService, InventoryMovementService>();
 builder.Services.AddScoped<IBranchInventoryService, BranchInventoryService>();
 builder.Services.AddScoped<IExpensesService, ExpensesService>();
+builder.Services.AddScoped<IOfferService, OfferService>();
+builder.Services.AddScoped<IPermissionsService, PermissionsService>();
 
 
 

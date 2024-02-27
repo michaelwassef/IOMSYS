@@ -35,49 +35,49 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<TransactionDetailModel>> LoadDetailsPaymentTransactionsByBranchAsync(int branchId)
         {
             var sql = @"SELECT 
-                        PT.TransactionId,
-                        CASE 
-                            WHEN E.ExpensesId IS NOT NULL THEN 'مصروفات'
-                            WHEN PI.PurchaseInvoiceId IS NOT NULL THEN 'فاتورة مشتريات'
-                            WHEN SI.SalesInvoiceId IS NOT NULL THEN 'فاتورة مبيعات'
-                            ELSE 'Unknown'
-                        END AS InvoiceType,
-                        COALESCE(E.ExpensesId, PI.PurchaseInvoiceId, SI.SalesInvoiceId) AS InvoiceId,
-                        CASE 
-                            WHEN E.ExpensesId IS NOT NULL THEN E.ExpensesName
-                            WHEN PI.PurchaseInvoiceId IS NOT NULL THEN CONCAT('فاتورة مشتريات #', CAST(PI.PurchaseInvoiceId AS VARCHAR), ' - ', S.SupplierName)
-                            WHEN SI.SalesInvoiceId IS NOT NULL THEN CONCAT('فاتورة مبيعات #', CAST(SI.SalesInvoiceId AS VARCHAR), ' - ', C.CustomerName)
-                            ELSE 'Unknown Detail'
-                        END AS InvoiceDetail,
-                        COALESCE(E.PurchaseDate, PI.PurchaseDate, SI.SaleDate) AS InvoiceDate,
-                        COALESCE(E.ExpensesAmount, PI.TotalAmount, SI.TotalAmount) AS Amount,
-                        PT.BranchId,
-                        PT.PaymentMethodId,
-                        PT.TransactionType,
-                        PT.TransactionDate,
-                        PT.Details,
-                        PT.ModifiedDate,
-                        PT.ModifiedUser,
-                        CASE 
-                            WHEN E.ExpensesId IS NOT NULL THEN 'N/A'
-                            WHEN PI.PurchaseInvoiceId IS NOT NULL THEN S.SupplierName
-                            WHEN SI.SalesInvoiceId IS NOT NULL THEN C.CustomerName
-                            ELSE 'Unknown Entity'
-                        END AS EntityName
-                    FROM 
-                        PaymentTransactions PT
-                    LEFT JOIN 
-                        Expenses E ON PT.InvoiceId = E.ExpensesId
-                    LEFT JOIN 
-                        PurchaseInvoices PI ON PT.InvoiceId = PI.PurchaseInvoiceId
-                    LEFT JOIN 
-                        SalesInvoices SI ON PT.InvoiceId = SI.SalesInvoiceId
-                    LEFT JOIN 
-                        Suppliers S ON PI.SupplierId = S.SupplierId
-                    LEFT JOIN 
-                        Customers C ON SI.CustomerId = C.CustomerId
-                    WHERE 
-                        PT.BranchId = @BranchId;";
+                P.TransactionId,
+                P.BranchId,
+                P.PaymentMethodId,
+                P.TransactionType,
+                P.TransactionDate as InvoiceDate,
+                P.Amount,
+                P.Details,
+                P.ModifiedDate,
+                P.ModifiedUser,
+                P.InvoiceId,
+                b.BranchName,
+                u.UserName,
+                pm.PaymentMethodName,
+                CASE 
+                    WHEN P.TransactionType = 'اضافة' AND EXISTS (SELECT 1 FROM SalesInvoices WHERE SalesInvoiceId = P.InvoiceId) THEN 'فاتورة مبيعات'
+                    WHEN EXISTS (SELECT 1 FROM PurchaseInvoices WHERE PurchaseInvoiceId = P.InvoiceId) THEN 'فاتورة مشتريات'
+                    WHEN P.TransactionType = 'خصم' AND EXISTS (SELECT 1 FROM SalesInvoices WHERE SalesInvoiceId = P.InvoiceId) THEN 'مرتجع فاتورة مبيعات'
+                    WHEN EXISTS (SELECT 1 FROM Expenses WHERE ExpensesId = P.InvoiceId) THEN 'مصروفات'
+                    ELSE P.TransactionType 
+                END AS InvoiceType,
+               CASE 
+                    WHEN EXISTS (SELECT 1 FROM SalesInvoices WHERE SalesInvoiceId = P.InvoiceId) THEN c.CustomerName
+                    WHEN EXISTS (SELECT 1 FROM PurchaseInvoices WHERE PurchaseInvoiceId = P.InvoiceId) THEN s.SupplierName
+                    ELSE NULL 
+                END AS EntityName
+            FROM 
+                IOMSYS.dbo.PaymentTransactions P
+            INNER JOIN 
+                Branches b ON P.BranchId = b.BranchId
+            INNER JOIN 
+                Users u ON P.ModifiedUser = u.UserId
+            INNER JOIN 
+                PaymentMethods pm ON P.PaymentMethodId = pm.PaymentMethodId
+            LEFT JOIN 
+                SalesInvoices si ON si.SalesInvoiceId = P.InvoiceId
+            LEFT JOIN 
+                PurchaseInvoices pi ON pi.PurchaseInvoiceId = P.InvoiceId
+            LEFT JOIN 
+                Customers c ON c.CustomerId = si.CustomerId
+            LEFT JOIN 
+                Suppliers s ON s.SupplierId = pi.SupplierId
+            WHERE
+                P.BranchId = @BranchId;";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<TransactionDetailModel>(sql, new { BranchId = branchId }).ConfigureAwait(false);

@@ -6,19 +6,27 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class CustomersController : Controller
     {
         private readonly ICustomersService _customersService;
+        private readonly IPermissionsService _permissionsService;
 
-        public CustomersController(ICustomersService customersService)
+
+        public CustomersController(ICustomersService customersService, IPermissionsService permissionsService)
         {
             _customersService = customersService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult CustomersPage()
+        public async Task<IActionResult> CustomersPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Customers", "CustomersPage");
+            if (!hasPermission)
+            {
+                return RedirectToAction("AccessDenied", "Access");
+            }
             return View();
         }
 
@@ -32,6 +40,12 @@ namespace IOMSYS.Controllers
         [HttpPost]
         public async Task<IActionResult> AddNewCustomer([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Customers", "AddNewCustomer");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var values = formData["values"];
@@ -57,6 +71,12 @@ namespace IOMSYS.Controllers
         [HttpPost]
         public async Task<IActionResult> AddFastNewCustomer([FromBody] CustomersModel newCustomer)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Customers", "AddNewCustomer");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 if (!ModelState.IsValid)
@@ -79,6 +99,12 @@ namespace IOMSYS.Controllers
         [HttpPut]
         public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Customers", "UpdateCustomer");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -109,9 +135,14 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Customers", "DeleteCustomer");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

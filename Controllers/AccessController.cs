@@ -1,6 +1,6 @@
 ﻿using IOMSYS.IServices;
-using IOMSYS.Services;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -41,7 +41,7 @@ namespace IOMSYS.Controllers
                     List<Claim> claims = new List<Claim>
                     {
                         new Claim(ClaimTypes.NameIdentifier, modelLogin.UserName),
-                        new Claim(ClaimTypes.Role, GetRoleName(modelLogin.UserTypeId)),
+                        new Claim(ClaimTypes.Role, GetRoleName(authenticationResult.UserTypeId)),
                         new Claim("UserId", authenticationResult.UserId)
                     };
 
@@ -52,6 +52,8 @@ namespace IOMSYS.Controllers
                         AllowRefresh = true,
                         IsPersistent = modelLogin.KeepLoggedIn
                     };
+
+                    string username = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), properties);
                     return RedirectToAction("Index", "Home");

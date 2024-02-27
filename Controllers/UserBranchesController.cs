@@ -5,23 +5,29 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager")]
+    [Authorize]
     public class UserBranchesController : Controller
     {
         private readonly IUsersService _usersService;
         private readonly IBranchesService _branchesService;
         private readonly IUserBranchesService _userBranchesService;
+        private readonly IPermissionsService _permissionsService;
 
-        public UserBranchesController(IUsersService usersService, IBranchesService branchesService, IUserBranchesService userBranchesService)
+        public UserBranchesController(IUsersService usersService, IBranchesService branchesService, IUserBranchesService userBranchesService, IPermissionsService permissionsService)
         {
             _usersService = usersService;
             _branchesService = branchesService;
             _userBranchesService = userBranchesService;
+            _permissionsService = permissionsService;
         }
 
         [HttpGet]
         public async Task<IActionResult> AssignBranches()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "UserBranches", "AssignBranches");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+
             var users = await _usersService.GetAllUsersAsync();
             var branches = await _branchesService.GetAllBranchesAsync();
             var viewModel = new UserBranchAssignmentViewModel

@@ -66,8 +66,8 @@
         columns.AddFor(m => m.TransactionId).Caption("كود العملية");
         columns.AddFor(m => m.InvoiceType).Caption("اسم العملية");
         columns.AddFor(m => m.InvoiceId).Caption("رقم الفاتورة");
-        columns.AddFor(m => m.InvoiceDetail).Caption("تفاصيل الفاتورة");
-        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
+@*        columns.AddFor(m => m.InvoiceDetail).Caption("تفاصيل الفاتورة");
+*@        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
           .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
           .ValueExpr("BranchId")
           .DisplayExpr("BranchName")); ;
@@ -85,7 +85,6 @@
        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
        .ValueExpr("UserId")
        .DisplayExpr("UserName"));
-       
     })
     @*.MasterDetail(md =>
     {

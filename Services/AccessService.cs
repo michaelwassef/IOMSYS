@@ -15,17 +15,10 @@ namespace IOMSYS.Services
             _db = dapperContext.CreateConnection();
         }
 
-        public async Task<bool> AuthenticateUserAsync1(AccessModel accessmodel)
-        {
-            var sql = @"SELECT COUNT(*) FROM Users WHERE UserName = @Username AND Password = @Password AND UserTypeId = @UserTypeId";
-            var count = await _db.ExecuteScalarAsync<int>(sql, new { UserName = accessmodel.UserName, Password = accessmodel.Password, UserTypeId = accessmodel.UserTypeId });
-            return count > 0;
-        }
-
         public async Task<AuthenticationResultModel> AuthenticateUserAsync(AccessModel accessmodel)
         {
-            var sql = @"SELECT UserId, IsActive FROM Users WHERE UserName = @Username AND Password = @Password AND UserTypeId = @UserTypeId";
-            var user = await _db.QuerySingleOrDefaultAsync<(string UserId, bool IsActive)>(sql, new { accessmodel.UserName, accessmodel.Password, accessmodel.UserTypeId });
+            var sql = @"SELECT UserId, IsActive, UserTypeId FROM Users WHERE UserName = @Username AND Password = @Password";
+            var user = await _db.QuerySingleOrDefaultAsync<(string UserId, bool IsActive, int UserTypeId)>(sql, new { accessmodel.UserName, accessmodel.Password });
 
             var isAuthenticated = !string.IsNullOrEmpty(user.UserId) && user.IsActive;
 
@@ -33,7 +26,8 @@ namespace IOMSYS.Services
             {
                 IsAuthenticated = isAuthenticated,
                 UserId = user.UserId,
-                IsActive = user.IsActive 
+                IsActive = user.IsActive,
+                UserTypeId = user.UserTypeId
             };
         }
 

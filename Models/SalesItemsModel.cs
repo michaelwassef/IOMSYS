@@ -1,4 +1,6 @@
-﻿namespace IOMSYS.Models
+﻿using DevExpress.ClipboardSource.SpreadsheetML;
+
+namespace IOMSYS.Models
 {
     public class SalesItemsModel
     {
@@ -12,6 +14,8 @@
         public decimal ItemDiscount { get; set; }
         public int? DiscountId { get; set; }
         public int? BranchId { get; set; }
+        public bool? IsReturn { get; set; }
+        public DateTime? ReturnDate { get; set; }
         //for joins
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }

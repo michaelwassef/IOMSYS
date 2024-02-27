@@ -68,7 +68,7 @@
         </div>
         <div class="form-group mb-3">
             <label for="Quantity">الكمية</label>
-            <input type="number" id="Quantity" class="form-control" min="0" required />
+            <input type="number" id="Quantity" class="form-control" required />
         </div>
         <div class="form-group mb-3">
             <label for="Notes">ملاحظات</label>
@@ -261,18 +261,12 @@
         var productId = $('#productId').val();
         var sizeId = $('#sizeId').val();
         var colorId = $('#colorId').val();
-        var quantity = $('#quantity').val();
+        var quantity = $('#quantity').val() || 0;
         var notes = $('#notes').val();
 
         // Ensure all required fields have values
         if (!fromBranchId || !toBranchId || !productId || !sizeId || !colorId || !quantity || !notes) {
             alert('برجاء ملاء جميع الحقول الضرورية.');
-            return;
-        }
-
-        // Check if quantity is greater than 0
-        if (parseInt(quantity, 10) <= 0) {
-            alert('الكمية يجب أن تكون أكثر من 0.');
             return;
         }
 

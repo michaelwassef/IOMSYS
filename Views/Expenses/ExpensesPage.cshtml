@@ -1,26 +1,24 @@
-﻿
-@{
+﻿@{
     ViewData["Title"] = "ExpensesPage";
     Layout = "_DevExtremeLayout";
 }
 
 <h1>المصروفات</h1>
 
+<div class="row">
+    <div class="form-group col-md-3 mb-3">
+        <label for="branchId">اسم الفرع</label>
+        <select id="BranchId" class="form-control"></select>
+    </div>
+</div>
+
 @(Html.DevExtreme().DataGrid<ExpenseModel>()
     .ID("gridContainer")
-    .DataSource(d => d
-        .Mvc()
-        .Controller("Expenses")
-        .LoadAction("LoadExpenses")
-        .InsertAction("AddNewExpense")
-        .UpdateAction("UpdateExpense")
-        .DeleteAction("DeleteExpense")
-        .Key("ExpensesId")
-    ).Selection(s => s.Mode(SelectionMode.Multiple))
+    .Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
-          .ColumnAutoWidth(true)
+     .ColumnAutoWidth(true)
     .Editing(e => e
         .Mode(GridEditMode.Popup)
         .AllowAdding(true)
@@ -52,13 +50,13 @@
         columns.AddFor(m => m.PaymentMethodId).Caption("طريقة الدفع").Lookup(lookup => lookup
         .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
         .ValueExpr("PaymentMethodId")
-        .DisplayExpr("PaymentMethodName"));;
+        .DisplayExpr("PaymentMethodName")); ;
         columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
        .ValueExpr("BranchId")
        .DisplayExpr("BranchName"));
         columns.AddFor(m => m.PurchaseDate).Caption("تاريخ المعاملة").AllowEditing(false);
-          columns.AddFor(m => m.UserId).Caption("مدخل المعاملة").AllowEditing(false).Lookup(lookup => lookup
+        columns.AddFor(m => m.UserId).Caption("مدخل المعاملة").AllowEditing(false).Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
        .ValueExpr("UserId")
        .DisplayExpr("UserName"));
@@ -72,13 +70,124 @@
                 .Column("المبلغ")
                 .SummaryType(SummaryType.Sum)
                 .DisplayFormat(" اجمالي المصروف: {0}");
-
-            // Add more summaries as needed
         })
     )
 )
 
 <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        try {
+            // Load branches data
+            const branchesResponse = await fetch('/Branches/LoadBranches');
+            if (!branchesResponse.ok) {
+                console.error('Failed to load branches data');
+                return;
+            }
+            const branchesData = await branchesResponse.json();
+
+            // Populate branches dropdown
+            populateDropdownData(branchesData);
+
+            // Set the default branch to the first option
+            const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
+            if (defaultBranchId) {
+                const loadUrl = `/Expenses/LoadExpensesByBranch?branchId=${defaultBranchId}`;
+                loadSalesInvoices(loadUrl);
+            }
+
+            // Event listener for branch selection change
+            $('#BranchId').change(function () {
+                const branchId = $(this).val();
+                const loadUrl = `/Expenses/LoadExpensesByBranch?branchId=${branchId}`;
+                loadSalesInvoices(loadUrl);
+            });
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    });
+
+    function populateDropdownData(data) {
+        const selectElement = document.getElementById('BranchId');
+        selectElement.innerHTML = '';
+        data.forEach(item => {
+            const option = new Option(item['BranchName'], item['BranchId']);
+            selectElement.add(option);
+        });
+    }
+
+    async function loadSalesInvoices(url) {
+        try {
+            const salesInvoicesResponse = await fetch(url);
+            if (!salesInvoicesResponse.ok) {
+                console.error('Failed to load sales invoices data');
+                return;
+            }
+            const salesInvoicesData = await salesInvoicesResponse.json();
+
+            $("#gridContainer").dxDataGrid({
+                dataSource: salesInvoicesData,
+                onRowInserted: async function (e) {
+                    try {
+                        const response = await fetch("/Expenses/AddNewExpense", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(e.data)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("Failed to add expense.");
+                        }
+
+                        const result = await response.json();
+                        console.log("Expense added successfully:", result);
+                    } catch (error) {
+                        console.error("Error adding expense:", error);
+                    }
+                },
+                onRowUpdated: async function (e) {
+                    try {
+                        const response = await fetch(`/Expenses/UpdateExpense`, {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(e.data)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("Failed to update expense.");
+                        }
+
+                        const result = await response.json();
+                        console.log("Expense updated successfully:", result);
+                    } catch (error) {
+                        console.error("Error updating expense:", error);
+                    }
+                },
+                onRowRemoved: async function (e) {
+                    try {
+                        const response = await fetch(`/Expenses/DeleteExpense?key=${e.data.ExpensesId}`, {
+                            method: "DELETE"
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("Failed to delete expense.");
+                        }
+
+                        const result = await response.json();
+                        console.log("Expense deleted successfully:", result);
+                    } catch (error) {
+                        console.error("Error deleting expense:", error);
+                    }
+                },
+            });
+        } catch (error) {
+            console.error('Error loading sales invoices:', error);
+        }
+    }
+
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
         var worksheet = workbook.addWorksheet('Colors');

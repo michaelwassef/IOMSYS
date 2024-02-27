@@ -1,0 +1,207 @@
+﻿@{
+    ViewData["Title"] = "OffersPage";
+    Layout = "_DevExtremeLayout";
+}
+
+<h1>العروض</h1>
+
+<button type="button" id="btnAddOfferDetail" class="btn btn-primary">Add Offer Detail</button>
+
+<div class="modal fade" id="addOfferDetailModal" tabindex="-1" role="dialog" aria-labelledby="addOfferDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addOfferDetailModalLabel">اضافة تفاصيل العرض</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formAddOfferDetail">
+                    <div class="form-group">
+                        <label for="offerId">Offer</label>
+                        <select id="OfferId" class="form-control" placeholder="اسم العرض" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ProductId">اسم المنتج</label>
+                        <select id="ProductId" class="form-control" placeholder="اسم المنتج" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="requiredQuantity">Required Quantity</label>
+                        <input type="number" id="RequiredQuantity" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="FreeQuantity">Free Quantity</label>
+                        <input type="number" id="freeQuantity" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="DiscountedPrice">Discounted Price</label>
+                        <input type="number" id="discountedPrice" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-success">Save Offer Detail</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@(Html.DevExtreme().DataGrid<OfferModel>()
+    .ID("gridContainer")
+    .DataSource(d => d
+        .Mvc()
+        .Controller("Offer")
+        .LoadAction("GetAllOffers")
+        .InsertAction("CreateOffer")
+        .UpdateAction("UpdateOffer")
+        .DeleteAction("DeleteOffer")
+        .Key("OfferId")
+    ).Selection(s => s.Mode(SelectionMode.Multiple))
+     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+     .OnExporting("exporting")
+     .AllowColumnResizing(true)
+     .ColumnAutoWidth(true)
+    .Editing(e => e
+        .Mode(GridEditMode.Popup)
+        .AllowAdding(true)
+        .AllowUpdating(true)
+        .AllowDeleting(true)
+        .Popup(p => p
+                .Width(700)
+                .Height(530))
+    )
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p
+        .ShowPageSizeSelector(true)
+        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
+    )
+    .SearchPanel(s => s
+        .Visible(true)
+        .HighlightCaseSensitive(true)
+    )
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.OfferName).Caption("اسم العرض");
+
+        columns.AddFor(m => m.OfferType).Caption("نوع العرض").Lookup(lookup => lookup
+            .DataSource(new[] {
+            new { ID = "واحد وعليه واحد", Name = "واحد وعليه واحد" },
+            new { ID = "حزمة", Name = "حزمة" },
+            new { ID = "خصم", Name = "خصم" }
+        }).ValueExpr("ID").DisplayExpr("Name"));
+        
+        columns.AddFor(m => m.StartDate).Caption("تاريخ البداية").DataType(GridColumnDataType.Date);
+        columns.AddFor(m => m.EndDate).Caption("تاريخ النهاية").DataType(GridColumnDataType.Date);
+        columns.AddFor(m => m.IsActive).Caption("نشط");
+    })
+    .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
+    .HeaderFilter(f => f.Visible(true))
+)
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Offers');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Offers.xlsx');
+            });
+        });
+    }
+
+    $(document).ready(function () {
+        populateDropdownSEARCH('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
+        populateDropdownSEARCH('/Offer/GetAllOffers', 'OfferId', 'OfferId', 'OfferName');
+
+        // Open the modal
+        $('#btnAddOfferDetail').click(function () {
+            $('#addOfferDetailModal').modal('show');
+        });
+
+        $('.close, .btn-secondary').click(function () {
+            $('#addOfferDetailModal').modal('hide');
+        });
+
+        $('#formAddOfferDetail').submit(function (event) {
+            event.preventDefault(); 
+
+            var offerDetailData = JSON.stringify({
+                OfferId: $('#OfferId').val(),
+                ProductId: $('#ProductId').val(),
+                RequiredQuantity: $('#RequiredQuantity').val(),
+                FreeQuantity: $('#freeQuantity').val(),
+                DiscountedPrice: $('#discountedPrice').val()
+            });
+
+            $.ajax({
+                type: 'POST',
+                url: '/OfferDetails/CreateOfferDetail',
+                contentType: 'application/json',
+                data: offerDetailData,
+                success: function (response) {
+                    alert('Offer detail added successfully.');
+                    $('#addOfferDetailModal').modal('hide');
+                },
+                error: function (xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText;
+                    alert('Error - ' + errorMessage);
+                }
+            });
+        });
+    });
+
+    async function populateDropdownSEARCH(url, elementId, valueField, textField) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const selectElement = $(`#${elementId}`);
+                let options = [];
+
+
+                data.forEach(item => {
+                    const optionText = `${item[valueField]} - ${item[textField]}`;
+                    options.push(new Option(optionText, item[valueField], false, false));
+                });
+
+                selectElement.empty().append(options);
+
+                selectElement.select2({
+                    placeholder: "برجاء الاختيار",
+                    allowClear: true,
+                    width: '100%'
+                });
+
+                selectElement.data('select2').$container.addClass('custom-font-size');
+
+            } else {
+                console.error('Failed to load data for:', elementId);
+            }
+        } catch (error) {
+            console.error('Error fetching data for:', elementId, error);
+        }
+    }
+</script>
+
+<style>
+    .select2-container--default .select2-selection--single {
+        height: auto;
+        padding: 3px;
+    }
+
+    .select2-container--open {
+        z-index: 9999999 !important;
+    }
+</style>
+
+

@@ -15,126 +15,6 @@
 
 <div id="gridContainer"></div>
 
-
-@*@(Html.DevExtreme().DataGrid<PurchaseInvoicesModel>()
-    .ID("gridContainer")
-    .DataSource(d => d
-        .Mvc()
-        .Controller("PurchaseInvoices")
-        .LoadAction("LoadPurchaseInvoicesByBranch")
-        .UpdateAction("UpdatePurchaseInvoice")
-        .DeleteAction("DeletePurchaseInvoice")
-        .Key("PurchaseInvoiceId")
-    ).OnToolbarPreparing("onToolbarPreparing")
-    .Selection(s => s.Mode(SelectionMode.Multiple))
-     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
-     .OnExporting("exporting")
-     .AllowColumnResizing(true)
-     .ColumnAutoWidth(true)
-     .Editing(e => e
-        .Mode(GridEditMode.Popup)
-        .AllowDeleting(true)
-        .AllowUpdating(true)
-        .Popup(p => p
-                .Title("فاتورة مشتريات")
-                .ShowTitle(true)
-                .Width(800)
-                .Height(700))
-    )
-    .RtlEnabled(true)
-    .Paging(p => p.PageSize(10))
-    .Pager(p => p
-        .ShowPageSizeSelector(true)
-        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
-    )
-    .SearchPanel(s => s
-        .Visible(true)
-        .HighlightCaseSensitive(true)
-    )
-    .GroupPanel(g => g.Visible(false))
-    .RowAlternationEnabled(true)
-    .Width("100%")
-    .ShowBorders(true)
-    .Columns(columns =>
-    {
-        columns.AddFor(m => m.PurchaseInvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
-        columns.AddFor(m => m.TotalAmount).Caption("اجمالي الفاتورة").AllowEditing(false);
-        columns.AddFor(m => m.PaidUp).Caption("المدفوع من الفاتورة");
-        columns.AddFor(m => m.Remainder).Caption("الباقي من المبلغ");
-        columns.AddFor(m => m.SupplierId).Caption("اسم المورد").Lookup(lookup => lookup
-          .DataSource(d => d.Mvc().Controller("Suppliers").LoadAction("LoadSuppliers"))
-          .ValueExpr("SupplierId")
-          .DisplayExpr("SupplierName"));
-        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
-       .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
-       .ValueExpr("BranchId")
-       .DisplayExpr("BranchName"));
-       columns.AddFor(m => m.PaymentMethodId).Caption("طريقة الدفع").Lookup(lookup => lookup
-        .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
-        .ValueExpr("PaymentMethodId")
-        .DisplayExpr("PaymentMethodName"));
-        columns.AddFor(m => m.PurchaseDate).Caption("تاريخ الفاتورة");
-        columns.AddFor(m => m.UserId).Caption("مدخل الفاتورة").AllowEditing(false).Lookup(lookup => lookup
-       .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
-       .ValueExpr("UserId")
-       .DisplayExpr("UserName"));
-    }).MasterDetail(md =>
-    {
-        md.Enabled(true);
-        md.Template(@<text>
-            @(Html.DevExtreme().DataGrid<PurchaseItemsModel>()
-        .ColumnAutoWidth(true)
-        .ShowBorders(true)
-        .Columns(columns =>
-        {
-            columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
-            columns.AddFor(m => m.SizeName).Caption("المقاس");
-            columns.AddFor(m => m.ColorName).Caption("اللون");
-            columns.AddFor(m => m.Quantity).Caption("الكمية");
-            columns.AddFor(m => m.BuyPrice).Caption("سعر الشراء للواحد");
-        })
-        .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
-        .DataSource(d => d.Mvc() 
-        .Controller("PurchaseItems")
-        .LoadAction("LoadPurchaseItemsByInvoiceId")
-        .Key("PurchaseItemId")
-        .DeleteAction("DeletePurchaseItem")
-        .LoadParams(new { purchaseInvoiceId = new JS("data.PurchaseInvoiceId") }))
-        .Editing(e => e
-            .Mode(GridEditMode.Popup)
-            .AllowDeleting(true)
-        )
-        .RtlEnabled(true)
-        )
-            </text>);
-    })
-    .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
-    .HeaderFilter(f => f.Visible(true))
-    .Summary(summary => summary
-        .TotalItems(items =>
-        {
-            items.Add()
-                .Column("رقم الفاتورة")
-                .SummaryType(SummaryType.Count)
-                .DisplayFormat("عدد الفواتير : {0}");
-
-            items.Add()
-            .Column("اجمالي الفاتورة")
-            .SummaryType(SummaryType.Sum)
-            .DisplayFormat("اجمالي الفواتير : {0}");
-
-            items.Add()
-            .Column("المدفوع من الفاتورة")
-            .SummaryType(SummaryType.Sum)
-            .DisplayFormat("اجمالي المدفوع : {0}");   
-            
-            items.Add()
-           .Column("الباقي من المبلغ")
-           .SummaryType(SummaryType.Sum)
-           .DisplayFormat("اجمالي المتبقي : {0}");
-        })
-    )
-)*@
 <script>
     $(function () {
         // Initial load of branches into the dropdown
@@ -313,7 +193,6 @@
             }
         });
 
-        // Change event for the Branch dropdown to reload the DataGrid
         $('#BranchId').change(function () {
             $("#gridContainer").dxDataGrid("instance").refresh();
         });

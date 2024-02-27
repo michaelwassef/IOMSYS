@@ -23,6 +23,15 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<ExpenseModel>> GetAllExpensesByBranchAsync(int branchId)
+        {
+            var sql = @"SELECT * FROM Expenses Where BranchId = @BranchId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ExpenseModel>(sql, new { BranchId = branchId }).ConfigureAwait(false);
+            }
+        }
+
         public async Task<ExpenseModel?> SelectExpenseByIdAsync(int expensesId)
         {
             var sql = @"SELECT * FROM Expenses WHERE ExpensesId = @ExpensesId";

@@ -6,19 +6,23 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class SuppliersController : Controller
     {
         private readonly ISuppliersService _SuppliersService;
+        private readonly IPermissionsService _permissionsService;
 
-        public SuppliersController(ISuppliersService suppliersService)
+        public SuppliersController(ISuppliersService suppliersService, IPermissionsService permissionsService)
         {
             _SuppliersService = suppliersService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult SuppliersPage()
+        public async Task<IActionResult> SuppliersPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Suppliers", "SuppliersPage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
@@ -30,9 +34,11 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewSupplier([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Suppliers", "AddNewSupplier");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var values = formData["values"];
@@ -55,11 +61,12 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateSupplier([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Suppliers", "UpdateSupplier");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -88,11 +95,12 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteSupplier([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Suppliers", "DeleteSupplier");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

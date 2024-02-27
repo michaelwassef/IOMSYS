@@ -1,10 +1,12 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IOMSYS.Controllers
 {
+    [Authorize]
     public class SalesItemsController : Controller
     {
         private readonly ISalesInvoicesService _salesInvoicesService;
@@ -30,6 +32,13 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> LoadReturnSalesItems(int BranchId)
+        {
+            var Items = await _salesItemsService.GetAllReturnSalesItemsAsync(BranchId);
+            return Json(Items);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> LoadSaleItemsByInvoiceId([FromQuery] int SalesInvoiceId)
         {
             var Items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(SalesInvoiceId);
@@ -37,7 +46,6 @@ namespace IOMSYS.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteSaleItem([FromForm] IFormCollection formData)
         {
             try
@@ -59,7 +67,7 @@ namespace IOMSYS.Controllers
                 if (deletesalesItemsResult > 0)
                 {
                     await _branchInventoryService.AdjustInventoryQuantityAsync(salesInvoiceIdModel.ProductId, salesInvoiceIdModel.SizeId, salesInvoiceIdModel.ColorId, (int)salesInvoiceIdModel.BranchId, salesInvoiceIdModel.Quantity);
-                    await RecalculateInvoiceTotal(salesInvoiceId);
+                    await RecalculateInvoiceTotalwhenDelete(salesInvoiceId);
                     await DeleteInvoiceIfNoItems(salesInvoiceId);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
                 }
@@ -69,6 +77,101 @@ namespace IOMSYS.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> ReturnSaleItem(int salesItemId)
+        {
+            try
+            {
+                // Step 1: Retrieve sales item details
+                var salesInvoiceIdModel = await _salesItemsService.GetSalesItemByIdAsync(salesItemId);
+                if (salesInvoiceIdModel == null)
+                    return BadRequest(new { ErrorMessage = "Sales item not found." });
+
+                int salesInvoiceId = salesInvoiceIdModel.SalesInvoiceId;
+
+                // Step 2: Remove the connection between the invoice and the item
+                var removeConnectionResult = await _salesInvoiceItemsService.RemoveSalesItemFromInvoiceAsync(new SalesInvoiceItemsModel
+                {
+                    SalesInvoiceId = salesInvoiceId,
+                    SalesItemId = salesItemId
+                });
+
+                // Step 3: Return the sales item
+                int deleteSalesItemResult = await _salesItemsService.ReturnSalesItemAsync(salesItemId);
+                if (deleteSalesItemResult <= 0)
+                    return BadRequest(new { ErrorMessage = "Failed to delete sales item." });
+
+                // Step 4: Adjust inventory quantity, recalculate invoice total, and delete invoice if necessary
+                await _branchInventoryService.AdjustInventoryQuantityAsync(salesInvoiceIdModel.ProductId, salesInvoiceIdModel.SizeId, salesInvoiceIdModel.ColorId, (int)salesInvoiceIdModel.BranchId, salesInvoiceIdModel.Quantity);
+
+                // Step 5: Calculate returned amount
+                var returnedAmount = salesInvoiceIdModel.Quantity * salesInvoiceIdModel.SellPrice;
+
+                // Step 6: Retrieve sales invoice details
+                var salesInvoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(salesInvoiceId);
+
+                // Step 7: Create payment transaction and update sales invoice
+                var paymentTransaction = new PaymentTransactionModel
+                {
+                    BranchId = salesInvoice.BranchId,
+                    PaymentMethodId = salesInvoice.PaymentMethodId,
+                    Amount = salesInvoiceIdModel.SellPrice * salesInvoiceIdModel.Quantity,
+                    TransactionType = "خصم",
+                    TransactionDate = salesInvoice.SaleDate,
+                    ModifiedUser = salesInvoice.UserId,
+                    ModifiedDate = DateTime.Now,
+                    Details = "مرتجع فاتورة # " + salesInvoice.SalesInvoiceId,
+                    InvoiceId = salesInvoice.SalesInvoiceId,
+                };
+                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+
+                // Update sales invoice's PaidUp property
+                salesInvoice.PaidUp = salesInvoice.TotalAmount - returnedAmount;
+                await _salesInvoicesService.UpdateSalesInvoiceAsync(salesInvoice);
+
+                await DeleteReturnInvoiceIfNoItems(salesInvoiceId);
+                await RecalculateInvoiceTotal(salesInvoiceId);
+                return Ok(new { SuccessMessage = "Deleted Successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+
+        private async Task<bool> RecalculateInvoiceTotalwhenDelete(int invoiceId)
+        {
+            try
+            {
+                var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
+                var totalAmount = items.Sum(item => item.Quantity * item.SellPrice);
+
+                var invoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(invoiceId);
+                if (invoice != null)
+                {
+                    invoice.TotalAmount = totalAmount;
+                    invoice.PaidUp = invoice.TotalAmount;
+                    var updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(invoice);
+                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
+                    if (paymentTransaction != null)
+                    {
+                        paymentTransaction.Amount = invoice.PaidUp;
+                        var deleteTransactionResult = await _paymentTransactionService.UpdatePaymentTransactionAsync(paymentTransaction);
+                        if (deleteTransactionResult <= 0)
+                        {
+                            return false;
+                        }
+                    }
+                    return updateResult > 0;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -127,5 +230,62 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
+        public async Task<IActionResult> DeleteReturnInvoiceIfNoItems(int invoiceId)
+        {
+            try
+            {
+                // Step 1: Check if any items are associated with this invoice
+                var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
+
+                // Step 2: If no items are associated, proceed to delete the invoice
+                int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
+                if (deleteResult > 0)
+                {
+                    return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+                }
+                else
+                {
+                    return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+        //public async Task<IActionResult> UpdateReturnInvoiceIfNoItems(int invoiceId)
+        //{
+        //    try
+        //    {
+        //        // Step 1: Check if any items are associated with this invoice
+        //        var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
+
+        //        // Step 2: If no items are associated, proceed to delete the invoice
+        //        int deleteResult = await _salesInvoicesService.UpdateReturnSalesInvoiceAsync(invoiceId);
+        //        if (deleteResult > 0)
+        //        {
+        //            var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
+        //            if (paymentTransaction != null)
+        //            {
+        //                // Delete the payment transaction
+        //                var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+        //                if (deleteTransactionResult <= 0)
+        //                {
+        //                    return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+        //                }
+        //            }
+        //            return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+        //        }
+        //        else
+        //        {
+        //            return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+        //    }
+        //}
     }
 }

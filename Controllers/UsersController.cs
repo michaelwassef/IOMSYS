@@ -1,28 +1,44 @@
 ﻿using IOMSYS.IServices;
-using IOMSYS.Services;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
 
     public class UsersController : Controller
     {
         private readonly IUsersService _UsersService;
         private readonly IUserTypesService _userTypesService;
+        private readonly IPermissionsService _permissionsService;
 
-        public UsersController(IUsersService usersService, IUserTypesService userTypesService)
+        public UsersController(IUsersService usersService, IUserTypesService userTypesService, IPermissionsService permissionsService)
         {
             _UsersService = usersService;
             _userTypesService = userTypesService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager")]
-        public IActionResult UsersPageAsync()
+        [HttpGet]
+        public async Task<IActionResult> UserOpenSession()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var user = await _UsersService.SelectUserByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+            return Ok(user.UserName);
+        }
+
+        public async Task<IActionResult> UsersPageAsync()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Users", "UsersPageAsync");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
@@ -41,9 +57,11 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> AddNewUser([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Users", "AddNewUser");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var values = formData["values"];
@@ -68,11 +86,12 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpPut]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> UpdateUser([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Users", "UpdateUser");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -108,11 +127,12 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteUser([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Users", "DeleteUser");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

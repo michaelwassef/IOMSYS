@@ -1,0 +1,109 @@
+﻿@model IOMSYS.Models.SalesInvoicesModel
+
+@{
+    ViewData["Title"] = "ReturnInvoice";
+    Layout = "_DevExtremeLayout";
+}
+
+<div id="alertPlaceholder"></div>
+
+<h1 class="mb-3">اضافه الي المرتجع</h1>
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">تفاصيل الفاتوره</h5>
+            <p class="card-text">رقم الفاتوره: @Model.SalesInvoiceId</p>
+            <p class="card-text">اسم العميل: @Model.CustomerName</p>
+            <p class="card-text">اجمالي الفاتورة: @Model.TotalAmount</p>
+            <p class="card-text">المدفوع: @Model.PaidUp</p>
+            <p class="card-text">المتبقي: @Model.Remainder</p>
+            <p class="card-text">اجمالي الخصم: @Model.TotalDiscount</p>
+            <p class="card-text">تاريخ الفاتوره: @Model.SaleDate.ToShortDateString()</p>
+        </div>
+    </div>
+</div>
+
+<h5>اصناف الفاتورة</h5>
+
+<div id="itemsGridContainer"></div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var salesItems = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.SalesItems));
+            $("#itemsGridContainer").dxDataGrid({
+                dataSource: salesItems,
+                showBorders: true,
+                columnAutoWidth: true,
+                columns: [
+                    {
+                        dataField: "ProductName",
+                        caption: "اسم المنتج"
+                    },
+                    {
+                        dataField: "SizeName",
+                        caption: "المقاس"
+                    },
+                    {
+                        dataField: "ColorName",
+                        caption: "اللون"
+                    },
+                    {
+                        dataField: "Quantity",
+                        caption: "الكمية"
+                    },
+                    {
+                        dataField: "SellPrice",
+                        caption: "سعر البيع للواحد"
+                    },
+                    {
+                        dataField: "ItemDiscount",
+                        caption: "الخصم علي القطعة"
+                    },
+                    {
+                        caption: "Action",
+                        cellTemplate: function (container, options) {
+                            $('<div class="return-btn">استرجاع</div>')
+                                .on('click', function () {
+                                    returnItem(options.data.SalesItemId);
+                                })
+                                .appendTo(container);
+                        }
+                    }
+                ]
+            });
+        });
+
+        function returnItem(salesItemId) {
+            if (!confirm("Are you sure you want to return this item?")) {
+                return;
+            }
+            $.ajax({
+                type: "PUT",
+                url: "/SalesItems/ReturnSaleItem",
+                data: { salesItemId: salesItemId },
+                success: function (response) {
+                    alert(response.SuccessMessage || "Item returned successfully.");
+                    location.reload(); 
+                },
+                error: function (xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText;
+                    alert('Error - ' + errorMessage);
+                }
+            });
+        }
+    </script>
+}
+
+<style>
+    /* Example custom style */
+    .return-btn {
+        color: #fff;
+        background-color: #007bff;
+        border-color: #007bff;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+</style>

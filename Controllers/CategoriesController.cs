@@ -6,19 +6,27 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class CategoriesController : Controller
     {
         private readonly ICategoriesService _categoriesService;
+        private readonly IPermissionsService _permissionsService;
 
-        public CategoriesController(ICategoriesService categoriesService)
+
+        public CategoriesController(ICategoriesService categoriesService, IPermissionsService permissionsService)
         {
             _categoriesService = categoriesService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult CategoriesPage()
+        public async Task<IActionResult> CategoriesPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Categories", "CategoriesPage");
+            if (!hasPermission)
+            {
+                return RedirectToAction("AccessDenied", "Access");
+            }
             return View();
         }
 
@@ -30,9 +38,14 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewCategory([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Categories", "AddNewCategory");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var values = formData["values"];
@@ -57,9 +70,14 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateCategory([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Categories", "UpdateCategory");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -90,9 +108,14 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteCategory([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Categories", "DeleteCategory");
+            if (!hasPermission)
+            {
+                return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" });
+            }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

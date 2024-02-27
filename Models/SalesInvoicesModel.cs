@@ -12,6 +12,8 @@
         public int PaymentMethodId { get; set; }
         public int UserId { get; set; }
         public DateTime SaleDate { get; set; }
+        public bool? IsReturn { get; set; }
+        public DateTime? ReturnDate { get; set; }
 
         //for joins
         public string? CustomerName { get; set; }

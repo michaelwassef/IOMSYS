@@ -7,19 +7,26 @@ using Newtonsoft.Json;
 namespace IOMSYS.Controllers
 {
 
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class ProductTypesController : Controller
     {
         private readonly IProductTypesService _productTypesService;
+        private readonly IPermissionsService _permissionsService;
 
-        public ProductTypesController(IProductTypesService productTypesService)
+        public ProductTypesController(IProductTypesService productTypesService, IPermissionsService permissionsService)
         {
             _productTypesService = productTypesService;
+            _permissionsService = permissionsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
-        public IActionResult ProductTypesPage()
+        public async Task<IActionResult> ProductTypesPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "ProductTypes", "ProductTypesPage");
+            if (!hasPermission)
+            {
+                return RedirectToAction("AccessDenied", "Access");
+            }
             return View();
         }
 
@@ -31,9 +38,11 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewProductType([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "ProductTypes", "AddNewProductType");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }) ; }
             try
             {
                 var values = formData["values"];
@@ -58,9 +67,11 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateProductType([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "ProductTypes", "UpdateProductType");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -91,9 +102,11 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteProductType([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "ProductTypes", "DeleteProductType");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var key = Convert.ToInt32(formData["key"]);

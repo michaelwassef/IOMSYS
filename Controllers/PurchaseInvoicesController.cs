@@ -15,8 +15,9 @@ namespace IOMSYS.Controllers
         private readonly IProductsService _ProductsService;
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly IBranchInventoryService _branchInventoryService;
+        private readonly IPermissionsService _permissionsService;
 
-        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService)
+        public PurchaseInvoicesController(IPurchaseInvoicesService purchaseInvoicesService, IPurchaseItemsService purchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IProductsService productsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService, IPermissionsService permissionsService)
         {
             _purchaseInvoicesService = purchaseInvoicesService;
             _purchaseItemsService = purchaseItemsService;
@@ -24,15 +25,22 @@ namespace IOMSYS.Controllers
             _ProductsService = productsService;
             _paymentTransactionService = paymentTransactionService;
             _branchInventoryService = branchInventoryService;
+            _permissionsService = permissionsService;
         }
 
-        public IActionResult PurchasePage()
+        public async Task<IActionResult> PurchasePage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PurchasePage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
-        public IActionResult PurchaseInvoicesPage()
+        public async Task<IActionResult> PurchaseInvoicesPage()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PurchaseInvoicesPage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
@@ -53,6 +61,10 @@ namespace IOMSYS.Controllers
         [HttpPost]
         public async Task<IActionResult> AddNewPurchaseInvoice([FromForm] string items, [FromForm] PurchaseInvoicesModel model)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PurchaseInvoicesPage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+
             try
             {
                 model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
@@ -95,6 +107,7 @@ namespace IOMSYS.Controllers
                 {
                     item.BranchId = model.BranchId;
                     item.Statues = 1;
+                    item.ModDate = DateTime.Now;
                     item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
                     await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                     await _ProductsService.UpdateProductBuyandSellPriceAsync(item.ProductId, item.BuyPrice, item.SellPrice);
@@ -127,9 +140,14 @@ namespace IOMSYS.Controllers
             }
         }
 
+        //not finish
         [HttpPut]
         public async Task<IActionResult> UpdatePurchaseInvoice([FromBody] PurchaseInvoicesModel purchaseInvoice)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "UpdatePurchaseInvoice");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+
             try
             {
                 purchaseInvoice.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
@@ -201,9 +219,12 @@ namespace IOMSYS.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePurchaseInvoice(int invoiceId)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "DeletePurchaseInvoice");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
+
             try
             {
                 // Step 1: Retrieve all items associated with the invoice

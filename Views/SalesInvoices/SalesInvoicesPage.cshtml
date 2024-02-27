@@ -126,8 +126,8 @@
                 <input type="date" id="saleDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required />
             </div>
                 <div class="row">
-                     <button type="button" onclick="saveAndPrintInvoice()" class="btn btn-primary col-md-5  mx-3">حفظ وطباعة الفاتورة</button>
-                     <button type="button" onclick="saveInvoice()" class="btn btn-success col-md-5 mx-3">حفظ الفاتورة</button>
+                     <button type="button" onclick="saveAndPrintInvoice()" class="btn btn-primary col-md-5 mx-1 my-3">حفظ وطباعة الفاتورة</button>
+                     <button type="button" onclick="saveInvoice()" class="btn btn-success col-md-5 mx-1 my-3">حفظ الفاتورة</button>
                 </div>
         </div>
     </div>
@@ -578,19 +578,27 @@ $('#ProductId').on('change', async function () {
         document.getElementById('totalDiscount').value = DiscountsAmount.toFixed(2);
     }
 
-    function displayMessage(type, message) {
-        const messageContainer = document.createElement("div");
-        messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
-        messageContainer.role = "alert";
-        messageContainer.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
+  function displayMessage(type, message) {
+    const messageContainer = document.createElement("div");
+    messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+    messageContainer.role = "alert";
+    messageContainer.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
 
-        const alertPlaceholder = document.getElementById("alertPlaceholder");
-        alertPlaceholder.innerHTML = '';
-        alertPlaceholder.appendChild(messageContainer);
-    }
+    const alertPlaceholder = document.getElementById("alertPlaceholder");
+    alertPlaceholder.innerHTML = '';
+    alertPlaceholder.appendChild(messageContainer);
+
+    // Automatically hide the alert after 5 seconds (5000 milliseconds)
+    setTimeout(() => {
+        $(messageContainer).fadeOut('slow', () => {
+            messageContainer.remove();
+        });
+    }, 5000);
+}
+
 
 
     async function saveInvoice() {
