@@ -253,39 +253,20 @@
 *@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
     <script>
-        window.onload = function () {
-            const sidebar = document.querySelector(".sidebar");
-            const closeBtn = document.querySelector("#btn");
+        var dropdown = document.querySelector('.nav-item.dropdown');
+        var dropdownMenu = document.querySelector('.dropdown-menu');
 
-            closeBtn.addEventListener("click", function () {
-                sidebar.classList.toggle("open")
-                menuBtnChange()
-            })
+        dropdown.addEventListener('click', function () {
+            var isVisible = dropdownMenu.style.display === 'block';
+            dropdownMenu.style.display = isVisible ? 'none' : 'block';
+        });
 
-            function menuBtnChange() {
-                if (sidebar.classList.contains("open")) {
-                    closeBtn.classList.replace("bx-menu", "bx-menu-alt-right")
-                } else {
-                    closeBtn.classList.replace("bx-menu-alt-right", "bx-menu")
-                }
+        document.addEventListener('click', function (e) {
+            if (!dropdown.contains(e.target)) {
+                dropdownMenu.style.display = 'none';
             }
-        }
-    </script>
-    <script>
-            var dropdown = document.querySelector('.nav-item.dropdown');
-            var dropdownMenu = document.querySelector('.dropdown-menu');
-
-            dropdown.addEventListener('click', function () {
-                var isVisible = dropdownMenu.style.display === 'block';
-                dropdownMenu.style.display = isVisible ? 'none' : 'block';
-            });
-
-            document.addEventListener('click', function (e) {
-                if (!dropdown.contains(e.target)) {
-                    dropdownMenu.style.display = 'none';
-                }
-            });
         });
     </script>
 

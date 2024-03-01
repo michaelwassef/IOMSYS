@@ -7,199 +7,162 @@
 
 <div class="row">
     <div class="form-group col-md-3 mb-3">
-        <label for="branchId">اسم الفرع</label>
+        <label for="BranchId">اسم الفرع</label>
         <select id="BranchId" class="form-control"></select>
     </div>
 </div>
 
-@(Html.DevExtreme().DataGrid<ExpenseModel>()
-    .ID("gridContainer")
-    .Selection(s => s.Mode(SelectionMode.Multiple))
-     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
-     .OnExporting("exporting")
-     .AllowColumnResizing(true)
-     .ColumnAutoWidth(true)
-    .Editing(e => e
-        .Mode(GridEditMode.Popup)
-        .AllowAdding(true)
-        .AllowUpdating(true)
-        .AllowDeleting(true)
-        .Popup(p => p
-                .Width(700)
-                .Height(530))
-    )
-    .RtlEnabled(true)
-    .Paging(p => p.PageSize(10))
-    .Pager(p => p
-        .ShowPageSizeSelector(true)
-        .AllowedPageSizes(new[] { 10, 25, 50, 100 })
-    )
-    .SearchPanel(s => s
-        .Visible(true)
-        .HighlightCaseSensitive(true)
-    )
-    .GroupPanel(g => g.Visible(false))
-    .RowAlternationEnabled(true)
-    .Width("100%")
-    .ShowBorders(true)
-    .Columns(columns =>
-    {
-        columns.AddFor(m => m.ExpensesName).Caption("البند");
-        columns.AddFor(m => m.ExpensesAmount).Caption("المبلغ");
-        columns.AddFor(m => m.Notes).Caption("ملاحظات");
-        columns.AddFor(m => m.PaymentMethodId).Caption("طريقة الدفع").Lookup(lookup => lookup
-        .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
-        .ValueExpr("PaymentMethodId")
-        .DisplayExpr("PaymentMethodName")); ;
-        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
-       .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
-       .ValueExpr("BranchId")
-       .DisplayExpr("BranchName"));
-        columns.AddFor(m => m.PurchaseDate).Caption("تاريخ المعاملة").AllowEditing(false);
-        columns.AddFor(m => m.UserId).Caption("مدخل المعاملة").AllowEditing(false).Lookup(lookup => lookup
-       .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
-       .ValueExpr("UserId")
-       .DisplayExpr("UserName"));
-    })
-    .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
-    .HeaderFilter(f => f.Visible(true))
-    .Summary(summary => summary
-        .TotalItems(items =>
-        {
-            items.Add()
-                .Column("المبلغ")
-                .SummaryType(SummaryType.Sum)
-                .DisplayFormat(" اجمالي المصروف: {0}");
-        })
-    )
-)
+<div id="gridContainer"></div>
 
 <script>
     document.addEventListener('DOMContentLoaded', async function () {
-        try {
-            // Load branches data
-            const branchesResponse = await fetch('/Branches/LoadBranches');
-            if (!branchesResponse.ok) {
-                console.error('Failed to load branches data');
-                return;
-            }
-            const branchesData = await branchesResponse.json();
+        const apiUrl = '/Expenses/LoadExpensesByBranch?branchId=';
+        const branchesUrl = '/Branches/LoadBranchesByUser';
+        const paymentMethodsUrl = '/PaymentMethods/LoadPaymentMethods';
+        const usersUrl = '/Users/LoadUsers';
+        const branchesDropdown = document.getElementById('BranchId');
+        const gridContainer = $("#gridContainer");
 
-            // Populate branches dropdown
-            populateDropdownData(branchesData);
-
-            // Set the default branch to the first option
-            const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
-            if (defaultBranchId) {
-                const loadUrl = `/Expenses/LoadExpensesByBranch?branchId=${defaultBranchId}`;
-                loadSalesInvoices(loadUrl);
-            }
-
-            // Event listener for branch selection change
-            $('#BranchId').change(function () {
-                const branchId = $(this).val();
-                const loadUrl = `/Expenses/LoadExpensesByBranch?branchId=${branchId}`;
-                loadSalesInvoices(loadUrl);
-            });
-        } catch (error) {
-            console.error('Error loading data:', error);
+        async function fetchData(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok.');
+            return await response.json();
         }
+
+        function populateDropdown(data) {
+            const options = data.map(item => `<option value="${item.BranchId}">${item.BranchName}</option>`).join('');
+            branchesDropdown.innerHTML = options;
+        }
+
+        function initializeDataGrid(branchId) {
+            gridContainer.dxDataGrid({
+                dataSource: DevExpress.data.AspNet.createStore({
+                    key: "ExpensesId",
+                    loadUrl: apiUrl + branchId,
+                    insertUrl: "/Expenses/AddNewExpense",
+                    updateUrl: "/Expenses/UpdateExpense",
+                    deleteUrl: "/Expenses/DeleteExpense",
+                    onBeforeSend: function (method, ajaxOptions) {
+                        ajaxOptions.xhrFields = { withCredentials: true };
+                    }
+                }),
+                columns: [
+                    { dataField: "ExpensesName", caption: "البند", width: 150, validationRules: [{ type: "required" }] },
+                    { dataField: "ExpensesAmount", caption: "المبلغ", width: 100, dataType: "number", validationRules: [{ type: "required" }] },
+                    { dataField: "Notes", caption: "ملاحظات", width: 200 },
+                    {
+                        dataField: "PaymentMethodId", caption: "طريقة الدفع", width: 150,
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "PaymentMethodId",
+                                loadUrl: "/PaymentMethods/LoadPaymentMethods"
+                            }),
+                            valueExpr: "PaymentMethodId",
+                            displayExpr: "PaymentMethodName"
+                        },
+                        validationRules: [{ type: "required" }]
+                    },
+                    {
+                        dataField: "BranchId", caption: "اسم الفرع", width: 150,
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "BranchId",
+                                loadUrl: "/Branches/LoadBranches"
+                            }),
+                            valueExpr: "BranchId",
+                            displayExpr: "BranchName"
+                        },
+                        validationRules: [{ type: "required" }]
+                    },
+                    { dataField: "PurchaseDate", caption: "تاريخ المعاملة", width: 150, dataType: "date", allowEditing: false },
+                    {
+                        dataField: "UserId", caption: "مدخل المعاملة", width: 150, allowEditing: false,
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "UserId",
+                                loadUrl: "/Users/LoadUsers"
+                            }),
+                            valueExpr: "UserId",
+                            displayExpr: "UserName"
+                        }
+                    }
+                ],
+                rtlEnabled: true,
+                paging: { pageSize: 10 },
+                pager: {
+                    showPageSizeSelector: true,
+                    allowedPageSizes: [10, 25, 50, 100]
+                },
+                searchPanel: { visible: true, highlightCaseSensitive: true },
+                groupPanel: { visible: false },
+                rowAlternationEnabled: true,
+                width: "100%",
+                showBorders: true,
+                columnFixing: {
+                    enabled: true
+                },
+                editing: {
+                    allowAdding: true,
+                    allowUpdating: true,
+                    allowDeleting: true,
+                    mode: "popup",
+                    popup: {
+                        title: "المصروف",
+                        showTitle: true,
+                        width: 700,
+                        height: 530,
+                    },
+                },
+                onEditorPreparing: function (e) {
+                    if (e.parentType === "dataRow" && (e.dataField === "PurchaseDate" || e.dataField === "UserId")) {
+                        e.editorOptions.visible = false;
+                    }
+
+                    if (e.parentType === "dataRow" && e.dataField === "BranchId") {
+                        e.editorOptions.dataSource = DevExpress.data.AspNet.createStore({
+                            key: "BranchId",
+                            loadUrl: "/Branches/LoadBranchesByUser"
+                        });
+                    }
+                },
+                export: {
+                    enabled: true,
+                    allowExportSelectedData: true
+                },
+                onExporting: function (e) {
+                    const workbook = new ExcelJS.Workbook();
+                    const worksheet = workbook.addWorksheet('Expenses');
+
+                    DevExpress.excelExporter.exportDataGrid({
+                        component: e.component,
+                        worksheet: worksheet,
+                        autoFilterEnabled: true
+                    }).then(function () {
+                        workbook.xlsx.writeBuffer().then(function (buffer) {
+                            saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Expenses.xlsx");
+                        });
+                    });
+                    e.cancel = true;
+                },
+            });
+
+        }
+
+        async function init() {
+            try {
+                const branchesData = await fetchData(branchesUrl);
+                populateDropdown(branchesData);
+                const defaultBranchId = branchesData.length > 0 ? branchesData[0].BranchId : null;
+                if (defaultBranchId) initializeDataGrid(defaultBranchId);
+
+                branchesDropdown.addEventListener('change', function () {
+                    initializeDataGrid(this.value);
+                });
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        init();
     });
-
-    function populateDropdownData(data) {
-        const selectElement = document.getElementById('BranchId');
-        selectElement.innerHTML = '';
-        data.forEach(item => {
-            const option = new Option(item['BranchName'], item['BranchId']);
-            selectElement.add(option);
-        });
-    }
-
-    async function loadSalesInvoices(url) {
-        try {
-            const salesInvoicesResponse = await fetch(url);
-            if (!salesInvoicesResponse.ok) {
-                console.error('Failed to load sales invoices data');
-                return;
-            }
-            const salesInvoicesData = await salesInvoicesResponse.json();
-
-            $("#gridContainer").dxDataGrid({
-                dataSource: salesInvoicesData,
-                onRowInserted: async function (e) {
-                    try {
-                        const response = await fetch("/Expenses/AddNewExpense", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(e.data)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error("Failed to add expense.");
-                        }
-
-                        const result = await response.json();
-                        console.log("Expense added successfully:", result);
-                    } catch (error) {
-                        console.error("Error adding expense:", error);
-                    }
-                },
-                onRowUpdated: async function (e) {
-                    try {
-                        const response = await fetch(`/Expenses/UpdateExpense`, {
-                            method: "PUT",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(e.data)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error("Failed to update expense.");
-                        }
-
-                        const result = await response.json();
-                        console.log("Expense updated successfully:", result);
-                    } catch (error) {
-                        console.error("Error updating expense:", error);
-                    }
-                },
-                onRowRemoved: async function (e) {
-                    try {
-                        const response = await fetch(`/Expenses/DeleteExpense?key=${e.data.ExpensesId}`, {
-                            method: "DELETE"
-                        });
-
-                        if (!response.ok) {
-                            throw new Error("Failed to delete expense.");
-                        }
-
-                        const result = await response.json();
-                        console.log("Expense deleted successfully:", result);
-                    } catch (error) {
-                        console.error("Error deleting expense:", error);
-                    }
-                },
-            });
-        } catch (error) {
-            console.error('Error loading sales invoices:', error);
-        }
-    }
-
-    function exporting(e) {
-        var workbook = new ExcelJS.Workbook();
-        var worksheet = workbook.addWorksheet('Colors');
-
-        DevExpress.excelExporter.exportDataGrid({
-            component: e.component,
-            worksheet: worksheet,
-            autoFilterEnabled: true
-        }).then(function () {
-            workbook.xlsx.writeBuffer().then(function (buffer) {
-                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Colors.xlsx');
-            });
-        });
-    }
 </script>

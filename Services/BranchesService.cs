@@ -24,11 +24,22 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<BranchesModel>> GetAllBranchesByUserAsync(int UserId)
+        {
+            var sql = @"SELECT B.BranchId,BI.BranchName FROM UserBranches B
+                        INNER JOIN Branches BI ON BI.BranchId = B.BranchId
+                        WHERE B.UserId = @UserId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<BranchesModel>(sql,new { UserId }).ConfigureAwait(false);
+            }
+        }
+
         public async Task<BranchesModel?> SelectBranchByIdAsync(int branchId)
         {
-            var sql = @" SELECT B.*,U.UserName FROM Branches B 
-                         LEFT JOIN Users U ON B.BranchMangerId = U.UserId
-                         WHERE B.BranchId = @BranchId";
+            var sql = @"SELECT B.*,U.UserName FROM Branches B 
+                        LEFT JOIN Users U ON B.BranchMangerId = U.UserId
+                        WHERE B.BranchId = @BranchId";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QuerySingleOrDefaultAsync<BranchesModel>(sql, new { BranchId = branchId }).ConfigureAwait(false);
@@ -38,14 +49,23 @@ namespace IOMSYS.Services
         public async Task<int?> SelectBranchIdByManagerIdAsync(int BranchMangerId)
         {
             var sql = @"SELECT B.BranchId 
-                FROM Branches B 
-                WHERE B.BranchMangerId = @BranchMangerId";
+                            FROM Branches B 
+                            WHERE B.BranchMangerId = @BranchMangerId";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QuerySingleOrDefaultAsync<int?>(sql, new { BranchMangerId }).ConfigureAwait(false);
             }
         }
 
+        public async Task<int?> SelectUserIdByBranchIdAsync(int BranchId)
+        {
+            var sql = @"SELECT B.BranchMangerId FROM Branches B 
+                        WHERE B.BranchId = @BranchId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QuerySingleOrDefaultAsync<int?>(sql, new { BranchId }).ConfigureAwait(false);
+            }
+        }
 
         public async Task<int> InsertBranchAsync(BranchesModel branch)
         {

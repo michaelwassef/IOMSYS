@@ -147,35 +147,37 @@
         $('#formAddCustomer').submit(function (event) {
             event.preventDefault(); // Prevent the form from submitting via the browser.
 
-            var customerData = JSON.stringify({
-                CustomerName: $('#CustomerName').val(),
-                PhoneNumber: $('#PhoneNumber').val()
-            });
+            var customerName = $('#CustomerName').val();
+            var phoneNumber = $('#PhoneNumber').val();
+            if (phoneNumber.length < 11) {
+                alert('رقم الهاتف علي الاقل 11 رقم');
+                return;
+            }
+            else {
+                var customerData = JSON.stringify({
+                    CustomerName: $('#CustomerName').val(),
+                    PhoneNumber: $('#PhoneNumber').val()
+                });
+            }
 
             $.ajax({
                 type: 'POST',
-                url: '/Customers/AddFastNewCustomer', // Make sure the URL is correct
-                contentType: 'application/json', // This specifies that you're sending JSON
-                data: customerData, // The data needs to be a JSON string
-                success: function(response) {
-                    alert(response.SuccessMessage);
+                url: '/Customers/AddFastNewCustomer', 
+                contentType: 'application/json', 
+                data: customerData, 
+                success: function (response) {
+                    DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
                     $('#addCustomerModal').modal('hide');
-    
-                    // Reload the customer dropdown
-                    loadCustomers(function() {
-                        // Select the newly added customer
-                        $('#CustomerId').val(response.CustomerId).trigger('change');
-                    });
+                        populateCustomersWithPhoneNumber(response.CustomerName, response.PhoneNumber).then(() => {
+                    }).catch(error => console.error(error));
                 },
                 error: function (xhr, status, error) {
-                    // Adjusted error handling
                     var errorMessage = xhr.status + ': ' + xhr.statusText;
                     alert('Error - ' + errorMessage);
                 }
             });
         });
     });
-
 
     async function populateDropdown(url, elementId, valueField, textField) {
         try {
@@ -236,10 +238,50 @@
         }
     }
 
+    function populateCustomersWithPhoneNumber(customerName, phoneNumber) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const response = await fetch('/Customers/LoadCustomers');
+                if (response.ok) {
+                    const customers = await response.json();
+                    const customerSelect = $('#CustomerId');
+                    let options = customers.map(customer => `<option value="${customer.CustomerId}">${customer.CustomerName} - ${customer.PhoneNumber}</option>`);
+                    customerSelect.html(options.join(''));
+
+                    // Search for the newly added customer by name or phone number
+                    if (customerName && phoneNumber) {
+                        const newCustomerOption = customers.find(customer => customer.CustomerName === customerName && customer.PhoneNumber === phoneNumber);
+                        if (newCustomerOption) {
+                            customerSelect.val(newCustomerOption.CustomerId).trigger('change');
+                        } else {
+                            console.error('Newly added customer not found in the list');
+                        }
+                    }
+
+                    customerSelect.select2({
+                        placeholder: "Select a customer",
+                        allowClear: true
+                    });
+                    resolve();
+                } else {
+                    console.error('Failed to load customers');
+                    reject('Failed to load customers');
+                }
+            } catch (error) {
+                console.error('Error loading customers:', error);
+                reject(error);
+            }
+        });
+    }
+
     async function populateProductsAndTriggerChange() {
         await populateDropdownSEARCH('/Products/GetAllProductsInWarehouse', 'ProductId', 'ProductId', 'ProductName');
         $('#ProductId').trigger('change');
     }
+
+    $(document).ready(function() {
+        populateCustomersWithPhoneNumber();
+    });
 
     async function fetchAvailableSizes(productId) {
     try {
@@ -276,18 +318,27 @@
         const selectElement = document.getElementById(elementId);
     }
 
-    // Function to fetch available quantity
+    var temporaryInventory = {};
     async function fetchAvailableQuantity(productId, sizeId, colorId, branchId) {
-        try {
-            const response = await fetch(`/Products/GetAvailable?productId=${productId}&colorId=${colorId}&sizeId=${sizeId}&BranchId=${branchId}`);
-            const data = await response.json();
-            $('#Quantity').attr('max', data); 
-            $('#availableQtyDisplay').text(`الكمية المتاحة: ${data}`);
-        } catch (error) {
-            console.error('Error fetching available quantity:', error);
-            $('#availableQtyDisplay').text(`Error fetching available quantity`);
+    try {
+        const response = await fetch(`/Products/GetAvailable?productId=${productId}&colorId=${colorId}&sizeId=${sizeId}&BranchId=${branchId}`);
+        if (response.ok) {
+            let availableQty = await response.json();
+            const key = `${productId}-${sizeId}-${colorId}-${branchId}`;
+            const tempQty = temporaryInventory[key] || 0;
+            availableQty -= tempQty; // Subtract the temp quantity from the available quantity
+            $('#Quantity').attr('max', availableQty);
+            $('#availableQtyDisplay').text(`الكمية المتاحة: ${availableQty}`);
+        } else {
+            console.error('Failed to fetch available quantity');
+            $('#availableQtyDisplay').text(`Failed to fetch available quantity`);
         }
+    } catch (error) {
+        console.error('Error fetching available quantity:', error);
+        $('#availableQtyDisplay').text(`Error fetching available quantity`);
     }
+}
+
 
     async function fetchSellPrice(productId) {
     try {
@@ -312,53 +363,53 @@
     }
     }
 
-$('#ProductId').on('change', async function () {
-    var productId = $(this).val();
-    var branchId = $('#BranchId').val(); 
+    $('#ProductId').on('change', async function () {
+        var productId = $(this).val();
+        var branchId = $('#BranchId').val(); 
 
-    if (productId) {
-        await fetchSellPrice(productId);
-        await fetchAvailableSizes(productId); 
-        await fetchAvailableColors(productId);
-    } else {
-        resetDropdown('SizeId'); 
-        resetDropdown('ColorId'); 
-        $('#availableQtyDisplay').text('');
-    }
-    var sizeId = $('#SizeId').val();
-    var colorId = $('#ColorId').val();
+        if (productId) {
+            await fetchSellPrice(productId);
+            await fetchAvailableSizes(productId); 
+            await fetchAvailableColors(productId);
+        } else {
+            resetDropdown('SizeId'); 
+            resetDropdown('ColorId'); 
+            $('#availableQtyDisplay').text('');
+        }
+        var sizeId = $('#SizeId').val();
+        var colorId = $('#ColorId').val();
 
-    if(productId && branchId && sizeId && colorId) {
-        fetchAvailableQuantity(productId, sizeId, colorId, branchId);
-    }
+        if(productId && branchId && sizeId && colorId) {
+            fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+        }
     });
 
 
     $(document).ready(function() {
-    $('#ProductId, #SizeId, #ColorId, #BranchId').change(function() {
-        // Get the current selected values
-        var productId = $('#ProductId').val();
-        var sizeId = $('#SizeId').val();
-        var colorId = $('#ColorId').val();
-        var branchId = $('#BranchId').val();
+        $('#ProductId, #SizeId, #ColorId, #BranchId').change(function() {
+            // Get the current selected values
+            var productId = $('#ProductId').val();
+            var sizeId = $('#SizeId').val();
+            var colorId = $('#ColorId').val();
+            var branchId = $('#BranchId').val();
 
 
-        var sizeId = $('#SizeId').val(); 
-        var colorId = $('#ColorId').val();
-            if (productId && sizeId && colorId && branchId) {
-                fetchAvailableQuantity(productId, sizeId, colorId, branchId);
-        } else {
-            $('#availableQtyDisplay').text('');
-        }
+            var sizeId = $('#SizeId').val(); 
+            var colorId = $('#ColorId').val();
+                if (productId && sizeId && colorId && branchId) {
+                    fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+            } else {
+                $('#availableQtyDisplay').text('');
+            }
 
+        });
     });
-});
+
     document.addEventListener('DOMContentLoaded', function () {
         populateDropdownSEARCH('/Products/GetAllProductsInWarehouse', 'ProductId', 'ProductId', 'ProductName');
-        populateDropdownSEARCH('/Customers/LoadCustomers', 'CustomerId', 'CustomerId', 'CustomerName');
+        //populateDropdownSEARCH('/Customers/LoadCustomers', 'CustomerId', 'CustomerId', 'CustomerName');
         populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
-        document.getElementById('paidUp').addEventListener('input', calculateTotals);
         document.getElementById('totalDiscount').addEventListener('input', calculateDiscounts);
         
         populateProductsAndTriggerChange();
@@ -440,6 +491,11 @@ $('#ProductId').on('change', async function () {
             alert('الخصم لا يمكن أن يكون أكبر من سعر البيع للواحد');
             return;
         }
+
+        // Add the item to the temporary inventory
+        var branchId = document.getElementById('BranchId').value;
+        const key = `${productId}-${sizeId}-${colorId}-${branchId}`;
+        temporaryInventory[key] = (temporaryInventory[key] || 0) + quantity;
 
         tempItems.push({
             ProductId: productId,
@@ -547,24 +603,26 @@ $('#ProductId').on('change', async function () {
     function calculateTotals() {
         let totalAmount = 0;
 
-        // Calculate totalAmount
         tempItems.forEach(item => {
             totalAmount += item.Quantity * item.SellPrice;
         });
 
-        // Update totalAmount input
         document.getElementById('totalAmount').value = totalAmount.toFixed(2);
-
-        // Set paidUp to totalAmount by default
         document.getElementById('paidUp').value = totalAmount.toFixed(2);
-
-        // Calculate remainder
+        calculateRemainder();
+    }
+    function calculateRemainder() {
+        const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
         const paidUp = parseFloat(document.getElementById('paidUp').value) || 0;
         const remainder = totalAmount - paidUp;
 
         // Update remainder input
         document.getElementById('remainder').value = remainder.toFixed(2);
     }
+
+    document.getElementById('paidUp').addEventListener('input', function () {
+        calculateRemainder();
+    });
 
     function calculateDiscounts() {
         let DiscountsAmount = 0;
@@ -599,12 +657,23 @@ $('#ProductId').on('change', async function () {
     }, 5000);
 }
 
+function resetTemporaryInventory() {
+    temporaryInventory = {};
+}
 
 
     async function saveInvoice() {
          if (tempItems.length === 0) {
             alert('يجب اضافة صنف واحد علي الاقل');
-            return; // Stop the function execution
+            return; 
+        }
+
+        var branchId = document.getElementById('BranchId').value;
+        const permissionResponse = await fetch(`/UserBranches/CheckBranchPermission?branchId=${branchId}`);
+        const permissionResult = await permissionResponse.json();
+        if (!permissionResult.success) {
+            displayMessage('error', permissionResult.message);
+            return;
         }
 
         // Create FormData object
@@ -633,10 +702,14 @@ $('#ProductId').on('change', async function () {
                     document.getElementById('invoiceForm').reset();
                     tempItems = [];
                     refreshItemsGrid();
+                    resetTemporaryInventory();
                     document.getElementById('totalAmount').value = '0';
                     document.getElementById('paidUp').value = '0';
+                    document.getElementById('remainder').value = '0';
+                    DevExpress.ui.notify(result.message, "success", 5000);
                 } else {
                     displayMessage('error', result.message);
+                    DevExpress.ui.notify(result.message, "error", 5000);
                 }
             }
         } catch (error) {
@@ -694,7 +767,6 @@ $('#ProductId').on('change', async function () {
         console.error('Error printing invoice:', error);
     }
 }
-
 </script>
 
 <style>

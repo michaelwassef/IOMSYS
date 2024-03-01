@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class PurchaseInvoicesController : Controller
     {
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
@@ -63,7 +63,7 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PurchaseInvoicesPage");
-            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
 
             try
             {
@@ -146,7 +146,7 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "UpdatePurchaseInvoice");
-            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
 
             try
             {

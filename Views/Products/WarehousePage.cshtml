@@ -233,7 +233,7 @@
     document.addEventListener('DOMContentLoaded', async function () {
         try {
             // Load branches data
-            const branchesResponse = await fetch('/Branches/LoadBranches');
+            const branchesResponse = await fetch('/Branches/LoadBranchesByUser');
             if (!branchesResponse.ok) {
                 console.error('Failed to load branches data');
                 return;

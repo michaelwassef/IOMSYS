@@ -85,7 +85,7 @@ namespace IOMSYS.Controllers
                 int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
 
                 if (addCustomerResult > 0)
-                    return Ok(new { SuccessMessage = "Successfully Added" });
+                    return Ok(new { SuccessMessage = "Successfully Added", newCustomer.CustomerName, newCustomer.PhoneNumber});
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }

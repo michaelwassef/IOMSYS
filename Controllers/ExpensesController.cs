@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -44,7 +43,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddNewExpense([FromBody] ExpenseModel newExpense)
+        public async Task<IActionResult> AddNewExpense([FromForm] IFormCollection formData)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Expenses", "AddNewExpense");
@@ -52,11 +51,24 @@ namespace IOMSYS.Controllers
 
             try
             {
+                var values = formData["values"];
+                var newExpense = new ExpenseModel();
+                JsonConvert.PopulateObject(values, newExpense);
+
                 newExpense.PurchaseDate = DateTime.Now;
                 newExpense.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
+
+                if (newExpense.ExpensesAmount < 0)
+                    return BadRequest(new { ErrorMessage = "لا يمكن ادخال قيمه سالبه" });
+
+                var branchBalance = await _paymentTransactionService.GetBranchAccountBalanceByPaymentAsync(newExpense.BranchId, newExpense.PaymentMethodId);
+                if (newExpense.ExpensesAmount >= branchBalance)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يوجد رصيد في الخزنة للخصم منه" });
+                }
 
                 int addExpenseResult = await _expensesService.InsertExpenseAsync(newExpense);
 
@@ -88,7 +100,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateExpense([FromBody] ExpenseModel expense)
+        public async Task<IActionResult> UpdateExpense([FromForm] IFormCollection formData)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Expenses", "UpdateExpense");
@@ -96,20 +108,30 @@ namespace IOMSYS.Controllers
 
             try
             {
-                //var key = Convert.ToInt32(formData["key"]);
-                //var values = formData["values"];
-                //var expense = await _expensesService.SelectExpenseByIdAsync(key);
-
-                //if (expense == null)
-                //    return NotFound(new { ErrorMessage = "Expense Not Found" });
-
-                //JsonConvert.PopulateObject(values, expense);
+                var key = Convert.ToInt32(formData["key"]);
+                var values = formData["values"];
+                var expense = await _expensesService.SelectExpenseByIdAsync(key);
+                var oldexpense = await _expensesService.SelectExpenseByIdAsync(key);
+                JsonConvert.PopulateObject(values, expense);
 
                 expense.PurchaseDate = DateTime.Now;
                 expense.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
+
+                if (expense.ExpensesAmount < 0)
+                    return BadRequest(new { ErrorMessage = "لا يمكن ادخال قيمه سالبه" });
+
+                if (expense.ExpensesAmount > oldexpense.ExpensesAmount)
+                {
+                    var difference = expense.ExpensesAmount - oldexpense.ExpensesAmount;
+                    var branchBalance = await _paymentTransactionService.GetBranchAccountBalanceByPaymentAsync(expense.BranchId, expense.PaymentMethodId);
+                    if (difference > branchBalance)
+                    {
+                        return BadRequest(new { ErrorMessage = "لا يوجد رصيد في الخزنة للخصم منه" });
+                    }
+                }
 
                 int updateExpenseResult = await _expensesService.UpdateExpenseAsync(expense);
 

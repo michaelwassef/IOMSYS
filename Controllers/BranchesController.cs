@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -11,11 +12,13 @@ namespace IOMSYS.Controllers
     {
         private readonly IBranchesService _branchesService;
         private readonly IPermissionsService _permissionsService;
+        private readonly IAccessService _accessService;
 
-        public BranchesController(IBranchesService branchesService, IPermissionsService permissionsService)
+        public BranchesController(IBranchesService branchesService, IPermissionsService permissionsService, IAccessService accessService)
         {
             _branchesService = branchesService;
             _permissionsService = permissionsService;
+            _accessService = accessService;
         }
 
         public async Task<IActionResult> BranchesPage()
@@ -33,6 +36,14 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> LoadBranches()
         {
             var branches = await _branchesService.GetAllBranchesAsync();
+            return Json(branches);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadBranchesByUser()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var branches = await _branchesService.GetAllBranchesByUserAsync(userId);
             return Json(branches);
         }
 
@@ -126,6 +137,27 @@ namespace IOMSYS.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CheckPasswordForManagerOfBranch([FromBody] BranchesModel branchesModel)
+        {
+            try
+            {
+                var UserId = await _branchesService.SelectUserIdByBranchIdAsync(branchesModel.BranchId);
+                var UserIdInt = Convert.ToInt32(UserId);
+                var password = PasswordHasher.HashPassword(branchesModel.Password);
+
+                bool IsManger = await _accessService.CheckPassword(UserIdInt, password);
+                if (IsManger)
+                    return Ok(new { SuccessMessage = "Successfully" });
+
+                else return BadRequest(new { ErrorMessage = "An error occurred while checking the password." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred while checking the password.", ExceptionMessage = ex.Message });
             }
         }
 

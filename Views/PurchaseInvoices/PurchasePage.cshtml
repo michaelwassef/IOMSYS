@@ -18,7 +18,7 @@
 <script>
     $(function () {
         // Initial load of branches into the dropdown
-        $.getJSON('/Branches/LoadBranches', function (data) {
+        $.getJSON('/Branches/LoadBranchesByUser', function (data) {
             var branchSelect = $('#BranchId');
             $.each(data, function () {
                 branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));

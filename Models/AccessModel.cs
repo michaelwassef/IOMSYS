@@ -6,6 +6,6 @@
         public string Password { get; set; }
         public int UserTypeId { get; set; }
         public bool KeepLoggedIn { get; set; }
-        public string UserId { get; set; }
+        public int UserId { get; set; }
     }
 }

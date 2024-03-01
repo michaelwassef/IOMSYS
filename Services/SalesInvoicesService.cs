@@ -54,7 +54,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
-                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
+                       si.CustomerId, c.CustomerName, si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId

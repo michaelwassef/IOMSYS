@@ -31,5 +31,12 @@ namespace IOMSYS.Services
             };
         }
 
+        public async Task<bool> CheckPassword(int UserId, string Password)
+        {
+            var sql = @"SELECT COUNT(*) FROM Users WHERE UserId = @UserId AND Password = @Password";
+            var count = await _db.ExecuteScalarAsync<int>(sql, new { UserId, Password });
+            return count > 0;
+        }
+
     }
 }

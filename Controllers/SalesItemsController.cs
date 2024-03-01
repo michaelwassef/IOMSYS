@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -83,6 +82,7 @@ namespace IOMSYS.Controllers
         [HttpPut]
         public async Task<IActionResult> ReturnSaleItem(int salesItemId)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             try
             {
                 // Step 1: Retrieve sales item details
@@ -120,8 +120,8 @@ namespace IOMSYS.Controllers
                     PaymentMethodId = salesInvoice.PaymentMethodId,
                     Amount = salesInvoiceIdModel.SellPrice * salesInvoiceIdModel.Quantity,
                     TransactionType = "خصم",
-                    TransactionDate = salesInvoice.SaleDate,
-                    ModifiedUser = salesInvoice.UserId,
+                    TransactionDate = DateTime.Now,
+                    ModifiedUser = userId,
                     ModifiedDate = DateTime.Now,
                     Details = "مرتجع فاتورة # " + salesInvoice.SalesInvoiceId,
                     InvoiceId = salesInvoice.SalesInvoiceId,
@@ -134,7 +134,7 @@ namespace IOMSYS.Controllers
 
                 await DeleteReturnInvoiceIfNoItems(salesInvoiceId);
                 await RecalculateInvoiceTotal(salesInvoiceId);
-                return Ok(new { SuccessMessage = "Deleted Successfully" });
+                return Ok(new { SuccessMessage = "تم الاسترجاع بنجاح" });
             }
             catch (Exception ex)
             {
@@ -254,6 +254,7 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
         //public async Task<IActionResult> UpdateReturnInvoiceIfNoItems(int invoiceId)
         //{
         //    try

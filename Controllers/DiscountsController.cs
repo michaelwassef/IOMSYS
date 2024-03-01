@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class DiscountsController : Controller
     {
         private readonly IDiscountsService _discountsService;
@@ -16,7 +16,6 @@ namespace IOMSYS.Controllers
             _discountsService = discountsService;
         }
 
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public IActionResult DiscountsPage()
         {
             return View();
@@ -30,7 +29,6 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> AddNewDiscount([FromForm] IFormCollection formData)
         {
             try
@@ -57,7 +55,6 @@ namespace IOMSYS.Controllers
 
 
         [HttpPut]
-        [Authorize(Roles = "GenralManager,BranchManager")]
         public async Task<IActionResult> UpdateDiscount([FromForm] IFormCollection formData)
         {
             try
@@ -90,7 +87,6 @@ namespace IOMSYS.Controllers
 
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeleteDiscount([FromForm] IFormCollection formData)
         {
             try

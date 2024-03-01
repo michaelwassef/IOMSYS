@@ -25,7 +25,7 @@
         });
 
         function loadBranches() {
-            fetch('/Branches/LoadBranches')
+            fetch('/Branches/LoadBranchesByUser')
                 .then(response => response.json())
                 .then(data => {
                     const select = document.getElementById('BranchId');

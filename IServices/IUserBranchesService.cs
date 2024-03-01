@@ -8,5 +8,6 @@ namespace IOMSYS.IServices
         Task<int> RemoveUserFromBranchAsync(UserBranchesModel userBranchesModel);
         Task<IEnumerable<int>> GetBranchesForUserAsync(int userId);
         Task<IEnumerable<int>> GetUsersForBranchAsync(int branchId);
+        Task<bool> CanUserSellFromBranchAsync(int userId, int branchId);
     }
 }

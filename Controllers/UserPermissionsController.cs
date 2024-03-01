@@ -1,9 +1,11 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IOMSYS.Controllers
 {
+    [Authorize]
     public class UserPermissionsController : Controller
     {
         private readonly IUsersService _usersService;

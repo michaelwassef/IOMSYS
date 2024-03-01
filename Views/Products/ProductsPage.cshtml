@@ -368,7 +368,7 @@
 
     // Function to validate item fields
     function validateItem(item) {
-        return item.ProductId && item.SizeId && item.ColorId && item.BranchId && !isNaN(item.Quantity) && item.Quantity > 0;
+        return item.ProductId && item.SizeId && item.ColorId && item.BranchId && !isNaN(item.Quantity);
     }
 
     // Function to clear form fields after adding an item
@@ -428,22 +428,26 @@
                 ProductId: $('#ProductId').val(),
                 SizeId: $('#SizeId').val(),
                 ColorId: $('#ColorId').val(),
-                BranchId: $('#BranchId').val(), 
-                Quantity: parseInt($('#Quantity').val(), 10),
+                BranchId: $('#BranchId').val(),
+                Quantity: $('#Quantity').val(),
                 Notes: $('#Notes').val()
             };
 
             var isValid = validateItem(item);
 
             if (isValid) {
-                invoiceItems.push(item);
-                $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
-                clearFormFields();
+                // Check if Quantity is not zero
+                if (parseInt(item.Quantity) !== 0) {
+                    invoiceItems.push(item);
+                    $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
+                    clearFormFields();
+                } else {
+                    alert('Quantity must be a non-zero value.');
+                }
             } else {
-                alert('برجاء ملاء جميع الحقول');
+                alert('Please fill in all fields.');
             }
         };
-
         // Function to close the popup
         window.closePopup = function () {
             $("#productDetailsPopup").dxPopup("instance").hide(); 

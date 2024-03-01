@@ -45,6 +45,18 @@ namespace IOMSYS.Controllers
             return Json(branchIds);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> CheckBranchPermission(int branchId)
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            bool hasPermission = await _userBranchesService.CanUserSellFromBranchAsync(userId, branchId);
+            if (!hasPermission)
+            {
+                return BadRequest(new { message = "ليس لديك صلاحية البيع من هذا الفرع" });
+            }
+            return Json(new { success = true });
+        }
+
         [HttpPost]
         public async Task<IActionResult> SaveBranchAssignments(int SelectedUserId, List<int> selectedBranchIds)
         {

@@ -11,6 +11,13 @@ namespace IOMSYS.Controllers
 {
     public class AccessController : Controller
     {
+        private readonly IAccessService _accessService;
+
+        public AccessController(IAccessService accessService)
+        {
+            _accessService = accessService;
+        }
+
         public IActionResult Login()
         {
             ClaimsPrincipal claimUser = HttpContext.User;
@@ -57,22 +64,6 @@ namespace IOMSYS.Controllers
 
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), properties);
                     return RedirectToAction("Index", "Home");
-                    // Redirect user based on userType
-
-                    //switch (modelLogin.UserTypeId)
-                    //{
-                    //    case 1: // GenralManager
-                    //        return RedirectToAction("GeneralManagerDashboard", "Dashboard");
-                    //    case 2: // BranchManager
-                    //        return RedirectToAction("BranchManagerDashboard", "Dashboard");
-                    //    case 3: // Employee
-                    //        return RedirectToAction("EmployeeDashboard", "Dashboard");
-                    //    default:
-                    //        {
-                    //            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                    //            return RedirectToAction("Login", "Access");
-                    //        }
-                    //}
                 }
                 else if (!authenticationResult.IsActive)
                 {
@@ -97,6 +88,8 @@ namespace IOMSYS.Controllers
                 return View(modelLogin);
             }
         }
+
+        
 
         private string GetRoleName(int userType)
         {

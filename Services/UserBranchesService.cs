@@ -63,5 +63,22 @@ namespace IOMSYS.Services
                 return await db.QueryAsync<int>(sql, new { BranchId = branchId }).ConfigureAwait(false);
             }
         }
+
+        public async Task<bool> CanUserSellFromBranchAsync(int userId, int branchId)
+        {
+            var sql = @"SELECT COUNT(1) FROM UserBranches WHERE UserId = @UserId AND BranchId = @BranchId";
+            try
+            {
+                using (var db = _dapperContext.CreateConnection())
+                {
+                    var count = await db.ExecuteScalarAsync<int>(sql, new { UserId = userId, BranchId = branchId }).ConfigureAwait(false);
+                    return count > 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }

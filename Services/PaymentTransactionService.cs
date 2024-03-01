@@ -121,8 +121,29 @@ namespace IOMSYS.Services
                     throw new Exception("Balance is null for the given branch.");
                 }
             }
-
         }
+
+        public async Task<decimal> GetBranchAccountBalanceByPaymentAsync(int BranchId, int PaymentMethodId)
+        {
+            var sql = @"
+                SELECT COALESCE(SUM(CASE WHEN TransactionType = 'اضافة' THEN Amount ELSE -Amount END), 0) AS Balance
+                FROM PaymentTransactions 
+                WHERE BranchId = @BranchId AND PaymentMethodId = @PaymentMethodId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                var balance = await db.QueryFirstOrDefaultAsync<decimal?>(sql, new { BranchId , PaymentMethodId }).ConfigureAwait(false);
+                if (balance.HasValue)
+                {
+                    return balance.Value;
+                }
+                else
+                {
+                    throw new Exception("Balance is null for the given branch.");
+                }
+            }
+        }
+
         public async Task<int> InsertPaymentTransactionAsync(PaymentTransactionModel transaction)
         {
             var sql = @"INSERT INTO PaymentTransactions (BranchId, PaymentMethodId, TransactionType, TransactionDate, Amount, Details, ModifiedDate, ModifiedUser, InvoiceId) 

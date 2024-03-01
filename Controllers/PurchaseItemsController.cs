@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-    [Authorize(Roles = "GenralManager,BranchManager,Employee")]
+    [Authorize]
     public class PurchaseItemsController : Controller
     {
         private readonly IPurchaseItemsService _PurchaseItemsService;
@@ -16,8 +16,9 @@ namespace IOMSYS.Controllers
         private readonly IBranchInventoryService _branchInventoryService;
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly IBranchesService _branchesService;
+        private readonly IPermissionsService _permissionsService;
 
-        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService, IBranchesService branchesService)
+        public PurchaseItemsController(IPurchaseItemsService PurchaseItemsService, IPurchaseInvoiceItemsService purchaseInvoiceItemsService, IPurchaseInvoicesService purchaseInvoicesService, IProductsService productsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService, IBranchesService branchesService, IPermissionsService permissionsService)
         {
             _PurchaseItemsService = PurchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
@@ -26,6 +27,7 @@ namespace IOMSYS.Controllers
             _branchInventoryService = branchInventoryService;
             _paymentTransactionService = paymentTransactionService;
             _branchesService = branchesService;
+            _permissionsService = permissionsService;
         }
 
         [HttpGet]
@@ -62,6 +64,16 @@ namespace IOMSYS.Controllers
                 if (newPurchaseItems.BranchId != BranchId)
                 {
                     return Json(new { success = false, message = "ليس لديك صلاحية للاضافة لهذا الفرع" });
+                }
+
+                if (newPurchaseItems.Quantity < 0)
+                {
+                    var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseItems", "AddDamagedProducts");
+                    if (!hasPermission)
+                    {
+                        return Json(new { success = false, message = "ليس لديك صلاحية لاضافة التوالف" });
+                    }
+
                 }
 
                 int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
@@ -142,7 +154,6 @@ namespace IOMSYS.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Roles = "GenralManager")]
         public async Task<IActionResult> DeletePurchaseItem([FromForm] IFormCollection formData)
         {
             try

@@ -16,8 +16,9 @@ namespace IOMSYS.Controllers
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly IBranchInventoryService _branchInventoryService;
         private readonly IPermissionsService _permissionsService;
+        private readonly IProductsService _productsService;
 
-        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService, IPermissionsService permissionsService)
+        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService, IPermissionsService permissionsService, IProductsService productsService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesItemsService = salesItemsService;
@@ -25,6 +26,7 @@ namespace IOMSYS.Controllers
             _paymentTransactionService = paymentTransactionService;
             _branchInventoryService = branchInventoryService;
             _permissionsService = permissionsService;
+            _productsService = productsService;
         }
 
         public async Task<IActionResult> SalesPage()
@@ -69,6 +71,15 @@ namespace IOMSYS.Controllers
 
                 //if (!ModelState.IsValid)
                 //    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
+
+                foreach (var item in model.SalesItems)
+                {
+                    var availableQuantity = await _productsService.GetAvailableQuantity(item.ProductId, item.ColorId, item.SizeId, model.BranchId);
+                    if (item.Quantity > availableQuantity)
+                    {
+                        return Json(new { success = false, message = $"لا يوجد مخزون كافي للمنتج {item.ProductId} بالمقاس {item.SizeId} واللون {item.ColorId} في الفرع {model.BranchId}." });
+                    }
+                }
 
                 decimal itemsTotal = model.SalesItems.Sum(item => item.Quantity * item.SellPrice);
 
