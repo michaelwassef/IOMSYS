@@ -18,7 +18,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
-                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId, u.UserName
+                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId, u.UserName, si.PaidUpDate, si.IsFullPaidUp, si.Notes
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
@@ -36,7 +36,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
-                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
+                       si.CustomerId,c.CustomerName,si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName, si.PaidUpDate, si.IsFullPaidUp, si.Notes
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
@@ -54,7 +54,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
-                       si.CustomerId, c.CustomerName, si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId,u.UserName
+                       si.CustomerId, c.CustomerName, si.BranchId, b.BranchName,si.PaymentMethodId, pm.PaymentMethodName, si.UserId, u.UserName, si.PaidUpDate, si.IsFullPaidUp, si.Notes
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
@@ -72,8 +72,8 @@ namespace IOMSYS.Services
         {
             salesInvoice.IsReturn = false;
             var sql = @"
-                INSERT INTO SalesInvoices (CustomerId, TotalAmount, PaidUp, Remainder, BranchId, PaymentMethodId, UserId, SaleDate, TotalDiscount, IsReturn, ReturnDate) 
-                VALUES (@CustomerId, @TotalAmount, @PaidUp, @Remainder, @BranchId, @PaymentMethodId, @UserId, @SaleDate, @TotalDiscount, @IsReturn, @ReturnDate);
+                INSERT INTO SalesInvoices (CustomerId, TotalAmount, PaidUp, Remainder, BranchId, PaymentMethodId, UserId, SaleDate, TotalDiscount, IsReturn, ReturnDate, PaidUpDate, IsFullPaidUp, Notes) 
+                VALUES (@CustomerId, @TotalAmount, @PaidUp, @Remainder, @BranchId, @PaymentMethodId, @UserId, @SaleDate, @TotalDiscount, @IsReturn, @ReturnDate, @PaidUpDate, @IsFullPaidUp, @Notes);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -87,7 +87,7 @@ namespace IOMSYS.Services
             var sql = @"
                 UPDATE SalesInvoices 
                 SET CustomerId = @CustomerId, TotalAmount = @TotalAmount, PaidUp = @PaidUp, Remainder = @Remainder, 
-                    BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, UserId = @UserId, SaleDate = @SaleDate, TotalDiscount = @TotalDiscount
+                    BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, UserId = @UserId, SaleDate = @SaleDate, TotalDiscount = @TotalDiscount, PaidUpDate = @PaidUpDate, IsFullPaidUp = @IsFullPaidUp, Notes = @Notes
                 WHERE SalesInvoiceId = @SalesInvoiceId";
 
             using (var db = _dapperContext.CreateConnection())

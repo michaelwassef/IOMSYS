@@ -15,11 +15,53 @@
         <div class="form-group col-md-5 mb-3" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
     </div>
 </div>
+
 <div class="form-group">
     <button id="filterTodayBtn" class="btn btn-primary mx-1">عرض بيانات اليوم</button>
     <button id="showAllBtn" class="btn btn-primary mx-1">عرض جميع البيانات</button>
+    <button onclick="movePayment()" class="btn btn-primary mx-1"> تحويل النقديه </button>
 </div>
 
+<div id="movePaymentPopup" style="display:none;">
+    <div>
+        <form id="movePaymentForm">
+            <div class="form-group">
+                <label for="FromBranchId">من فرع:</label>
+                <select id="fromBranch" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label for="FromPaymentMethodId">اختر خزنة:</label>
+                <select id="fromPaymentMethodId" class="form-control"></select>
+                <div id="availableAmountDisplay" class="text-primary mt-2"></div>
+            </div>
+            <div class="form-group">
+                <label for="ToBranchId">إلى فرع:</label>
+                <select id="toBranch" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label for="ToPaymentMethodId">اختر الخزنة:</label>
+                <select id="toPaymentMethodId" class="form-control"></select>
+                <div id="availableAmountDisplay2" class="text-primary mt-2"></div>
+            </div>
+            <div class="form-group">
+                <label for="Amount">المبلغ المحول:</label>
+                <input type="number" id="amount" class="form-control" min="1" required>
+            </div>
+            <div class="form-group mb-3">
+                <label for="Notes">ملاحظات</label>
+                <input type="text" id="notes" class="form-control" />
+            </div>
+            <button class="btn btn-primary mx-1" id="addTransferItemButton">إضافة</button>
+            <div>
+                <div id="transferGrid" class="my-3"></div>
+            </div>
+            <div class="my-3">
+                <button type="button" class="btn btn-secondary mx-3" onclick="closePopup()">إغلاق</button>
+                <button type="button" class="btn btn-success" onclick="moveInventory()">تأكيد التحويل</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 @(Html.DevExtreme().DataGrid<TransactionDetailModel>()
     .ID("gridContainer")
@@ -86,48 +128,214 @@
        .ValueExpr("UserId")
        .DisplayExpr("UserName"));
     })
-    @*.MasterDetail(md =>
-    {
-        md.Enabled(true);
-        md.Template(@<text>
-            @(Html.DevExtreme().DataGrid<PurchaseItemsModel>()
-        .ColumnAutoWidth(true)
-        .ShowBorders(true)
-        .Columns(columns =>
-        {
-            columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
-        })
-        .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
-        .DataSource(d => d.Mvc()
-        .Controller("PurchaseItems")
-        .LoadAction("LoadPurchaseItemsByInvoiceId")
-        .Key("PurchaseItemId")
-        .DeleteAction("DeletePurchaseItem")
-        .LoadParams(new { purchaseInvoiceId = new JS("data.PurchaseInvoiceId") }))
-        .Editing(e => e
-        .Mode(GridEditMode.Popup)
-        .AllowDeleting(true)
-        )
-        .RtlEnabled(true)
-        )
-            </text>);
-    })*@
-     .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
+    .ColumnFixing(columnFixing =>{columnFixing.Enabled(true);})
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>
         {
-            items.Add()
+@*            items.Add()
                 .Column("القيمة")
                 .SummaryType(SummaryType.Sum)
-                .DisplayFormat("الاجمالي : {0}");
-
-            // Add more summaries as needed
+                .DisplayFormat("الاجمالي : {0}");*@
         })
     )
 )
 
 <script>
+    function movePayment() {
+        $("#movePaymentPopup").dxPopup("show");
+        populateDropdown('/Branches/LoadBranchesByUser', 'fromBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
+        populateDropdown('/PaymentMethods/LoadPaymentMethods', 'fromPaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
+        populateDropdown('/PaymentMethods/LoadPaymentMethods', 'toPaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
+        initializeItemsGrid();
+    }
+
+    async function populateDropdown(url, elementId, valueField, textField, prevSelectedValue) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const selectElement = $(`#${elementId}`);
+                selectElement.empty();
+                data.forEach(item => {
+                    const option = new Option(item[textField], item[valueField]);
+                    selectElement.append(option);
+                });
+
+                if (prevSelectedValue && selectElement.find(`option[value="${prevSelectedValue}"]`).length > 0) {
+                    selectElement.val(prevSelectedValue).trigger('change');
+                } else {
+                    selectElement.val(null).trigger('change'); 
+                }
+
+                selectElement.select2({
+                    placeholder: "برجاء الاختيار",
+                    allowClear: true,
+                    width: '100%'
+                });
+            } else {
+                console.error('Failed to load data for:', elementId);
+            }
+        } catch (error) {
+            console.error('Error populating dropdown:', error);
+        }
+    }
+
+    async function fetchAvailableQuantity(paymentMethodId, branchId, displayElement) {
+        try {
+            const response = await fetch(`/PaymentTransactions/GetAccountBalanceByPaymentMethodIdAndBranchId?BranchId=${branchId}&PaymentMethodId=${paymentMethodId}`);
+            const data = await response.json();
+            $(displayElement).text(`المبلغ المتاح: ${data}`);
+        } catch (error) {
+            $(displayElement).text(`المبلغ المتاح: 0`);
+        }
+    }
+
+    window.closePopup = function () {
+        $("#movePaymentPopup").dxPopup("hide");
+        transferItems = [];
+        $('#availableAmountDisplay').val('');
+        $('#availableAmountDisplay2').val('');
+    };
+
+    $(function () {
+        $("#movePaymentPopup").dxPopup({
+            title: "تحويل نقدية",
+            visible: false,
+            width: 600,
+            height: 500,
+        });
+    });
+
+    var transferItems = [];
+    
+    function initializeItemsGrid() {
+        $("#transferGrid").dxDataGrid({
+            dataSource: transferItems,
+            columns: [
+                { dataField: "FromBranchId", caption: "من فرع" },
+                { dataField: "FromPaymentMethodId", caption: "من خزنة" },
+                { dataField: "ToBranchId", caption: "الي فرع" },
+                { dataField: "ToPaymentMethodId", caption: "الي خزنة" },
+                { dataField: "Amount", caption: "المبلغ المحول" }
+            ],
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        $('#toBranch, #toPaymentMethodId').change(function () {
+            var toBranchId = $('#toBranch').val();
+            var toPaymentMethodId = $('#toPaymentMethodId').val();
+            if (toPaymentMethodId && toBranchId) {
+                fetchAvailableQuantity(toPaymentMethodId, toBranchId, '#availableAmountDisplay2');
+            }
+        });
+        $('#fromBranch, #fromPaymentMethodId').change(function () {
+            var fromBranchId = $('#fromBranch').val();
+            var fromPaymentMethodId = $('#fromPaymentMethodId').val();
+            if (fromPaymentMethodId && fromBranchId) {
+                fetchAvailableQuantity(fromPaymentMethodId, fromBranchId, '#availableAmountDisplay');
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        document.getElementById('addTransferItemButton').addEventListener('click', addItemToTransferList);
+    });
+
+    async function addItemToTransferList(event) {
+        event.preventDefault();
+
+        var item = {
+            FromBranchId: $('#fromBranch').val(),
+            FromPaymentMethodId: $('#fromPaymentMethodId').val(),
+            ToBranchId: $('#toBranch').val(),
+            ToPaymentMethodId: $('#toPaymentMethodId').val(),
+            Amount: parseInt($('#amount').val(), 10),
+            Notes: $('#notes').val()
+        };
+
+        // Check if the destination is not the same as the source
+        if (item.FromBranchId === item.ToBranchId) {
+            alert('The destination branch must be different from the source branch.');
+            return;
+        }
+
+        // Perform validation
+        if (!validateTransferItem(item)) {
+            alert('Please fill in all fields and ensure quantity is a valid number.');
+            return;
+        }
+
+        try {
+            transferItems.push(item);
+            displayTransferItems();
+            clearTransferForm();
+        } catch (error) {
+            alert('An error occurred while checking available quantity.');
+        }
+    };
+
+    function validateTransferItem(item) {
+        return item.FromBranchId && item.ToBranchId && item.FromPaymentMethodId && item.ToPaymentMethodId && item.Amount && !isNaN(item.Amount) && item.Amount > 0;
+    }
+
+    function displayTransferItems() {
+        $("#transferGrid").dxDataGrid("instance").option('dataSource', transferItems);
+    }
+
+    function clearTransferForm() {
+        $('#fromBranch').val('').trigger('change');
+        $('#fromPaymentMethodId').val('').trigger('change');
+        $('#toBranch').val('').trigger('change');
+        $('#toPaymentMethodId').val('').trigger('change');
+        $('#amount').val('');
+        $('#notes').val('');
+    }
+
+    async function moveInventory() {
+        if (transferItems.length === 0) {
+            alert('Please add at least one item to transfer.');
+            return;
+        }
+
+        const payload = {
+            Items: transferItems.map(item => ({
+                FromBranchId: item.FromBranchId,
+                FromPaymentMethodId: item.FromPaymentMethodId,
+                ToBranchId: item.ToBranchId,
+                ToPaymentMethodId: item.ToPaymentMethodId,
+                Amount: item.Amount,
+                Notes: item.Notes,
+            }))
+        };
+
+        try {
+            const response = await fetch('/PaymentTransactions/MoveBalance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const responseData = await response.json();
+
+            if (!responseData.success) {
+                alert(responseData.message);
+                return;
+            }
+
+            alert(responseData.message);
+            transferItems = [];
+            displayTransferItems();
+        } catch (error) {
+            alert(responseData.message);
+        }
+    }
+
+    ///////////////////////////////////////////////////
     function toIsoDateString(date) {
         return date.toISOString().split('T')[0];
     }
@@ -161,7 +369,7 @@
     document.addEventListener('DOMContentLoaded', async function () {
         try {
             // Load branches data
-            const branchesResponse = await fetch('/Branches/LoadBranches');
+            const branchesResponse = await fetch('/Branches/LoadBranchesByUser');
             if (!branchesResponse.ok) {
                 console.error('Failed to load branches data');
                 return;
@@ -199,7 +407,6 @@
             dataGrid.clearFilter();
         });
         });
-
 
     async function fetchBranchAccountBalance(branchId) {
         try {
@@ -244,6 +451,7 @@
         }
     }
 </script>
+
 <style>
     #branchTreasury {
         background-color: #f0f0f0; 
@@ -260,5 +468,9 @@
     #branchTreasury #treasuryValue {
         font-weight: bold; 
         color: #007bff; 
+    }
+
+    .select2-container--open {
+        z-index: 9999999 !important;
     }
 </style>

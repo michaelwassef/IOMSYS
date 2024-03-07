@@ -239,7 +239,7 @@ namespace IOMSYS.Controllers
                 var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
 
                 // Step 2: If no items are associated, proceed to delete the invoice
-                int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
+                int deleteResult = await _salesInvoicesService.UpdateReturnSalesInvoiceAsync(invoiceId);
                 if (deleteResult > 0)
                 {
                     return Ok(new { SuccessMessage = "Invoice deleted successfully." });
@@ -254,39 +254,5 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
-
-        //public async Task<IActionResult> UpdateReturnInvoiceIfNoItems(int invoiceId)
-        //{
-        //    try
-        //    {
-        //        // Step 1: Check if any items are associated with this invoice
-        //        var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
-
-        //        // Step 2: If no items are associated, proceed to delete the invoice
-        //        int deleteResult = await _salesInvoicesService.UpdateReturnSalesInvoiceAsync(invoiceId);
-        //        if (deleteResult > 0)
-        //        {
-        //            var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-        //            if (paymentTransaction != null)
-        //            {
-        //                // Delete the payment transaction
-        //                var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
-        //                if (deleteTransactionResult <= 0)
-        //                {
-        //                    return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
-        //                }
-        //            }
-        //            return Ok(new { SuccessMessage = "Invoice deleted successfully." });
-        //        }
-        //        else
-        //        {
-        //            return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
-        //    }
-        //}
     }
 }

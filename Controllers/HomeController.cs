@@ -1,4 +1,5 @@
-﻿using IOMSYS.Models;
+﻿using IOMSYS.IServices;
+using IOMSYS.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -12,14 +13,19 @@ namespace IOMSYS.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly IPermissionsService _permissionsService;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger,IPermissionsService permissionsService)
         {
             _logger = logger;
+            _permissionsService = permissionsService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Home", "Index");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 

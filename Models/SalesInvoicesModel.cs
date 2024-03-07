@@ -1,4 +1,6 @@
-﻿namespace IOMSYS.Models
+﻿using System.Drawing;
+
+namespace IOMSYS.Models
 {
     public class SalesInvoicesModel
     {
@@ -14,7 +16,9 @@
         public DateTime SaleDate { get; set; }
         public bool? IsReturn { get; set; }
         public DateTime? ReturnDate { get; set; }
-
+        public DateTime? PaidUpDate { get; set; }
+        public bool IsFullPaidUp { get; set; }
+        public string? Notes { get; set; }
         //for joins
         public string? CustomerName { get; set; }
         public string? BranchName { get; set; }

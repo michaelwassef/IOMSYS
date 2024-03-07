@@ -5,15 +5,15 @@
 
 <h1>بيانات المنتجات</h1>
 <div>
-    <button class="btn btn-primary mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
-    <button class="btn btn-primary mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
+@*    <button class="btn btn-primary mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
+*@    <button class="btn btn-primary mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
 </div>
 
 
 @(Html.DevExtreme().DataGrid<ProductsModel>()
     .ID("gridContainer")
     .DataSource(d => d.Mvc().Controller("Products").LoadAction("LoadProducts").InsertAction("AddNewProduct").UpdateAction("UpdateProduct").DeleteAction("DeleteProduct").Key("ProductId"))
-    .OnToolbarPreparing("onToolbarPreparing")
+  .OnToolbarPreparing("onToolbarPreparing")
     .Selection(s => s.Mode(SelectionMode.Multiple))
     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
     .OnExporting("exporting")
@@ -124,6 +124,10 @@
                 <label for="Notes">ملاحظات</label>
                 <input type="text" id="notes" class="form-control" required />
             </div>
+            <button class="btn btn-primary mx-1" id="addTransferItemButton">إضافة منتج للنقل</button>
+            <div>
+                <div id="transferItemsGrid" class="my-3"></div>
+            </div>
             <div class="my-3">
                 <button type="button" class="btn btn-secondary mx-3" onclick="closePopup2()">إغلاق</button>
                 <button type="button" class="btn btn-success" onclick="moveInventory()">تأكيد النقل</button>
@@ -131,7 +135,6 @@
         </form>
     </div>
 </div>
-
 <script>
     window.closePopup2 = function () {
         $("#moveInventoryPopup").dxPopup("hide");
@@ -167,6 +170,11 @@
             // Trigger the change event for the product to re-fetch for both branches
             $('#productId').change();
         });
+
+    });
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        document.getElementById('addTransferItemButton').addEventListener('click', addItemToTransferList);
     });
 
     // Updated function to fetch available quantity and specify the display element
@@ -181,53 +189,46 @@
         }
     }
 
+    // Function to populate dropdowns
     async function populateDropdown(url, elementId, valueField, textField, prevSelectedValue) {
-        const response = await fetch(url);
-        if (response.ok) {
-            const data = await response.json();
-            const selectElement = $(`#${elementId}`);
-            selectElement.empty();
-            data.forEach(item => {
-                const option = new Option(item[textField], item[valueField]);
-                selectElement.append(option);
-            });
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const selectElement = $(`#${elementId}`);
+                selectElement.empty();
+                data.forEach(item => {
+                    const option = new Option(item[textField], item[valueField]);
+                    selectElement.append(option);
+                });
 
-            // If previous value still exists, reselect it
-            if (prevSelectedValue && selectElement.find(`option[value="${prevSelectedValue}"]`).length > 0) {
-                selectElement.val(prevSelectedValue).trigger('change');
+                // If previous value still exists, reselect it
+                if (prevSelectedValue && selectElement.find(`option[value="${prevSelectedValue}"]`).length > 0) {
+                    selectElement.val(prevSelectedValue).trigger('change');
+                } else {
+                    selectElement.val(null).trigger('change'); // Reset or set to a placeholder if no previous value
+                }
+
+                // Reinitialize select2 if used
+                selectElement.select2({
+                    placeholder: "برجاء الاختيار",
+                    allowClear: true,
+                    width: '100%'
+                });
             } else {
-                selectElement.val(null).trigger('change'); // Reset or set to a placeholder if no previous value
+                console.error('Failed to load data for:', elementId);
             }
-
-            // Reinitialize select2 if used
-            selectElement.select2({
-                placeholder: "برجاء الاختيار",
-                allowClear: true,
-                width: '100%'
-            });
-        } else {
-            console.error('Failed to load data for:', elementId);
+        } catch (error) {
+            console.error('Error populating dropdown:', error);
         }
     }
-
-
-    $(function () {
-        $("#moveInventoryPopup").dxPopup({
-            title: "نقل المخزون",
-            visible: false,
-            width: 600,
-            height: 500,
-        });
-        populateDropdown('/Branches/LoadBranches', 'fromBranch', 'BranchId', 'BranchName');
-        populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
-        populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
-    });
-
+    
     function showMoveInventoryPopup() {
         $("#moveInventoryPopup").dxPopup("show");
-        populateDropdown('/Branches/LoadBranches', 'fromBranch', 'BranchId', 'BranchName');
+        initializeItemsGrid2();
+        populateDropdown('/Branches/LoadBranchesByUser', 'fromBranch', 'BranchId', 'BranchName');
         populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
-        populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
+        populateDropdown('/Products/GetAllProductsInWarehouse', 'productId', 'ProductId', 'ProductName');
 
         setTimeout(() => {
             var productId = $('#productId').val();
@@ -254,105 +255,161 @@
         populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'colorId', 'ColorId', 'ColorName', prevColorId);
     }
 
+    var transferItems = [];
 
-    async function moveInventory() {
-        var fromBranchId = $('#fromBranch').val();
-        var toBranchId = $('#toBranch').val();
-        var productId = $('#productId').val();
-        var sizeId = $('#sizeId').val();
-        var colorId = $('#colorId').val();
-        var quantity = $('#quantity').val() || 0;
-        var notes = $('#notes').val();
+    // Function to add an item to the transfer list
+    async function addItemToTransferList(event) {
+        event.preventDefault();
 
-        // Ensure all required fields have values
-        if (!fromBranchId || !toBranchId || !productId || !sizeId || !colorId || !quantity || !notes) {
-            alert('برجاء ملاء جميع الحقول الضرورية.');
+        var item = {
+            ProductId: $('#productId').val(),
+            SizeId: $('#sizeId').val(),
+            ColorId: $('#colorId').val(),
+            FromBranchId: $('#fromBranch').val(),
+            ToBranchId: $('#toBranch').val(),
+            Quantity: parseInt($('#quantity').val(), 10),
+            Notes: $('#notes').val()
+        };
+
+        // Check if the destination is not the same as the source
+        if (item.FromBranchId === item.ToBranchId) {
+            alert('The destination branch must be different from the source branch.');
             return;
         }
 
-        // Check if fromBranch and toBranch are the same
-        if (fromBranchId === toBranchId) {
-            alert('فرع المنشأ وفرع الوجهة يجب أن يكونا مختلفين.');
+        // Perform validation
+        if (!validateTransferItem(item)) {
+            alert('Please fill in all fields and ensure quantity is a valid number.');
             return;
         }
 
-        // Directly fetch and check available quantity before proceeding
+        // Check available quantity in the source branch
         try {
-            const response = await fetch(`/Products/GetAvailable?productId=${productId}&sizeId=${sizeId}&colorId=${colorId}&branchId=${fromBranchId}`);
+            const response = await fetch(`/Products/GetAvailable?productId=${item.ProductId}&sizeId=${item.SizeId}&colorId=${item.ColorId}&branchId=${item.FromBranchId}`);
             const availableQtyFromBranch = await response.json();
 
-            if (availableQtyFromBranch < quantity) {
-                alert('الكمية المتاحة في فرع المنشأ غير كافية لإتمام عملية النقل.');
+            if (availableQtyFromBranch < item.Quantity) {
+                alert('The available quantity in the source branch is not sufficient for the transfer.');
                 return;
             }
 
-            var formData = new FormData();
-            formData.append('fromBranchId', fromBranchId);
-            formData.append('toBranchId', toBranchId);
-            formData.append('productId', productId);
-            formData.append('sizeId', sizeId);
-            formData.append('colorId', colorId);
-            formData.append('quantity', quantity);
-            formData.append('notes', notes);
-            submitTransfer(formData);
+            // Add item to transferItems if all checks pass
+            transferItems.push(item);
+            displayTransferItems();
+            clearTransferForm();
         } catch (error) {
-            console.error('Error fetching available quantity:', error);
-            alert('حدث خطأ أثناء تحقق من الكمية المتاحة.');
+            alert('An error occurred while checking available quantity.');
         }
-    }
-    async function submitTransfer(formData) {
-        const response = await fetch('/InventoryMovement/AddNewinventoryMovement', {
-            method: 'POST',
-            body: formData
-        });
+    };
 
-        const responseData = await response.json();
-
-        if (responseData.success) {
-            alert("تم نقل الكمية بنجاح.");
-            $("#moveInventoryPopup").dxPopup("hide");
-        } else {
-            alert(responseData.message || "حدث خطأ أثناء نقل الكمية.");
-        }
+    function validateTransferItem(item) {
+        return item.ProductId && item.SizeId && item.ColorId && item.FromBranchId && item.ToBranchId && !isNaN(item.Quantity) && item.Quantity > 0 && item.FromBranchId !== item.ToBranchId;
     }
 
+    function displayTransferItems() {
+        $("#transferItemsGrid").dxDataGrid("instance").option('dataSource', transferItems);
+    }
 
-    //////////
-    var invoiceItems = []; 
+    function clearTransferForm() {
+        $('#productId').val('').trigger('change');
+        $('#sizeId').val('').trigger('change');
+        $('#colorId').val('').trigger('change');
+        $('#fromBranch').val('').trigger('change');
+        $('#toBranch').val('').trigger('change');
+        $('#quantity').val('');
+        $('#notes').val('');
+    }
+
+    async function moveInventory() {
+        if (transferItems.length === 0) {
+            alert('Please add at least one item to transfer.');
+            return;
+        }
+
+        const payload = {
+            Items: transferItems.map(item => ({
+                ProductId: item.ProductId,
+                SizeId: item.SizeId,
+                ColorId: item.ColorId,
+                FromBranchId: item.FromBranchId,
+                ToBranchId: item.ToBranchId,
+                Quantity: item.Quantity,
+                Notes: item.Notes,
+            }))
+        };
+
+        try {
+            const response = await fetch('/InventoryMovement/AddNewInventoryMovement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const responseData = await response.json();
+
+            if (!responseData.success) {
+                alert(responseData.message);
+                return;
+            }
+
+            alert(responseData.message);
+            transferItems = [];
+            displayTransferItems() ;
+    } catch (error) {
+            alert(responseData.message);
+        }
+    }
+
+    var invoiceItems = [];
 
     $(document).ready(function () {
         initializeItemsGrid();
-         $('#ProductId, #SizeId, #ColorId, #fromBranch').change(function () {
-                // Get the current selected values
-                var productId = $('#ProductId').val();
-                var sizeId = $('#SizeId').val();
-                var colorId = $('#ColorId').val();
-                var branchId = $('#fromBranch').val();
+        $('#ProductId, #SizeId, #ColorId, #fromBranch').change(function () {
+            // Get the current selected values
+            var productId = $('#ProductId').val();
+            var sizeId = $('#SizeId').val();
+            var colorId = $('#ColorId').val();
+            var branchId = $('#fromBranch').val();
 
-                if (productId && sizeId && colorId && branchId) {
-                    fetchAvailableQuantity(productId, sizeId, colorId, branchId);
-                } else {
-                    $('#availableQtyDisplay').text('');
-                }
-          });
+            if (productId && sizeId && colorId && branchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, branchId);
+            } else {
+                $('#availableQtyDisplay').text('');
+            }
+        });
     });
 
+    $(function () {
+        $("#moveInventoryPopup").dxPopup({
+            title: "نقل المخزون",
+            visible: false,
+            width: 600,
+            height: 500,
+        });
+        populateDropdown('/Branches/LoadBranchesByUser', 'fromBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
+        populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
+    });
+
+    // Function to display a message
     function displayMessage(type, message) {
         console.log('Displaying message:', type, message); // Add this line for debugging
         const messageContainer = document.createElement("div");
         messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
         messageContainer.role = "alert";
         messageContainer.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
 
         const alertPlaceholder = document.getElementById("alertPlaceholder");
         alertPlaceholder.innerHTML = '';
         alertPlaceholder.appendChild(messageContainer);
     }
 
-
+    // Function to initialize invoice items grid
     function initializeItemsGrid() {
         $("#invoiceItemsGrid").dxDataGrid({
             dataSource: invoiceItems,
@@ -366,12 +423,25 @@
         });
     }
 
+    function initializeItemsGrid2() {
+        $("#transferItemsGrid").dxDataGrid({
+            dataSource: invoiceItems,
+            columns: [
+                { dataField: "ProductId", caption: "اسم المنتج" },
+                { dataField: "SizeId", caption: "المقاس" },
+                { dataField: "ColorId", caption: "اللون" },
+                { dataField: "Quantity", caption: "الكمية" },
+                { dataField: "FromBranchId", caption: "من فرع" },
+                { dataField: "ToBranchId", caption: "الي فرع" }
+            ],
+        });
+    }
+
     // Function to validate item fields
     function validateItem(item) {
         return item.ProductId && item.SizeId && item.ColorId && item.BranchId && !isNaN(item.Quantity);
     }
 
-    // Function to clear form fields after adding an item
     function clearFormFields() {
         $('#ProductId').val('').trigger('change');
         $('#SizeId').val('').trigger('change');
@@ -448,10 +518,10 @@
                 alert('Please fill in all fields.');
             }
         };
-        // Function to close the popup
+
         window.closePopup = function () {
-            $("#productDetailsPopup").dxPopup("instance").hide(); 
-            invoiceItems = []; 
+            $("#productDetailsPopup").dxPopup("instance").hide();
+            invoiceItems = [];
             $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
 
@@ -461,23 +531,6 @@
             populateDropdown('/Sizes/LoadSizes', 'SizeId', 'SizeId', 'SizeName');
             populateDropdown('/Colors/LoadColors', 'ColorId', 'ColorId', 'ColorName');
             populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
-        }
-
-        // Generic function to populate a dropdown from an endpoint
-        async function populateDropdown(url, elementId, valueField, textField) {
-            const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                const selectElement = $(`#${elementId}`);
-                selectElement.empty().append(data.map(item => new Option(item[textField], item[valueField])));
-                selectElement.select2({
-                    placeholder: "برجاء الاختيار",
-                    allowClear: true,
-                    width: '100%'
-                });
-            } else {
-                console.error('Failed to load data for:', elementId);
-            }
         }
 
         window.saveInvoice = async function () {
@@ -500,19 +553,19 @@
 
                     if (!result.success) {
                         displayMessage('error', result.message);
-                        return; 
+                        return;
                     }
-                    
+
                     displayMessage('success', result.message);
 
                 } catch (error) {
                     console.error('Could not save the invoice item:', error);
                     displayMessage('error', "حدث خطأ أثناء الحفظ، يرجى المحاولة مرة أخرى.");
-                    return; 
+                    return;
                 }
             }
 
-            invoiceItems = []; 
+            invoiceItems = [];
             $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
     });

@@ -89,8 +89,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-        
-
         private string GetRoleName(int userType)
         {
             switch (userType)

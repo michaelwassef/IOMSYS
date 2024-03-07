@@ -3,6 +3,7 @@ using IOMSYS.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace IOMSYS.Controllers
 {
@@ -44,6 +45,14 @@ namespace IOMSYS.Controllers
             return View();
         }
 
+        public async Task<IActionResult> PaymentsNotMade()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PaymentsNotMade");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> LoadPurchaseInvoices()
         {
@@ -55,6 +64,13 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> LoadPurchaseInvoicesByBranch(int branchId)
         {
             var purchaseInvoices = await _purchaseInvoicesService.GetAllPurchaseInvoicesByBranchAsync(branchId);
+            return Json(purchaseInvoices);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadNotPaidPurchaseInvoicesByBranch(DateTime PaidUpDate, int branchId)
+        {
+            var purchaseInvoices = await _purchaseInvoicesService.GetAllNotPaidPurchaseInvoicesByBranchAsync(PaidUpDate, branchId);
             return Json(purchaseInvoices);
         }
 
@@ -97,6 +113,9 @@ namespace IOMSYS.Controllers
                     return Json(new { success = false, message = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
                 }
 
+                if (paidUp == totalAmount) { model.IsFullPaidUp = true; }
+                else { model.IsFullPaidUp = false; }
+
                 // Insert the invoice
                 int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
                 if (invoiceId <= 0)
@@ -123,7 +142,7 @@ namespace IOMSYS.Controllers
                 {
                     BranchId = model.BranchId,
                     PaymentMethodId = model.PaymentMethodId,
-                    Amount = model.TotalAmount,
+                    Amount = model.PaidUp,
                     TransactionType = "خصم",
                     TransactionDate = model.PurchaseDate,
                     ModifiedUser = model.UserId,
@@ -140,9 +159,8 @@ namespace IOMSYS.Controllers
             }
         }
 
-        //not finish
         [HttpPut]
-        public async Task<IActionResult> UpdatePurchaseInvoice([FromBody] PurchaseInvoicesModel purchaseInvoice)
+        public async Task<IActionResult> UpdatePurchaseInvoice(int id, [FromBody] JsonElement data)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "UpdatePurchaseInvoice");
@@ -150,49 +168,48 @@ namespace IOMSYS.Controllers
 
             try
             {
-                purchaseInvoice.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+                var existingInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(id);
 
-                //if (!ModelState.IsValid)
-                //    return BadRequest(ModelState);
-
-                decimal totalAmount = purchaseInvoice.TotalAmount;
-
-                decimal totalItemsAmount = await InvoiceTotalByItems(purchaseInvoice.PurchaseInvoiceId);
-                if (totalItemsAmount != purchaseInvoice.TotalAmount)
+                if (data.TryGetProperty("values", out JsonElement valuesElement))
                 {
-                    return BadRequest(new { ErrorMessage = "اجمالي الفاتورة لا يتوافق مع اجمالي الاصناف" });
+                    var values = valuesElement.ToString();
+                    JsonConvert.PopulateObject(values, existingInvoice);
                 }
 
-                decimal paidUp = purchaseInvoice.PaidUp;
-                decimal remainder = totalAmount - paidUp;
+                decimal totalItemsAmount = await InvoiceTotalByItems(existingInvoice.PurchaseInvoiceId);
+                decimal paidUp = existingInvoice.PaidUp;
 
-                // Check if PaidUp is less than or equal to TotalAmount
-                if (paidUp > totalAmount)
+                if (existingInvoice.PaidUp != null)
                 {
-                    return BadRequest(new { ErrorMessage = "المدفوع لا يمكن ان يكون اكبر من اجمالي الفاتورة" });
+                    decimal remainder = totalItemsAmount - paidUp;
+                    if (paidUp > totalItemsAmount)
+                    {
+                        return BadRequest(new { ErrorMessage = "المدفوع لا يمكن ان يكون اكبر من اجمالي الفاتورة" });
+                    }
+                    if (remainder > totalItemsAmount || paidUp + remainder != totalItemsAmount || remainder != existingInvoice.Remainder)
+                    {
+                        return BadRequest(new { ErrorMessage = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
+                    }
                 }
 
-                // Check if Remainder is less than or equal to TotalAmount and PaidUp + Remainder equals TotalAmount
-                if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != purchaseInvoice.Remainder)
-                {
-                    return BadRequest(new { ErrorMessage = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
-                }
+                if (paidUp == totalItemsAmount) { existingInvoice.IsFullPaidUp = true; }
+                else { existingInvoice.IsFullPaidUp = false; }
 
                 // Update the invoice
-                int updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(purchaseInvoice);
+                int updateResult = await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(existingInvoice);
                 if (updateResult > 0)
                 {
                     // Retrieve the complete updated purchase invoice
-                    var updatedInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(purchaseInvoice.PurchaseInvoiceId);
+                    var updatedInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(existingInvoice.PurchaseInvoiceId);
 
                     // Retrieve the payment transaction associated with this invoice
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(purchaseInvoice.PurchaseInvoiceId);
+                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(existingInvoice.PurchaseInvoiceId);
                     if (paymentTransaction != null)
                     {
                         // Update transaction details as necessary
-                        paymentTransaction.Amount = purchaseInvoice.TotalAmount;
-                        paymentTransaction.BranchId = purchaseInvoice.BranchId;
-                        paymentTransaction.PaymentMethodId = purchaseInvoice.PaymentMethodId;
+                        paymentTransaction.Amount = existingInvoice.PaidUp;
+                        paymentTransaction.BranchId = existingInvoice.BranchId;
+                        paymentTransaction.PaymentMethodId = existingInvoice.PaymentMethodId;
 
                         var updateTransactionResult = await _paymentTransactionService.UpdatePaymentTransactionAsync(paymentTransaction);
                         if (updateTransactionResult <= 0)

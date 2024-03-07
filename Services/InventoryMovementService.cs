@@ -28,8 +28,8 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<InventoryMovementModel>> SelectHangingWarehouseByToBranchIdAsync(int? ToBranchId)
         {
             var sql = @"SELECT I.MovementId, p.ProductName, s.SizeName, c.ColorName, I.Quantity,
-                b1.BranchName AS FromBranchName, b2.BranchName AS ToBranchName, I.IsApproved,
-                I.MovementDate, I.Notes 
+                b1.BranchName AS FromBranchName, b2.BranchName AS ToBranchName, I.IsApproved, 
+                I.MovementDate, I.Notes , I.SalesInvoiceId, I.PurchaseInvoiceId
                 FROM InventoryMovements I
                 LEFT JOIN Products p ON I.ProductId = p.ProductId 
                 LEFT JOIN Sizes s ON I.SizeId = s.SizeId
@@ -52,8 +52,8 @@ namespace IOMSYS.Services
                 try
                 {
                     var movementId = await db.ExecuteScalarAsync<int>(
-                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate) 
-                        VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate);
+                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate, SalesInvoiceId, PurchaseInvoiceId) 
+                        VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate, @SalesInvoiceId, @PurchaseInvoiceId);
                         SELECT CAST(SCOPE_IDENTITY() as int);",
                         movement).ConfigureAwait(false);
 
@@ -84,13 +84,13 @@ namespace IOMSYS.Services
                 return -1;
             }
         }
-        public async Task<bool> ApproveOrRejectInventoryMovementAsync(int movementId, bool isApproved)
+        public async Task<bool> ApproveOrRejectInventoryMovementAsync(int movementId, bool isApproved, int PurchaseInvoiceId)
         {
-            var sql = @"UPDATE InventoryMovements SET IsApproved = @IsApproved WHERE MovementId = @MovementId";
+            var sql = @"UPDATE InventoryMovements SET IsApproved = @IsApproved, PurchaseInvoiceId = @PurchaseInvoiceId WHERE MovementId = @MovementId";
 
             using (var db = _dapperContext.CreateConnection())
             {
-                var result = await db.ExecuteAsync(sql, new { MovementId = movementId, IsApproved = isApproved }).ConfigureAwait(false);
+                var result = await db.ExecuteAsync(sql, new { MovementId = movementId, IsApproved = isApproved, PurchaseInvoiceId }).ConfigureAwait(false);
                 if (result > 0)
                 {
                     if (isApproved)
@@ -115,7 +115,7 @@ namespace IOMSYS.Services
             }
         }
 
-        public async Task<InventoryMovementModel?> SelectInventoryMovementByIdAsync(int movementId)
+        public async Task<InventoryMovementModel> SelectInventoryMovementByIdAsync(int movementId)
         {
             var sql = @"SELECT * FROM InventoryMovements WHERE MovementId = @MovementId";
             using (var db = _dapperContext.CreateConnection())

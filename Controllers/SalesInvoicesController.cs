@@ -105,6 +105,9 @@ namespace IOMSYS.Controllers
                     return Json(new { success = false, message = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
                 }
 
+                if (paidUp == totalAmount) { model.IsFullPaidUp = true; }
+                else { model.IsFullPaidUp = false; }
+
                 // Insert the invoice
                 int invoiceId = await _salesInvoicesService.InsertSalesInvoiceAsync(model);
 
@@ -125,7 +128,7 @@ namespace IOMSYS.Controllers
                 {
                     BranchId = model.BranchId,
                     PaymentMethodId = model.PaymentMethodId,
-                    Amount = model.TotalAmount,
+                    Amount = model.PaidUp,
                     TransactionType = "اضافة",
                     TransactionDate = model.SaleDate,
                     ModifiedUser = model.UserId,
@@ -177,6 +180,9 @@ namespace IOMSYS.Controllers
                     return BadRequest(new { ErrorMessage = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
                 }
 
+                if (paidUp == totalAmount) { SaleInvoice.IsFullPaidUp = true; }
+                else { SaleInvoice.IsFullPaidUp = false; }
+
                 // Update the invoice
                 int updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(SaleInvoice);
                 if (updateResult <= 0)
@@ -189,7 +195,7 @@ namespace IOMSYS.Controllers
                 if (paymentTransaction != null)
                 {
                     // Update transaction details as necessary
-                    paymentTransaction.Amount = SaleInvoice.TotalAmount;
+                    paymentTransaction.Amount = SaleInvoice.PaidUp;
                     paymentTransaction.BranchId = SaleInvoice.BranchId;
                     paymentTransaction.PaymentMethodId = SaleInvoice.PaymentMethodId;
 

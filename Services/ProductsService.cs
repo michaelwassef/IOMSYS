@@ -232,55 +232,108 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<ProductsModel>> WarehouseMovementsAsync(int BranchId)
         {
             var sql = @"
-           SELECT
-                PI.ProductId,
-                PI.PurchaseItemId as ID,
-                P.ProductName,
-                S.SizeName,
-                C.ColorName,
-                PT.ProductTypeName,
-                C1.CategoryName,
-                PI.Quantity,
-                PI.BuyPrice,
-                PI.Notes,
-                PI.BranchId,
-                PI.Statues,
-                PI.ModDate AS DateAdded,
-                'مدخلات' AS RecordType
-            FROM PurchaseItems PI
-            JOIN Products P ON PI.ProductId = P.ProductId
-            JOIN Sizes S ON PI.SizeId = S.SizeId
-            JOIN Colors C ON PI.ColorId = C.ColorId
-            JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
-            JOIN Categories C1 ON P.CategoryId = C1.CategoryId
-            WHERE PI.BranchId = @BranchId
-
-            UNION ALL
-
+            WITH InventoryMovementsRanked AS (
+                SELECT
+                    IM.MovementId,
+                    IM.ProductId,
+                    CASE 
+                        WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity 
+                        ELSE IM.Quantity 
+                    END AS Quantity,
+                    IM.FromBranchId,
+                    IM.ToBranchId,
+                    IM.MovementDate,
+                    IM.Notes AS MovementNotes,
+                    SZ.SizeName,
+                    CLR.ColorName,
+                    CAT.CategoryName,
+                    PTY.ProductTypeName,
+                    'منقوله بين الفروع' AS RecordType,
+                    ROW_NUMBER() OVER(PARTITION BY IM.ProductId ORDER BY IM.MovementDate DESC) AS RowNum
+                FROM InventoryMovements IM
+                JOIN Products PR ON IM.ProductId = PR.ProductId
+                JOIN Sizes SZ ON IM.SizeId = SZ.SizeId
+                JOIN Colors CLR ON IM.ColorId = CLR.ColorId
+                JOIN Categories CAT ON PR.CategoryId = CAT.CategoryId
+                JOIN ProductTypes PTY ON PR.ProductTypeId = PTY.ProductTypeId
+                WHERE IM.ToBranchId = @BranchId OR IM.FromBranchId = @BranchId
+            ),
+            PurchaseItemsFiltered AS (
+                SELECT
+                    PI.PurchaseItemId,
+                    PI.ProductId,
+                    PI.Quantity,
+                    PI.BuyPrice,
+                    PI.Notes AS PurchaseNotes,
+                    PI.BranchId,
+                    PI.ModDate AS DateAdded,
+                    SZ.SizeName,
+                    CLR.ColorName,
+                    CAT.CategoryName,
+                    PTY.ProductTypeName,
+                    'مشتريات' AS RecordType
+                FROM PurchaseItems PI
+                JOIN Products PR ON PI.ProductId = PR.ProductId
+                JOIN Sizes SZ ON PI.SizeId = SZ.SizeId
+                JOIN Colors CLR ON PI.ColorId = CLR.ColorId
+                JOIN Categories CAT ON PR.CategoryId = CAT.CategoryId
+                JOIN ProductTypes PTY ON PR.ProductTypeId = PTY.ProductTypeId
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM InventoryMovements
+                    WHERE ProductId = PI.ProductId AND ToBranchId = @BranchId
+                )
+                AND PI.BranchId = @BranchId
+            ),
+            MovementsSelected AS (
+                SELECT
+                    M.MovementId AS ID,
+                    M.ProductId,
+                    M.Quantity,
+                    NULL AS BuyPrice,
+                    M.MovementNotes,
+                    CASE WHEN M.ToBranchId = @BranchId THEN M.ToBranchId ELSE M.FromBranchId END AS BranchId,
+                    M.MovementDate,
+                    M.SizeName,
+                    M.ColorName,
+                    M.CategoryName,
+                    M.ProductTypeName,
+                    M.RecordType
+                FROM InventoryMovementsRanked M
+                WHERE M.RowNum = 1
+                AND (M.ToBranchId = @BranchId OR M.FromBranchId = @BranchId)
+            )
             SELECT
-                IM.ProductId,
-                IM.MovementId as ID,
-                PR.ProductName,
-                SZ.SizeName,
-                CLR.ColorName,
-                PTY.ProductTypeName,
-                CAT.CategoryName,
-                IM.Quantity,
-                NULL AS BuyPrice,
-                IM.Notes,
-                IM.ToBranchId,
-                NULL AS Statues,
-                IM.MovementDate AS DateAdded,
-                'منقول من فرع' AS RecordType
-            FROM InventoryMovements IM
-            JOIN Products PR ON IM.ProductId = PR.ProductId
-            JOIN Sizes SZ ON IM.SizeId = SZ.SizeId
-            JOIN Colors CLR ON IM.ColorId = CLR.ColorId
-            JOIN ProductTypes PTY ON PR.ProductTypeId = PTY.ProductTypeId
-            JOIN Categories CAT ON PR.CategoryId = CAT.CategoryId
-            WHERE IM.ToBranchId = @BranchId
-
-            ORDER BY DateAdded DESC;";
+                P.PurchaseItemId AS ID,
+                P.ProductId,
+                P.Quantity,
+                P.BuyPrice,
+                P.PurchaseNotes AS Notes,
+                P.BranchId,
+                P.DateAdded,
+                P.SizeName,
+                P.ColorName,
+                P.CategoryName,
+                P.ProductTypeName,
+                P.RecordType
+            FROM PurchaseItemsFiltered P
+            UNION ALL
+            SELECT
+                M.ID,
+                M.ProductId,
+                M.Quantity,
+                M.BuyPrice,
+                M.MovementNotes AS Notes,
+                M.BranchId,
+                M.MovementDate,
+                M.SizeName,
+                M.ColorName,
+                M.CategoryName,
+                M.ProductTypeName,
+                M.RecordType
+            FROM MovementsSelected M
+            ORDER BY DateAdded DESC;
+            ";
 
             using (var db = _dapperContext.CreateConnection())
             {

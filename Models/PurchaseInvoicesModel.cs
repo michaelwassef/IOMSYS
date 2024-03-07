@@ -15,6 +15,9 @@
         public int UserId { get; set; }
         public string? UserName { get; set; }
         public DateTime PurchaseDate { get; set; }
+        public DateTime? PaidUpDate { get; set; }
+        public bool IsFullPaidUp { get; set; }
+        public string? Notes { get; set; }
 
         // New property to hold associated purchase items
         public List<PurchaseItemsModel> PurchaseItems { get; set; }

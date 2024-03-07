@@ -294,16 +294,8 @@
                     }
                 },
                 {
-                    dataField: "BranchId",
-                    caption: "الفرع",
-                    lookup: {
-                        dataSource: DevExpress.data.AspNet.createStore({
-                            key: "BranchId",
-                            loadUrl: "/Branches/LoadBranches"
-                        }),
-                        valueExpr: "BranchId",
-                        displayExpr: "BranchName"
-                    }
+                    dataField: "Notes",
+                    caption: "ملاحظات"
                 },
                 {
                     dataField: "PaymentMethodId",
@@ -323,6 +315,11 @@
                     dataType: "date"
                 },
                 {
+                    dataField: "PaidUpDate",
+                    caption: "تاريخ التحصيل",
+                    dataType: "date"
+                },
+                {
                     dataField: "UserId",
                     caption: "مدخل الفاتوره",
                         allowEditing: false,
@@ -334,7 +331,19 @@
                         valueExpr: "UserId",
                         displayExpr: "UserName"
                     }
-                }
+                },
+                {
+                    dataField: "BranchId",
+                    caption: "الفرع",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "BranchId",
+                            loadUrl: "/Branches/LoadBranches"
+                        }),
+                        valueExpr: "BranchId",
+                        displayExpr: "BranchName"
+                    }
+                },
             ],
             onToolbarPreparing: function (e) {
                 var toolbarItems = e.toolbarOptions.items;

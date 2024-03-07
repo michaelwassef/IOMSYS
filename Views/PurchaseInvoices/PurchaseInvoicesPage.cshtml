@@ -13,27 +13,27 @@
     <div class="row">
         <div class="form-group col-md-4 mb-3">
         <label for="ProductId">اسم المنتج</label>
-            <select id="ProductId" class="form-control" placeholder="اسم المنتج" required></select>
+        <select id="ProductId" class="form-control" placeholder="اسم المنتج" required></select>
     </div>
         <div class="form-group col-md-4 mb-3">
         <label for="SizeId">المقاس</label>
-            <select id="SizeId" class="form-control" placeholder="المقاس" required></select>
+        <select id="SizeId" class="form-control" placeholder="المقاس" required></select>
     </div>
     <div class="form-group col-md-4 mb-3">
         <label for="ColorId">اللون</label>
-            <select id="ColorId" class="form-control" placeholder="اللون" required></select>
+        <select id="ColorId" class="form-control" placeholder="اللون" required></select>
     </div>
     <div class="form-group col-md-4 mb-3">
         <label for="Quantity">الكمية</label>
-            <input type="number" id="Quantity" class="form-control" placeholder="الكمية" required min="0" />
+        <input type="number" id="Quantity" class="form-control" placeholder="الكمية" required min="0" />
     </div>
         <div class="form-group col-md-4 mb-3">
         <label for="BuyPrice">سعر الشراء للواحد</label>
-            <input type="number" id="BuyPrice" class="form-control" placeholder="سعر الشراء للواحد" required min="0" />
+        <input type="number" id="BuyPrice" class="form-control" placeholder="سعر الشراء للواحد" required min="0" />
     </div>
         <div class="form-group col-md-4 mb-3">
-            <label for="SellPrice">سعر البيع للواحد</label>
-            <input type="number" id="SellPrice" class="form-control" placeholder="سعر البيع للواحد" min="0" />
+        <label for="SellPrice">سعر البيع للواحد</label>
+        <input type="number" id="SellPrice" class="form-control" placeholder="سعر البيع للواحد" min="0" />
     </div>
         <button type="button" onclick="addItem()" class="btn btn-primary mb-3">اضافة صنف</button>
 </div>
@@ -73,11 +73,15 @@
                     </label>
                 </div>
             </div>
-            <div class="form-group col-md-3 mb-3">
+            <div class="form-group col-md-2 mb-3">
                 <label for="remainder">الباقي</label>
                 <input type="number" id="remainder" class="form-control" placeholder="الباقي" required min="0" readonly />
             </div>
-            <div class="form-group col-md-3 mb-3">
+            <div class="form-group col-md-2 mb-3">
+                <label for="PaidUpDate">تاريخ التحصيل</label>
+                <input type="date" id="PaidUpDate" class="form-control mb-3" placeholder="تاريخ التحصيل" required />
+            </div>
+            <div class="form-group col-md-2 mb-3">
                 <label for="purchaseDate">تاريخ الفاتورة</label>
                 <input type="date" id="purchaseDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required/>
             </div>
@@ -85,8 +89,6 @@
         </div>
     </div>
 </form>
-
-
 
 <script>
     async function populateDropdown(url, elementId, valueField, textField) {
@@ -367,6 +369,7 @@
         formData.append("TotalAmount", document.getElementById('totalAmount').value);
         formData.append("PaidUp", document.getElementById('paidUp').value);
         formData.append("Remainder", document.getElementById('remainder').value);
+        formData.append("PaidUpDate", document.getElementById('PaidUpDate').value);
         formData.append("PurchaseDate", document.getElementById('purchaseDate').value);
 
         try {

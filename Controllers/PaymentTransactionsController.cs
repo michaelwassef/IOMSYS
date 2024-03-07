@@ -1,4 +1,7 @@
 ﻿using IOMSYS.IServices;
+using IOMSYS.Models;
+using IOMSYS.Reports;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,11 +12,13 @@ namespace IOMSYS.Controllers
     {
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly IPermissionsService _permissionsService;
+        private readonly IBranchesService _branchesService;
 
-        public PaymentTransactionsController(IPaymentTransactionService paymentTransactionService, IPermissionsService permissionsService)
+        public PaymentTransactionsController(IPaymentTransactionService paymentTransactionService, IPermissionsService permissionsService, IBranchesService branchesService)
         {
             _paymentTransactionService = paymentTransactionService;
             _permissionsService = permissionsService;
+            _branchesService = branchesService;
         }
 
         public async Task<IActionResult> PaymentTransactionsPage()
@@ -50,6 +55,69 @@ namespace IOMSYS.Controllers
         {
             var paymentTransactions = await _paymentTransactionService.GetBranchAccountBalanceAsync(BranchId);
             return Json(paymentTransactions);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAccountBalanceByPaymentMethodIdAndBranchId(int BranchId, int PaymentMethodId)
+        {
+            var paymentTransactions = await _paymentTransactionService.GetBranchAccountBalanceByPaymentAsync(BranchId, PaymentMethodId);
+            return Json(paymentTransactions);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MoveBalance([FromBody] MovePaymentBatchModel batchModel)
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PaymentTransactions", "MoveBalance");
+            if (!hasPermission) { return BadRequest(new { message = "ليس لديك صلاحية" }); }
+
+            try
+            {
+                foreach (var model in batchModel.Items)
+                {
+                    int? BranchId = await _branchesService.SelectBranchIdByManagerIdAsync(userId);
+                    if (model.FromBranchId != BranchId)
+                    {
+                        return Json(new { success = false, message = "ليس لديك صلاحية للتحويل من هذا الفرع" });
+                    }
+
+                    if (!ModelState.IsValid)
+                        return BadRequest(ModelState);
+
+                    var frombranchname = await _branchesService.SelectBranchByIdAsync(model.FromBranchId);
+                    var tobranchname = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
+                    var frompaymentTransaction = new PaymentTransactionModel
+                    {
+                        BranchId = model.FromBranchId,
+                        PaymentMethodId = model.FromPaymentMethodId,
+                        Amount = model.Amount,
+                        TransactionType = "خصم",
+                        TransactionDate = DateTime.Now,
+                        ModifiedUser = userId,
+                        ModifiedDate = DateTime.Now,
+                        Details = "محولة الي " + tobranchname.BranchName + " - " + model.Notes,
+                    };
+                    await _paymentTransactionService.InsertPaymentTransactionAsync(frompaymentTransaction);
+
+                    var topaymentTransaction = new PaymentTransactionModel
+                    {
+                        BranchId = model.ToBranchId,
+                        PaymentMethodId = model.ToPaymentMethodId,
+                        Amount = model.Amount,
+                        TransactionType = "اضافة",
+                        TransactionDate = DateTime.Now,
+                        ModifiedUser = userId,
+                        ModifiedDate = DateTime.Now,
+                        Details = "محولة من "+ frombranchname.BranchName + " - "+model.Notes,
+                    };
+                    await _paymentTransactionService.InsertPaymentTransactionAsync(topaymentTransaction);
+                }
+                return Json(new { success = true, message = "تم نقل المبالغ بنجاح." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Could not add", ExceptionMessage = ex.Message });
+            }
         }
 
         //[HttpPost]
