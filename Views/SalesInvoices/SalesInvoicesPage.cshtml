@@ -82,7 +82,6 @@
             <div id="maxDiscountDisplay" class="text-muted"></div>
             <input type="hidden" id="maxDiscount" value="" />
         </div>
-
         <button type="button" onclick="addItem()" class="btn btn-primary mb-3">اضافة صنف</button>
     </div>
 </div>
@@ -95,6 +94,14 @@
     <div id="invoiceDetailsForm" style="margin-top: 20px;">
         <h3>بيانات الفاتورة</h3>
         <div class="row">
+            @*<div class="form-group col-md-4 mb-3">
+                <label for="OfferId">العرض</label>
+                <select id="OfferId" class="form-control" onchange="fetchOfferDetails()"></select>
+            </div>
+            <div class="form-group col-md-8 mb-3 text-right">
+                <button type="button" id="btnApplyOffer" class="btn btn-success" onclick="applyOfferToInvoiceItems()">تطبيق العرض</button>
+            </div>
+*@
             <div class="form-group col-md-4 mb-3">
                 <label for="paymentMethodName">طريقة الدفع</label>
                 <select id="PaymentMethodId" class="form-control" required></select>
@@ -138,7 +145,130 @@
 </form>
 
   <script>
+    let selectedOfferDetails = null;
+
+    async function populateOffers() {
+        try {
+            const response = await fetch('/Offer/GetAllActiveOffers');
+            if (response.ok) {
+                const offers = await response.json();
+                const offerSelect = $('#OfferId');
+                let options = '<option value="">Select an offer</option>';
+                offers.forEach(offer => {
+                    options += `<option value="${offer.OfferId}">${offer.OfferName}</option>`;
+                });
+                offerSelect.html(options);
+            } else {
+                console.error('Failed to load offers');
+            }
+        } catch (error) {
+            console.error('Error fetching offers:', error);
+        }
+    }
+
+    async function fetchOfferDetails() {
+        const offerId = $('#OfferId').val();
+        if (!offerId) {
+            selectedOfferDetails = null;
+            return;
+        }
+        try {
+            const response = await fetch(`/Offer/GetDetilasOffersByOfferId?OfferId=${offerId}`);
+            if (response.ok) {
+                selectedOfferDetails = await response.json();
+            } else {
+                console.error('Failed to fetch offer details');
+                selectedOfferDetails = null;
+            }
+        } catch (error) {
+            console.error('Error fetching offer details:', error);
+            selectedOfferDetails = null;
+        }
+    }
+
+    function applyOfferToInvoiceItems() {
+        if (!selectedOfferDetails || !selectedOfferDetails.Details) {
+            alert("Please select a valid offer.");
+            return;
+        }
+        refreshItemsGrid(); 
+        calculateTotals();
+    }
+
+    function calculateTotalsWithOffer() {
+        if (!selectedOfferDetails) return; 
+        switch (selectedOfferDetails.OfferType) {
+            case "واحد وعليه واحد":
+                applyBOGOffer(selectedOfferDetails);
+                break;
+            case "حزمة":
+                applyBundleOffer(selectedOfferDetails);
+                break;
+            case "خصم":
+                applyDiscountOffer(selectedOfferDetails);
+                break;
+            default:
+                console.error('Unknown offer type');
+        }
+    }
+
+    function applyBOGOffer(offerDetails) {
+        // Filter eligible items for the BOGO offer
+        tempItems.forEach((item, index) => {
+            if (offerDetails.Details.some(detail => detail.ProductId === item.ProductId)) {
+                // Assuming each eligible item gets paired with the next for the offer
+                if ((index + 1) % 2 === 0) { // Applies to every second item of the eligible ones
+                    item.SellPrice = 0; // Set the second item as free
+                }
+            }
+        });
+    }
+
+    function applyBundleOffer(offerDetails) {
+       const bundleProducts = offerDetails.Details.map(detail => detail.ProductId);
+        const allInCart = bundleProducts.every(productId =>
+            tempItems.some(item => item.ProductId === productId)
+        );
+
+        if (allInCart) {
+            tempItems.forEach(item => {
+                if (bundleProducts.includes(item.ProductId)) {
+                    const discountAmount = item.SellPrice * offerDetails.DiscountRate;
+                    item.SellPrice -= discountAmount;
+                    item.ItemDiscount = discountAmount;
+                }
+            });
+        }
+    }
+
+    function applyDiscountOffer(offerDetails) {
+        tempItems.forEach(item => {
+            const detail = offerDetails.Details.find(detail => detail.ProductId === item.ProductId);
+            if (detail) {
+                const discountRate = detail.DiscountRate || (detail.DiscountedPrice / item.SellPrice);
+                const discountAmount = item.SellPrice * discountRate;
+                item.SellPrice -= discountAmount; // Apply discount to item price
+                item.ItemDiscount = discountAmount; // Optionally, track discount amount for each item
+            }
+        });
+    }
+
+    function recalculateInvoiceTotals() {
+        let total = 0;
+        let totalDiscount = 0;
+        tempItems.forEach(item => {
+            total += item.Quantity * item.SellPrice;
+            totalDiscount += item.ItemDiscount || 0;
+        });
+
+        // Update the DOM elements with new totals
+        document.getElementById('totalAmount').value = total.toFixed(2);
+        document.getElementById('totalDiscount').value = totalDiscount.toFixed(2);
+        // Calculate and update any other totals as needed
+    }
+
     $(document).ready(function () {
+        populateOffers();
         // Open the modal
         $('#btnAddCustomer').click(function () {
             $('#addCustomerModal').modal('show');
@@ -296,6 +426,7 @@
         console.error('Error fetching available sizes:', error);
     }
 }
+
     async function fetchAvailableColors(productId) {
         try {
             // Correct the URL parameter to 'ProductId'
@@ -323,6 +454,7 @@
     }
 
     var temporaryInventory = {};
+
     async function fetchAvailableQuantity(productId, sizeId, colorId, branchId) {
     try {
         const response = await fetch(`/Products/GetAvailable?productId=${productId}&colorId=${colorId}&sizeId=${sizeId}&BranchId=${branchId}`);
@@ -342,7 +474,6 @@
         $('#availableQtyDisplay').text(`Error fetching available quantity`);
     }
 }
-
 
     async function fetchSellPrice(productId) {
     try {
@@ -387,7 +518,6 @@
             fetchAvailableQuantity(productId, sizeId, colorId, branchId);
         }
     });
-
 
     $(document).ready(function() {
         $('#ProductId, #SizeId, #ColorId, #BranchId').change(function() {
@@ -527,30 +657,36 @@
     }
 
     let productsLookup = [];
+
     async function fetchProductsLookup() {
         const response = await fetch('/Products/LoadProducts');
         if (response.ok) {
             productsLookup = await response.json();
         }
     }
+
     fetchProductsLookup();
 
     let sizesLookup = [];
+
     async function fetchsizesLookup() {
         const response = await fetch('/Sizes/LoadSizes');
         if (response.ok) {
             sizesLookup = await response.json();
         }
     }
+
     fetchsizesLookup();
 
     let colorsLookup = [];
+
     async function fetchcolorsLookup() {
         const response = await fetch('/Colors/LoadColors');
         if (response.ok) {
             colorsLookup = await response.json();
         }
     }
+
     fetchcolorsLookup();
 
     function refreshItemsGrid() {
@@ -615,6 +751,7 @@
         document.getElementById('paidUp').value = totalAmount.toFixed(2);
         calculateRemainder();
     }
+
     function calculateRemainder() {
         const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
         const paidUp = parseFloat(document.getElementById('paidUp').value) || 0;
@@ -640,14 +777,14 @@
         document.getElementById('totalDiscount').value = DiscountsAmount.toFixed(2);
     }
 
-  function displayMessage(type, message) {
-    const messageContainer = document.createElement("div");
-    messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-    messageContainer.role = "alert";
-    messageContainer.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
+    function displayMessage(type, message) {
+        const messageContainer = document.createElement("div");
+        messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        messageContainer.role = "alert";
+        messageContainer.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
 
     const alertPlaceholder = document.getElementById("alertPlaceholder");
     alertPlaceholder.innerHTML = '';
@@ -661,10 +798,9 @@
     }, 5000);
 }
 
-function resetTemporaryInventory() {
-    temporaryInventory = {};
-}
-
+    function resetTemporaryInventory() {
+        temporaryInventory = {};
+    }
 
     async function saveInvoice() {
          if (tempItems.length === 0) {
@@ -722,6 +858,7 @@ function resetTemporaryInventory() {
             alert('Error saving invoice');
         }
     }
+
     refreshItemsGrid();
 
     async function saveAndPrintInvoice() {
@@ -745,7 +882,6 @@ function resetTemporaryInventory() {
         }
     }
 
- 
     async function printInvoiceById(invoiceId) {
     try {
         const response = await fetch(`/SalesInvoices/SaleInvoiceReport?invoiceId=${invoiceId}`);

@@ -40,6 +40,20 @@ namespace IOMSYS.Controllers
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllActiveOffers()
+        {
+            var offers = await _offerService.GetAllOffersAsync();
+            return Json(offers);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDetilasOffersByOfferId(int OfferId)
+        {
+            var offers = await _offerService.GetOfferDetailByOfferIdAsync(OfferId);
+            return Json(offers);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateOffer([FromForm] IFormCollection formData)
         {
@@ -113,7 +127,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateOfferDetail([FromBody] OfferDetailModel offerDetail)
+        public async Task<IActionResult> CreateOfferDetail([FromForm] OfferDetailModel offerDetail)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Offer", "CreateOffer");

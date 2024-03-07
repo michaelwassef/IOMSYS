@@ -24,6 +24,15 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<OfferModel>> GetAllActiveOffersAsync()
+        {
+            const string sql = "SELECT * FROM Offers where IsActive '1'";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<OfferModel>(sql);
+            }
+        }
+
         public async Task<OfferModel> GetOfferByIdAsync(int offerId)
         {
             const string sql = "SELECT * FROM Offers WHERE OfferId = @OfferId";
@@ -80,6 +89,15 @@ namespace IOMSYS.Services
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QuerySingleOrDefaultAsync<OfferDetailModel>(sql, new { OfferDetailId = offerDetailId });
+            }
+        }
+
+        public async Task<OfferDetailModel> GetOfferDetailByOfferIdAsync(int OfferId)
+        {
+            const string sql = "SELECT * FROM OfferDetails WHERE OfferId = @OfferId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QuerySingleOrDefaultAsync<OfferDetailModel>(sql, new { OfferId });
             }
         }
 

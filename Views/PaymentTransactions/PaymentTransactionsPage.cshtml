@@ -256,25 +256,40 @@
             Notes: $('#notes').val()
         };
 
-        // Check if the destination is not the same as the source
-        if (item.FromBranchId === item.ToBranchId) {
-            alert('The destination branch must be different from the source branch.');
+        // Check if the destination is the same as the source
+        if (item.FromBranchId === item.ToBranchId && item.FromPaymentMethodId === item.ToPaymentMethodId) {
+            alert('لا يمكن نقل النقدية لنفس الخزنة...اختر خزنة أخرى');
             return;
         }
 
         // Perform validation
         if (!validateTransferItem(item)) {
-            alert('Please fill in all fields and ensure quantity is a valid number.');
+            alert('برجاء ملاء جميع البيانات وتاكد من المبلغ المرسل اكبر من 0');
             return;
         }
 
+        // Check if the amount being transferred exceeds the available balance
         try {
-            transferItems.push(item);
-            displayTransferItems();
-            clearTransferForm();
+            const availableBalanceResponse = await fetch(`/PaymentTransactions/GetAccountBalanceByPaymentMethodIdAndBranchId?BranchId=${item.FromBranchId}&PaymentMethodId=${item.FromPaymentMethodId}`);
+            if (!availableBalanceResponse.ok) {
+                alert('An error occurred while checking the available balance.');
+                return;
+            }
+
+            const availableBalance = await availableBalanceResponse.json();
+            if (item.Amount > availableBalance) {
+                alert('المبلغ الذي تريد نقله اكبر من رصيد الخزنة');
+                return;
+            }
+
         } catch (error) {
-            alert('An error occurred while checking available quantity.');
+            alert('An error occurred while checking the available balance.');
+            return;
         }
+
+        transferItems.push(item);
+        displayTransferItems();
+        clearTransferForm();
     };
 
     function validateTransferItem(item) {
@@ -345,9 +360,6 @@
         var today = new Date();
         var todayStart = new Date(today.setHours(0, 0, 0, 0));
         var todayEnd = new Date(today.setHours(23, 59, 59, 999));
-
-        // Assuming 'InvoiceDate' is the field name for transaction dates in your data model.
-        // Adjust the field name if it's different.
         gridInstance.filter(["InvoiceDate", ">=", todayStart], "and", ["InvoiceDate", "<=", todayEnd]);
     });
 

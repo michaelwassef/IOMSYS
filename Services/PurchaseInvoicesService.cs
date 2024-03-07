@@ -49,31 +49,62 @@ namespace IOMSYS.Services
             }
         }
 
-        public async Task<IEnumerable<PurchaseInvoicesModel>> GetAllNotPaidPurchaseInvoicesByBranchAsync(DateTime PaidUpDate, int BranchId)
+        public async Task<IEnumerable<PurchaseInvoicesModel>> GetNotPaidPurchaseInvoicesByBranchAsync(DateTime PaidUpDate, int BranchId)
         {
             var sql = @"
-                SELECT
-                    PurchaseInvoiceId,
-                    TotalAmount,
-                    PaidUp,
-                    Remainder,
-                    SupplierId,
-                    BranchId,
-                    PaymentMethodId,
-                    UserId,
-                    PurchaseDate,
-                    PaidUpDate,
-                    IsFullPaidUp,
-                    Notes
-                FROM
-                    PurchaseInvoices
-                WHERE
-                    PaidUpDate = @PaidUpDate AND BranchId = @BranchId
-                    AND TotalAmount > PaidUp";
+                    SELECT
+                        PurchaseInvoiceId,
+                        TotalAmount,
+                        PaidUp,
+                        Remainder,
+                        SupplierId,
+                        BranchId,
+                        PaymentMethodId,
+                        UserId,
+                        PurchaseDate,
+                        PaidUpDate,
+                        IsFullPaidUp,
+                        Notes
+                    FROM
+                        PurchaseInvoices
+                    WHERE
+                        PaidUpDate = @PaidUpDate
+                        AND BranchId = @BranchId
+                        AND TotalAmount > PaidUp;
+                    ";
 
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<PurchaseInvoicesModel>(sql, new { PaidUpDate, BranchId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<IEnumerable<PurchaseInvoicesModel>> GetAllNotPaidPurchaseInvoicesByBranchAsync(int BranchId)
+        {
+            var sql = @"
+                    SELECT
+                        PurchaseInvoiceId,
+                        TotalAmount,
+                        PaidUp,
+                        Remainder,
+                        SupplierId,
+                        BranchId,
+                        PaymentMethodId,
+                        UserId,
+                        PurchaseDate,
+                        PaidUpDate,
+                        IsFullPaidUp,
+                        Notes
+                    FROM
+                        PurchaseInvoices
+                    WHERE
+                        BranchId = @BranchId
+                        AND TotalAmount > PaidUp;
+                    ";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<PurchaseInvoicesModel>(sql, new { BranchId }).ConfigureAwait(false);
             }
         }
 

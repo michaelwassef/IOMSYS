@@ -1,10 +1,10 @@
 ﻿
 @{
-    ViewData["Title"] = "PurchaseInvoicesPage";
+    ViewData["Title"] = "AllPaymentsNotMade";
     Layout = "_DevExtremeLayout";
 }
 
-<h1>فواتير المشتريات</h1>
+<h1> جميع المدفوعات المؤجله</h1>
 
 <div class="row">
     <div class="form-group col-md-3 mb-3">
@@ -12,95 +12,46 @@
         <select id="BranchId" class="form-control"></select>
     </div>
 </div>
-
 <button id="showAllBtn" class="btn btn-primary mx-1" onclick="window.location.href='/PurchaseInvoices/PaymentsNotMade';">عرض المدفوعات المؤجله اليوم</button>
-<button id="showAllBtn" class="btn btn-primary mx-1" onclick="window.location.href='/PurchaseInvoices/AllPaymentsNotMade';">عرض جميع المدفوعات المؤجله</button>
-
 
 <div id="gridContainer"></div>
 
 <script>
     $(function () {
-        // Initial load of branches into the dropdown
         $.getJSON('/Branches/LoadBranchesByUser', function (data) {
             var branchSelect = $('#BranchId');
             $.each(data, function () {
                 branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
             });
+            branchSelect.change(function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
+            });
         });
 
-        // Initialize the DataGrid
         $("#gridContainer").dxDataGrid({
             dataSource: new DevExpress.data.CustomStore({
-                key: "PurchaseInvoiceId",
                 load: function (loadOptions) {
-                    var d = $.Deferred();
-                    var params = { branchId: $('#BranchId').val() };
+                    var deferred = $.Deferred();
+                    var branchId = $('#BranchId').val();
+                    var url = '/PurchaseInvoices/LoadAllNotPaidPurchaseInvoicesByBranch?branchId=' + branchId;
 
-                    $.getJSON('/PurchaseInvoices/LoadPurchaseInvoicesByBranch', params)
-                        .done(function (result) { d.resolve(result); })
-                        .fail(function () { d.reject("Data Loading Error"); });
+                    console.log('URL:', url);
 
-                    return d.promise();
-                },
-                onRowUpdating: function (e) {
-                    var oldData = e.oldData;
-                    var newData = e.newData;
-
-                    if (newData.PaidUp !== undefined) {
-                        newData.Remainder = oldData.TotalAmount - newData.PaidUp;
-                    }
-
-                    e.newData = Object.assign({}, oldData, newData);
-                },
-                update: function (key, values) {
-                    var url = '/PurchaseInvoices/UpdatePurchaseInvoice/' + encodeURIComponent(key);
-
-                    // Construct the data object with a "values" property
-                    var dataToSend = JSON.stringify({ values: values });
-
-                    return $.ajax({
-                        url: url,
-                        method: 'PUT',
-                        contentType: 'application/json',
-                        data: dataToSend
-                    })
-                        .done(function (response) {
-                            // Success notification
-                            DevExpress.ui.notify({ message: "Invoice updated successfully" }, "success", 3000);
+                    $.getJSON(url)
+                        .done(function (result) {
+                            deferred.resolve(result);
                         })
-                        .fail(function (jqXHR) {
-                            // Error handling
-                            var message = "Could not update invoice";
-                            if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
-                                message = jqXHR.responseJSON.ErrorMessage;
-                            }
-                            DevExpress.ui.notify({ message: message }, "error", 3000);
+                        .fail(function () {
+                            deferred.reject("Data Loading Error");
                         });
+                    return deferred.promise();
                 },
-                remove: function (key) {
-                    return $.ajax({
-                        url: '/PurchaseInvoices/DeletePurchaseInvoice?invoiceId=' + encodeURIComponent(key),
-                        method: 'DELETE'
-                    });
-                }
             }),
             onToolbarPreparing: onToolbarPreparing,
             selection: { mode: "multiple" },
             export: { enabled: true, allowExportSelectedData: true },
             onExporting: exporting,
             columnAutoWidth: true,
-            editing: {
-                mode: "popup",
-                allowUpdating: true,
-                allowDeleting: true,
-                popup: {
-                    title: "فاتورة مشتريات",
-                    showTitle: true,
-                    width: 800,
-                    height: 700
-                }
-            },
             rtlEnabled: true,
             paging: { pageSize: 10 },
             pager: {
@@ -198,34 +149,9 @@
             columnFixing: {
                 enabled: true
             },
-            masterDetail: {
-                enabled: true,
-                template: function (container, options) {
-                    $("<div>")
-                        .addClass("master-detail-grid")
-                        .dxDataGrid({
-                            columnAutoWidth: true,
-                            showBorders: true,
-                            columns: [
-                                { dataField: "ProductName", caption: "اسم المنتج" },
-                                { dataField: "SizeName", caption: "المقاس" },
-                                { dataField: "ColorName", caption: "اللون" },
-                                { dataField: "Quantity", caption: "الكمية" },
-                                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
-                            ],
-                            dataSource: new DevExpress.data.CustomStore({
-                                load: function (loadOptions) {
-                                    return $.getJSON('/PurchaseItems/LoadPurchaseItemsByInvoiceId', {
-                                        purchaseInvoiceId: options.key
-                                    });
-                                }
-                            })
-                        }).appendTo(container);
-                }
-            }
         });
 
-        $('#BranchId').change(function () {
+        $('#BranchId ,paidUpDatePicker ').change(function () {
             $("#gridContainer").dxDataGrid("instance").refresh();
         });
     });

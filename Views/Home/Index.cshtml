@@ -13,11 +13,11 @@
         <select id="BranchId" class="form-control"></select>
     </div>
     <div class="form-group col-md-3 mb-3">
-        <label for="fromDate">تاريخ التحصيل</label>
+        <label for="fromDate">من تاريخ</label>
         <div id="fromDate"></div>
     </div>
     <div class="form-group col-md-3 mb-3">
-        <label for="toDate">تاريخ التحصيل</label>
+        <label for="toDate">الي تاريخ</label>
         <div id="toDate"></div>
     </div>
 </div>
@@ -32,9 +32,8 @@
         </div>
     </div>
 </div>
-
 <div class="row">
-    <div class="col-md-4 mb-4">
+    <div class="col-md-3 mb-4">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">
@@ -42,13 +41,12 @@
                 </h5>
                 <p class="card-text display-4" id="totalAmountInPurchase">0</p>
                 <div class="progress">
-                    <div class="progress-bar bg-primary" id="totalAmountInPurchaseProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-primary" id="totalAmountInPurchaseProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
-
     </div>
-    <div class="col-md-4 mb-4">
+    <div class="col-md-3 mb-4">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">
@@ -56,12 +54,12 @@
                 </h5>
                 <p class="card-text display-4" id="paidUpInPurchase">0</p>
                 <div class="progress">
-                    <div class="progress-bar bg-success" id="paidUpInPurchaseProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" id="paidUpInPurchaseProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-4">
+    <div class="col-md-3 mb-4">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">
@@ -69,13 +67,26 @@
                 </h5>
                 <p class="card-text display-4" id="remainderInPurchase">0</p>
                 <div class="progress">
-                    <div class="progress-bar bg-warning" id="remainderInPurchaseProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-warning" id="remainderInPurchaseProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+    <div class="col-md-3 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-cart-fill bg-primary"></i> اجمالي المصروفات
+                </h5>
+                <p class="card-text display-4" id="ExpensesAmount">0</p>
+                <div class="progress">
+                    <div class="progress-bar bg-danger" id="ExpensesAmountProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
 
+    </div>
+</div>
 <div class="row">
     <div class="col-md-4 mb-4">
         <div class="card shadow-sm">
@@ -83,7 +94,7 @@
                 <h5 class="card-title"><i class="bi bi-cart-fill"></i> اجمالي قيمة المبيعات</h5>
                 <p class="card-text display-4" id="totalAmountInSales">0</p>
                 <div class="progress">
-                    <div class="progress-bar" id="totalAmountInSalesProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar" id="totalAmountInSalesProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
@@ -94,7 +105,7 @@
                 <h5 class="card-title"><i class="bi bi-cart-fill"></i> اجمالي المدفوع من قيمة المبيعات</h5>
                 <p class="card-text display-4" id="paidUpInSales">0</p>
                 <div class="progress">
-                    <div class="progress-bar bg-success" id="paidUpInSalesProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-success" id="paidUpInSalesProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
@@ -105,14 +116,109 @@
                 <h5 class="card-title"><i class="bi bi-cart-fill"></i> اجمالي المتبقي من قيمة المبيعات</h5>
                 <p class="card-text display-4" id="remainderInSales">0</p>
                 <div class="progress">
-                    <div class="progress-bar bg-warning" id="remainderInSalesProgress" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-warning" id="remainderInSalesProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-cart-fill"></i> العناصر الأعلى مبيعًا</h5>
+                <div id="bestSalesChartContainer" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-cart-fill"></i> اجمالي المبيعات اليومي</h5>
+            <div id="dailySalesChartContainer" style="height: 400px;"></div>
+        </div>
+    </div>
+</div>
+</div>
 
 <script>
+    function renderBestSalesChart(data) {
+        $("#bestSalesChartContainer").dxPieChart({
+            dataSource: data,
+            series: [{
+                argumentField: "ProductName",
+                valueField: "TotalSalesQuantity",
+                label: {
+                    visible: true,
+                    connector: {
+                        visible: true
+                    }
+                }
+            }],
+            legend: {
+                visible: true
+            },
+            tooltip: {
+                enabled: true,
+                customizeTooltip: function (arg) {
+                    return {
+                        text: arg.valueText + " عدد المبيعات"
+                    };
+                }
+            }
+        });
+    }
+
+    function fetchBestSalesData(fromDate, toDate, branchId) {
+        const params = { fromDate, toDate, BranchId: branchId };
+
+        fetch('@Url.Action("GetBestSalesAmount", "Dashboard")' + '?' + new URLSearchParams(params))
+            .then(response => response.json())
+            .then(data => {
+                renderBestSalesChart(data);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function renderDailySalesChart(data) {
+        $("#dailySalesChartContainer").dxChart({
+            dataSource: data,
+            series: {
+                argumentField: "SaleDate",
+                valueField: "TotalAmount",
+                type: "bar",
+                color: "#77DD77"
+            },
+            argumentAxis: {
+                label: {
+                    format: "shortDate"
+                }
+            },
+            legend: {
+                visible: false
+            },
+            tooltip: {
+                enabled: true,
+                customizeTooltip: function (arg) {
+                    return {
+                        text: arg.valueText + " EGP"
+                    };
+                }
+            }
+        });
+    }
+
+    function fetchDailySalesData(fromDate, toDate, branchId) {
+        const params = { fromDate, toDate, BranchId: branchId };
+
+        fetch('@Url.Action("GetDailySalesAmount", "Dashboard")' + '?' + new URLSearchParams(params))
+            .then(response => response.json())
+            .then(data => {
+                renderDailySalesChart(data);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
     function updateProgressBar(progressElementId, value, max) {
         const progressBar = document.getElementById(progressElementId);
         if (progressBar) {
@@ -148,17 +254,19 @@
         let branchId = $("#BranchId").val();
 
         const params = { fromDate, toDate, BranchId: branchId };
+        fetchDailySalesData(fromDate, toDate, branchId);
+        fetchBestSalesData(fromDate, toDate, branchId);
 
-        fetchData('@Url.Action("GetTotalAmountInPurchaseInvoices", "Dashboard")', params, 'totalAmountInPurchase', 'paidUpInPurchase', 'totalAmountInPurchaseProgress');
+        fetchData('@Url.Action("GetTotalAmountInPurchaseInvoices", "Dashboard")', params, 'totalAmountInPurchase', '', 'totalAmountInPurchaseProgress');
         fetchData('@Url.Action("GetPaidUpInPurchaseInvoices", "Dashboard")', params, 'paidUpInPurchase', '', 'paidUpInPurchaseProgress');
         fetchData('@Url.Action("GetRemainderInPurchaseInvoices", "Dashboard")', params, 'remainderInPurchase', '', 'remainderInPurchaseProgress');
         fetchData('@Url.Action("GetTotalAmountInSalesInvoices", "Dashboard")', params, 'totalAmountInSales', '', 'totalAmountInSalesProgress');
         fetchData('@Url.Action("GetPaidUpInSalesInvoices", "Dashboard")', params, 'paidUpInSales', '', 'paidUpInSalesProgress');
         fetchData('@Url.Action("GetRemainderInSalesInvoices", "Dashboard")', params, 'remainderInSales', '', 'remainderInSalesProgress');
+        fetchData('@Url.Action("GetExpensesAmount", "Dashboard")', params, 'ExpensesAmount', '', 'ExpensesAmountProgress');
         fetchData('@Url.Action("CalculateProfit", "Dashboard")', params, 'profit', '', '');
+
     }
-
-
 
     $(function () {
         $("#fromDate, #toDate").dxDateBox({

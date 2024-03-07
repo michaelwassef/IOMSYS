@@ -53,6 +53,14 @@ namespace IOMSYS.Controllers
             return View();
         }
 
+        public async Task<IActionResult> AllPaymentsNotMade()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PaymentsNotMade");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> LoadPurchaseInvoices()
         {
@@ -70,7 +78,14 @@ namespace IOMSYS.Controllers
         [HttpGet]
         public async Task<IActionResult> LoadNotPaidPurchaseInvoicesByBranch(DateTime PaidUpDate, int branchId)
         {
-            var purchaseInvoices = await _purchaseInvoicesService.GetAllNotPaidPurchaseInvoicesByBranchAsync(PaidUpDate, branchId);
+            var purchaseInvoices = await _purchaseInvoicesService.GetNotPaidPurchaseInvoicesByBranchAsync(PaidUpDate, branchId);
+            return Json(purchaseInvoices);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadAllNotPaidPurchaseInvoicesByBranch(int branchId)
+        {
+            var purchaseInvoices = await _purchaseInvoicesService.GetAllNotPaidPurchaseInvoicesByBranchAsync(branchId);
             return Json(purchaseInvoices);
         }
 

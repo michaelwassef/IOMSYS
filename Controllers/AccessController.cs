@@ -67,13 +67,13 @@ namespace IOMSYS.Controllers
                 }
                 else if (!authenticationResult.IsActive)
                 {
-                    TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور او نوع المستخدم.";
+                    TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور.";
                     return View(modelLogin);
                 }
                 else
                 {
                     // Handle authentication failure
-                    TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور او نوع المستخدم.";
+                    TempData["ValidateMessage"] = "خطأ في اسم المستخدم او كلمة المرور.";
                     return View(modelLogin);
                 }
             }

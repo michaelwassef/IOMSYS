@@ -60,5 +60,27 @@ namespace IOMSYS.Controllers
             var total = await _dashboardService.CalculateProfitAsync(fromDate, toDate, BranchId);
             return Json(new { total = total });
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetExpensesAmount(DateTime fromDate, DateTime toDate, int BranchId)
+        {
+            var total = await _dashboardService.GetExpensesAmountInExpensesAsync(fromDate, toDate, BranchId);
+            return Json(new { total = total });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDailySalesAmount(DateTime fromDate, DateTime toDate, int BranchId)
+        {
+            var data = await _dashboardService.GetDailySalesAmountAsync(fromDate, toDate, BranchId);
+            return Json(data);
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetBestSalesAmount(DateTime fromDate, DateTime toDate, int BranchId)
+        {
+            var data = await _dashboardService.GetBestSaleAsync(fromDate, toDate, BranchId);
+            return Json(data);
+        }
     }
 }

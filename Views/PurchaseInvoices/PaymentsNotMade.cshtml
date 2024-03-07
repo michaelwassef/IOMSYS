@@ -16,7 +16,7 @@
         <div id="paidUpDatePicker"></div>
     </div>
 </div>
-
+<button id="showAllBtn" class="btn btn-primary mx-1" onclick="window.location.href='/PurchaseInvoices/AllPaymentsNotMade';">عرض جميع المدفوعات المؤجله</button>
 
 <div id="gridContainer"></div>
 
@@ -27,7 +27,6 @@
             value: new Date(),
             displayFormat: "yyyy-MM-dd",
             onValueChanged: function () {
-                // Refresh the grid when the date value changes
                 $("#gridContainer").dxDataGrid("instance").refresh();
             }
         });
@@ -37,25 +36,22 @@
             $.each(data, function () {
                 branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
             });
-            // Trigger grid refresh when a new branch is selected
             branchSelect.change(function () {
                 $("#gridContainer").dxDataGrid("instance").refresh();
             });
         });
 
-        // Initialize the DataGrid
         $("#gridContainer").dxDataGrid({
-            // DataGrid initialization and configuration
             dataSource: new DevExpress.data.CustomStore({
-                // dataSource configuration including load function
                 load: function (loadOptions) {
                     var deferred = $.Deferred();
-                    var params = {
-                        branchId: $('#BranchId').val(),
-                        PaidUpDate: $("#paidUpDatePicker").dxDateBox("instance").option("value").toISOString()
-                    };
+                    var paidUpDate = $("#paidUpDatePicker").dxDateBox("instance").option("value").toISOString().split('T')[0];
+                    var branchId = $('#BranchId').val();
+                    var url = '/PurchaseInvoices/LoadNotPaidPurchaseInvoicesByBranch?branchId=' + branchId + '&PaidUpDate=' + paidUpDate;
 
-                    $.getJSON('/PurchaseInvoices/LoadNotPaidPurchaseInvoicesByBranch', params)
+                    console.log('URL:', url);
+
+                    $.getJSON(url)
                         .done(function (result) {
                             deferred.resolve(result);
                         })
@@ -167,31 +163,6 @@
             columnFixing: {
                 enabled: true
             },
-            masterDetail: {
-                enabled: true,
-                template: function (container, options) {
-                    $("<div>")
-                        .addClass("master-detail-grid")
-                        .dxDataGrid({
-                            columnAutoWidth: true,
-                            showBorders: true,
-                            columns: [
-                                { dataField: "ProductName", caption: "اسم المنتج" },
-                                { dataField: "SizeName", caption: "المقاس" },
-                                { dataField: "ColorName", caption: "اللون" },
-                                { dataField: "Quantity", caption: "الكمية" },
-                                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
-                            ],
-                            dataSource: new DevExpress.data.CustomStore({
-                                load: function (loadOptions) {
-                                    return $.getJSON('/PurchaseItems/LoadPurchaseItemsByInvoiceId', {
-                                        purchaseInvoiceId: options.key
-                                    });
-                                }
-                            })
-                        }).appendTo(container);
-                }
-            }
         });
 
         $('#BranchId ,paidUpDatePicker ').change(function () {
