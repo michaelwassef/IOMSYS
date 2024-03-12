@@ -16,15 +16,15 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<UsersModel>> GetAllUsersAsync()
         {
-            //var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName, U.UserTypeId, U.IsActive 
-            //            FROM Users U
-            //            INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId
-            //            ORDER BY U.UserId
-            //            OFFSET 1 ROWS
-            //            FETCH NEXT 9999999 ROWS ONLY";
+            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName, U.UserTypeId, U.IsActive 
+                        FROM Users U
+                        INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId
+                        ORDER BY U.UserId
+                        OFFSET 1 ROWS
+                        FETCH NEXT 9999999 ROWS ONLY";
 
-            var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName ,U.UserTypeId, U.IsActive FROM Users U
-                        INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId";
+            //var sql = @"SELECT U.UserId, U.UserName, U.PhoneNumber, U.Password, T.UserTypeName ,U.UserTypeId, U.IsActive FROM Users U
+            //            INNER JOIN UserTypes T ON T.UserTypeId = U.UserTypeId";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<UsersModel>(sql).ConfigureAwait(false);

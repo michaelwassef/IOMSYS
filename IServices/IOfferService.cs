@@ -5,6 +5,7 @@ namespace IOMSYS.IServices
     public interface IOfferService
     {
         Task<IEnumerable<OfferModel>> GetAllOffersAsync();
+        Task<IEnumerable<OfferModel>> GetOffersWithoutDetailsAsync();
         Task<IEnumerable<OfferModel>> GetAllActiveOffersAsync();
         Task<OfferModel> GetOfferByIdAsync(int offerId);
         Task<int> CreateOfferAsync(OfferModel offer);
@@ -19,5 +20,6 @@ namespace IOMSYS.IServices
         Task<IEnumerable<ProductOfferModel>> GetAllProductOffersAsync();
         Task<bool> CreateProductOfferAsync(ProductOfferModel productOffer);
         Task<bool> DeleteProductOfferAsync(int productId, int offerId);
+        Task<List<OfferDetailModel>> GetOfferDetailByOfferIdlistAsync(int OfferId);
     }
 }

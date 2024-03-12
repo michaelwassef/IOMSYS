@@ -41,6 +41,20 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetOffersWithoutDetails()
+        {
+            try
+            {
+                var offers = await _offerService.GetOffersWithoutDetailsAsync();
+                return Json(offers);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetAllActiveOffers()
         {
             var offers = await _offerService.GetAllOffersAsync();
@@ -51,6 +65,13 @@ namespace IOMSYS.Controllers
         public async Task<IActionResult> GetDetilasOffersByOfferId(int OfferId)
         {
             var offers = await _offerService.GetOfferDetailByOfferIdAsync(OfferId);
+            return Json(offers);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDetilasOffersListByOfferId(int OfferId)
+        {
+            var offers = await _offerService.GetOfferDetailByOfferIdlistAsync(OfferId);
             return Json(offers);
         }
 

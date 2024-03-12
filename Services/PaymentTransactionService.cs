@@ -61,7 +61,7 @@ namespace IOMSYS.Services
                     ELSE NULL 
                 END AS EntityName
             FROM 
-                IOMSYS.dbo.PaymentTransactions P
+                PaymentTransactions P
             INNER JOIN 
                 Branches b ON P.BranchId = b.BranchId
             INNER JOIN 
@@ -77,7 +77,7 @@ namespace IOMSYS.Services
             LEFT JOIN 
                 Suppliers s ON s.SupplierId = pi.SupplierId
             WHERE
-                P.BranchId = @BranchId;";
+                P.BranchId = @BranchId ORDER BY InvoiceDate DESC;";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<TransactionDetailModel>(sql, new { BranchId = branchId }).ConfigureAwait(false);

@@ -5,7 +5,7 @@
 
 <h1>العروض</h1>
 
-<button type="button" id="btnAddOfferDetail" class="btn btn-primary">Add Offer Detail</button>
+<button type="button" id="btnAddOfferDetail" class="btn btn-primary">اضافة تفاصيل العرض</button>
 
 <div class="modal fade" id="addOfferDetailModal" tabindex="-1" role="dialog" aria-labelledby="addOfferDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -27,15 +27,15 @@
                         <select id="ProductId" name="ProductId" class="form-control" placeholder="اسم المنتج" required></select>
                     </div>
                     <div class="form-group">
-                        <label for="requiredQuantity">Required Quantity</label>
+                        <label for="requiredQuantity">اقل كمية مطلوبة</label>
                         <input type="number" id="RequiredQuantity" name="RequiredQuantity" class="form-control">
                     </div>
-                    <div class="form-group">
+@*                    <div class="form-group">
                         <label for="FreeQuantity">Free Quantity</label>
                         <input type="number" id="freeQuantity" name="FreeQuantity" class="form-control">
-                    </div>
+                    </div>*@
                     <div class="form-group">
-                        <label for="DiscountedPrice">Discounted Price</label>
+                        <label for="DiscountedPrice">نسبة الخصم</label>
                         <input type="number" id="discountedPrice" name="DiscountedPrice" class="form-control">
                     </div>
                     <button type="submit" class="btn btn-success">Save Offer Detail</button>
@@ -86,7 +86,7 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.OfferId).Caption("كود العرض");
+        columns.AddFor(m => m.OfferId).Caption("كود العرض").AllowEditing(false);
 
         columns.AddFor(m => m.OfferName).Caption("اسم العرض");
 
@@ -103,7 +103,33 @@
     })
     .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
-)
+    .MasterDetail(md =>
+     {
+        md.Enabled(true);
+        md.Template(@<text>
+            @(Html.DevExtreme().DataGrid<OfferDetailModel>()
+                .ColumnAutoWidth(true)
+                .ShowBorders(true)
+                .Columns(columns =>
+                 {
+                    columns.AddFor(m => m.ProductId).Caption("اسم المنتج").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Products").LoadAction("LoadProducts")).ValueExpr("ProductId").DisplayExpr("ProductName"));
+                    columns.AddFor(m => m.RequiredQuantity).Caption("اقل كمية مطلوبه");
+                    columns.AddFor(m => m.DiscountedPrice).Caption("نسبة الخصم");
+                 })
+                .DataSource(d => d.Mvc()
+                .Controller("Offer")
+             .LoadAction("GetDetilasOffersListByOfferId")
+                .InsertAction("CreateOfferDetail")
+                .UpdateAction("UpdateOfferDetail")
+                .DeleteAction("DeleteOfferDetail")
+                .Key("OfferDetailId")
+                .LoadParams(new { OfferId = new JS("data.OfferId") }))
+                .Editing(e => e.Mode(GridEditMode.Popup))
+                .RtlEnabled(true)
+                )
+            </text>);
+     })
+     )
 
 <script>
     function exporting(e) {
@@ -123,7 +149,7 @@
 
     $(document).ready(function () {
         populateDropdownSEARCH('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
-        populateDropdownSEARCH('/Offer/GetAllOffers', 'OfferId', 'OfferId', 'OfferName');
+        populateDropdownSEARCH('/Offer/GetOffersWithoutDetails', 'OfferId', 'OfferId', 'OfferName');
 
         // Open the modal
         $('#btnAddOfferDetail').click(function () {

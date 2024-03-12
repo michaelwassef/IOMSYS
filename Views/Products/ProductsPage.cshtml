@@ -48,7 +48,7 @@
     .HeaderFilter(f => f.Visible(true))
 )
 
-<div id="productDetailsPopup" style="display:none;">
+@*<div id="productDetailsPopup" style="display:none;">
     <div class="row">
         <div class="form-group mb-3">
             <label for="ProductId">اسم المنتج</label>
@@ -90,7 +90,7 @@
     </div>
 
 </div>
-
+*@
 <div id="moveInventoryPopup" style="display:none;">
     <div>
         <form id="moveInventoryForm">
@@ -135,6 +135,7 @@
         </form>
     </div>
 </div>
+
 <script>
     window.closePopup2 = function () {
         $("#moveInventoryPopup").dxPopup("hide");
@@ -382,16 +383,40 @@
     });
 
     $(function () {
-        $("#moveInventoryPopup").dxPopup({
+        var moveInventoryPopup = $("#moveInventoryPopup").dxPopup({
             title: "نقل المخزون",
             visible: false,
-            width: 600,
-            height: 500,
+            width: calculatePopupWidth(),
+            height: calculatePopupHeight(),
+        }).dxPopup("instance");
+
+        function calculatePopupWidth() {
+            var windowWidth = $(window).width();
+
+            if (windowWidth < 768) {
+                return "90%";
+            } else {
+                return 600;
+            }
+        }
+
+        function calculatePopupHeight() {
+            var windowHeight = $(window).height();
+            if (windowHeight < 768) {
+                return "90%";
+            } else {
+                return 500;
+            }
+        }
+
+        $(window).resize(function () {
+            moveInventoryPopup.option({
+                width: calculatePopupWidth(),
+                height: calculatePopupHeight()
+            });
         });
-        populateDropdown('/Branches/LoadBranchesByUser', 'fromBranch', 'BranchId', 'BranchName');
-        populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
-        populateDropdown('/Products/LoadProducts', 'productId', 'ProductId', 'ProductName');
     });
+
 
     // Function to display a message
     function displayMessage(type, message) {

@@ -2,6 +2,7 @@
 using IOMSYS.IServices;
 using IOMSYS.Models;
 using Dapper;
+using Humanizer;
 
 namespace IOMSYS.Services
 {
@@ -18,6 +19,18 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<OfferModel>> GetAllOffersAsync()
         {
             const string sql = "SELECT * FROM Offers";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<OfferModel>(sql);
+            }
+        }
+
+        public async Task<IEnumerable<OfferModel>> GetOffersWithoutDetailsAsync()
+        {
+            const string sql = @"SELECT * 
+                         FROM Offers O
+                         LEFT JOIN OfferDetails OD ON O.OfferId = OD.OfferId
+                         WHERE OD.OfferDetailId IS NULL";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<OfferModel>(sql);
@@ -94,10 +107,21 @@ namespace IOMSYS.Services
 
         public async Task<OfferDetailModel> GetOfferDetailByOfferIdAsync(int OfferId)
         {
-            const string sql = "SELECT * FROM OfferDetails WHERE OfferId = @OfferId";
+            var sql = " SELECT OD.*,O.OfferType FROM OfferDetails OD INNER JOIN Offers O ON OD.OfferId = O.OfferId WHERE OD.OfferId = @OfferId";
+
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QuerySingleOrDefaultAsync<OfferDetailModel>(sql, new { OfferId });
+            }
+        }
+        public async Task<List<OfferDetailModel>> GetOfferDetailByOfferIdlistAsync(int OfferId)
+        {
+            var sql = "SELECT OD.*,O.OfferType FROM OfferDetails OD INNER JOIN Offers O ON OD.OfferId = O.OfferId WHERE OD.OfferId = @OfferId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                var offerDetails = await db.QueryAsync<OfferDetailModel>(sql, new { OfferId });
+                return offerDetails.AsList();
             }
         }
 

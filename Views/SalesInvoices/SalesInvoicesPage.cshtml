@@ -94,14 +94,6 @@
     <div id="invoiceDetailsForm" style="margin-top: 20px;">
         <h3>بيانات الفاتورة</h3>
         <div class="row">
-            @*<div class="form-group col-md-4 mb-3">
-                <label for="OfferId">العرض</label>
-                <select id="OfferId" class="form-control" onchange="fetchOfferDetails()"></select>
-            </div>
-            <div class="form-group col-md-8 mb-3 text-right">
-                <button type="button" id="btnApplyOffer" class="btn btn-success" onclick="applyOfferToInvoiceItems()">تطبيق العرض</button>
-            </div>
-*@
             <div class="form-group col-md-4 mb-3">
                 <label for="paymentMethodName">طريقة الدفع</label>
                 <select id="PaymentMethodId" class="form-control" required></select>
@@ -136,10 +128,23 @@
                 <label for="saleDate">تاريخ الفاتورة</label>
                 <input type="date" id="saleDate" class="form-control mb-3" placeholder="تاريخ الفاتورة" required />
             </div>
-                <div class="row">
-                     <button type="button" onclick="saveAndPrintInvoice()" class="btn btn-primary col-md-5 mx-1 my-3">حفظ وطباعة الفاتورة</button>
-                     <button type="button" onclick="saveInvoice()" class="btn btn-success col-md-5 mx-1 my-3">حفظ الفاتورة</button>
+            <div class="row">
+                <div class="form-group col-md-4 mb-3">
+                    <select id="OfferId" class="form-control" onchange="fetchOfferDetails()"></select>
                 </div>
+                <div class="form-group col-md-3 mb-3">
+                    <button type="button" id="btnApplyOffer" class="btn btn-success" onclick="applyOfferToInvoiceItems()">تطبيق العرض</button>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <button type="button" onclick="saveAndPrintInvoice()" class="btn btn-primary col-md-5 mx-1 my-3">
+                    <i class="fas fa-save"></i> حفظ وطباعة الفاتورة
+                </button>
+                <button type="button" onclick="saveInvoice()" class="btn btn-success col-md-5 mx-1 my-3">
+                    <i class="fas fa-save"></i> حفظ الفاتورة
+                </button>
+            </div>
+
         </div>
     </div>
 </form>
@@ -153,16 +158,14 @@
             if (response.ok) {
                 const offers = await response.json();
                 const offerSelect = $('#OfferId');
-                let options = '<option value="">Select an offer</option>';
+                let options = '<option value="">اختر عرض</option>';
                 offers.forEach(offer => {
                     options += `<option value="${offer.OfferId}">${offer.OfferName}</option>`;
                 });
                 offerSelect.html(options);
             } else {
-                console.error('Failed to load offers');
             }
         } catch (error) {
-            console.error('Error fetching offers:', error);
         }
     }
 
@@ -177,21 +180,19 @@
             if (response.ok) {
                 selectedOfferDetails = await response.json();
             } else {
-                console.error('Failed to fetch offer details');
                 selectedOfferDetails = null;
             }
         } catch (error) {
-            console.error('Error fetching offer details:', error);
             selectedOfferDetails = null;
         }
     }
 
     function applyOfferToInvoiceItems() {
-        if (!selectedOfferDetails || !selectedOfferDetails.Details) {
-            alert("Please select a valid offer.");
+        if (!selectedOfferDetails || !selectedOfferDetails.OfferType) {
+            DevExpress.ui.notify(result.message, "برجاء اختيار عرض صالح", 3000);
             return;
         }
-        refreshItemsGrid(); 
+        calculateTotalsWithOffer();
         calculateTotals();
     }
 
@@ -208,64 +209,79 @@
                 applyDiscountOffer(selectedOfferDetails);
                 break;
             default:
-                console.error('Unknown offer type');
+                DevExpress.ui.notify('Unknown offer type', "error", 5000);
         }
     }
 
     function applyBOGOffer(offerDetails) {
-        // Filter eligible items for the BOGO offer
-        tempItems.forEach((item, index) => {
-            if (offerDetails.Details.some(detail => detail.ProductId === item.ProductId)) {
-                // Assuming each eligible item gets paired with the next for the offer
-                if ((index + 1) % 2 === 0) { // Applies to every second item of the eligible ones
-                    item.SellPrice = 0; // Set the second item as free
-                }
+        let totalDiscount = 0;
+        let totalQuantity = 0;
+        let SellPrice = 0;
+
+        tempItems.forEach(item => {
+            if (parseInt(offerDetails.ProductId) === parseInt(item.ProductId)) {
+                totalQuantity += item.Quantity;
+                SellPrice = item.SellPrice;
             }
         });
+
+        if (totalQuantity < 2) {
+            DevExpress.ui.notify("الكمية المدخلة اقل من 2 لتطبيق العرض", "error", 3000);
+            document.getElementById('totalDiscount').value = 0;
+            return;
+        }
+
+        const discountApplications = Math.floor(totalQuantity / 2);
+        totalDiscount = discountApplications * SellPrice;
+        document.getElementById('totalDiscount').value = totalDiscount;
     }
 
     function applyBundleOffer(offerDetails) {
-       const bundleProducts = offerDetails.Details.map(detail => detail.ProductId);
-        const allInCart = bundleProducts.every(productId =>
-            tempItems.some(item => item.ProductId === productId)
-        );
+        let totalDiscount = 0;
+        let totalQuantity = 0;
+        let totalAmount = 0;
 
-        if (allInCart) {
-            tempItems.forEach(item => {
-                if (bundleProducts.includes(item.ProductId)) {
-                    const discountAmount = item.SellPrice * offerDetails.DiscountRate;
-                    item.SellPrice -= discountAmount;
-                    item.ItemDiscount = discountAmount;
-                }
-            });
+        tempItems.forEach(item => {
+            if (parseInt(offerDetails.ProductId) === parseInt(item.ProductId)) {
+                totalQuantity += item.Quantity;
+            }
+        });
+
+        if (totalQuantity >= offerDetails.RequiredQuantity) {
+            const discountApplications = Math.floor(totalQuantity / offerDetails.RequiredQuantity);
+            totalAmount = offerDetails.RequiredQuantity * tempItems.find(item => parseInt(offerDetails.ProductId) === parseInt(item.ProductId)).SellPrice;
+            totalDiscount = offerDetails.DiscountedPrice * 0.01 * discountApplications;
+
+            document.getElementById('totalDiscount').value = totalDiscount * totalAmount;
+        } else {
+            DevExpress.ui.notify("الكمية المدخلة اقل من الكمية المطلوبه بالعرض", "error", 3000);
+            document.getElementById('totalDiscount').value = 0;
         }
     }
 
     function applyDiscountOffer(offerDetails) {
-        tempItems.forEach(item => {
-            const detail = offerDetails.Details.find(detail => detail.ProductId === item.ProductId);
-            if (detail) {
-                const discountRate = detail.DiscountRate || (detail.DiscountedPrice / item.SellPrice);
-                const discountAmount = item.SellPrice * discountRate;
-                item.SellPrice -= discountAmount; // Apply discount to item price
-                item.ItemDiscount = discountAmount; // Optionally, track discount amount for each item
-            }
-        });
+    let totalDiscount = 0;
+    let totalQuantity = 0;
+    let SellPrice = 0;
+
+    tempItems.forEach(item => {
+        if (parseInt(offerDetails.ProductId) === parseInt(item.ProductId)) {
+            totalQuantity += item.Quantity;
+            SellPrice = item.SellPrice;
+        }
+    });
+
+    if (totalQuantity < offerDetails.RequiredQuantity) {
+        DevExpress.ui.notify("الكمية المدخلة لا تساوي الكمية المطلوبه بالعرض", "error", 3000);
+        document.getElementById('totalDiscount').value = 0;
+        return;
     }
 
-    function recalculateInvoiceTotals() {
-        let total = 0;
-        let totalDiscount = 0;
-        tempItems.forEach(item => {
-            total += item.Quantity * item.SellPrice;
-            totalDiscount += item.ItemDiscount || 0;
-        });
+    const discountApplications = Math.floor(totalQuantity / offerDetails.RequiredQuantity);
+    totalDiscount = discountApplications * offerDetails.DiscountedPrice;
 
-        // Update the DOM elements with new totals
-        document.getElementById('totalAmount').value = total.toFixed(2);
-        document.getElementById('totalDiscount').value = totalDiscount.toFixed(2);
-        // Calculate and update any other totals as needed
-    }
+    document.getElementById('totalDiscount').value = totalDiscount;
+}
 
     $(document).ready(function () {
         populateOffers();
@@ -284,7 +300,7 @@
             var customerName = $('#CustomerName').val();
             var phoneNumber = $('#PhoneNumber').val();
             if (phoneNumber.length < 11) {
-                alert('رقم الهاتف علي الاقل 11 رقم');
+                DevExpress.ui.notify('رقم الهاتف علي الاقل 11 رقم', "error", 5000);
                 return;
             }
             else {
@@ -393,16 +409,14 @@
                     }
 
                     customerSelect.select2({
-                        placeholder: "Select a customer",
+                        placeholder: "اختر عميل",
                         allowClear: true
                     });
                     resolve();
                 } else {
-                    console.error('Failed to load customers');
                     reject('Failed to load customers');
                 }
             } catch (error) {
-                console.error('Error loading customers:', error);
                 reject(error);
             }
         });
@@ -542,7 +556,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         populateDropdownSEARCH('/Products/GetAllProductsInWarehouse', 'ProductId', 'ProductId', 'ProductName');
         //populateDropdownSEARCH('/Customers/LoadCustomers', 'CustomerId', 'CustomerId', 'CustomerName');
-        populateDropdown('/Branches/LoadBranches', 'BranchId', 'BranchId', 'BranchName');
+        populateDropdown('/Branches/LoadBranchesByUser', 'BranchId', 'BranchId', 'BranchName');
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
         document.getElementById('totalDiscount').addEventListener('input', calculateDiscounts);
         
@@ -576,7 +590,7 @@
         });
     });
 
-    var tempItems = []; // Temporary storage for items
+    var tempItems = [];
 
     function addItem() {
         // Get item details
@@ -592,29 +606,29 @@
         var maxQuantity = parseInt($('#Quantity').attr('max') || '0');
 
         if (quantity > maxQuantity) {
-            alert(`الكمية المدخلة تتجاوز الكمية المتاحة. الكمية المتاحة: ${maxQuantity}`);
+            DevExpress.ui.notify(`الكمية المدخلة تتجاوز الكمية المتاحة. الكمية المتاحة: ${maxQuantity}`, "error", 5000);
             return; 
         }
 
         if (quantity < 0) {
-            alert('الكمية لا يمكن أن تكون قيمة سالبة');
+            DevExpress.ui.notify('الكمية لا يمكن أن تكون قيمة سالبة', "error", 5000);
             return;
         }
 
         // Validation for discount exceeding MaxDiscount
         if (discount > maxDiscount) {
-            alert(`الحد الأقصى للخصم هو ${maxDiscount}`);
+            DevExpress.ui.notify(`الحد الأقصى للخصم هو ${maxDiscount}`, "error", 5000);
             return; 
         }
 
         if (discount < 0) {
-            alert('الخصم لا يمكن أن يكون قيمة سالبة');
+            DevExpress.ui.notify('الخصم لا يمكن أن يكون قيمة سالبة', "error", 5000);
             return;
         }
 
         // Check if any field is empty
         if (!productId || !sizeId || !colorId || !quantity || !sellPrice) {
-            alert('برجاء ملاء بيانات الاصناف');
+            DevExpress.ui.notify('برجاء ملاء بيانات الاصناف', "error", 5000);
             return;
         }
 
@@ -622,7 +636,7 @@
         var Totaldiscount = discount * quantity;
 
         if (effectiveSellPrice < 0) {
-            alert('الخصم لا يمكن أن يكون أكبر من سعر البيع للواحد');
+            DevExpress.ui.notify('الخصم لا يمكن أن يكون أكبر من سعر البيع للواحد', "error", 5000);
             return;
         }
 
@@ -747,8 +761,8 @@
             totalAmount += item.Quantity * item.SellPrice;
         });
 
-        document.getElementById('totalAmount').value = totalAmount.toFixed(2);
-        document.getElementById('paidUp').value = totalAmount.toFixed(2);
+        document.getElementById('totalAmount').value = totalAmount.toFixed(2) - document.getElementById('totalDiscount').value ;
+        document.getElementById('paidUp').value = totalAmount.toFixed(2) - document.getElementById('totalDiscount').value ;
         calculateRemainder();
     }
 
@@ -790,22 +804,21 @@
     alertPlaceholder.innerHTML = '';
     alertPlaceholder.appendChild(messageContainer);
 
-    // Automatically hide the alert after 5 seconds (5000 milliseconds)
-    setTimeout(() => {
-        $(messageContainer).fadeOut('slow', () => {
-            messageContainer.remove();
-        });
-    }, 5000);
-}
+        setTimeout(() => {
+            $(messageContainer).fadeOut('slow', () => {
+                messageContainer.remove();
+            });
+        }, 5000);
+    }
 
     function resetTemporaryInventory() {
         temporaryInventory = {};
     }
 
     async function saveInvoice() {
-         if (tempItems.length === 0) {
-            alert('يجب اضافة صنف واحد علي الاقل');
-            return; 
+        if (tempItems.length === 0) {
+           DevExpress.ui.notify('يجب اضافة صنف واحد علي الاقل', "error", 5000);
+           return; 
         }
 
         var branchId = document.getElementById('BranchId').value;
@@ -813,6 +826,7 @@
         const permissionResult = await permissionResponse.json();
         if (!permissionResult.success) {
             displayMessage('error', permissionResult.message);
+            DevExpress.ui.notify(permissionResult.message, "error", 5000);
             return;
         }
 
@@ -840,6 +854,7 @@
                 let result = await response.json();
                 if (result.success) {
                     displayMessage('success', result.message);
+                    DevExpress.ui.notify(result.message, "success", 5000);
                     document.getElementById('invoiceForm').reset();
                     tempItems = [];
                     refreshItemsGrid();
@@ -854,8 +869,7 @@
                 }
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error saving invoice');
+            DevExpress.ui.notify(`Error saving invoice : ${error}`, "error", 5000);
         }
     }
 
@@ -863,6 +877,11 @@
 
     async function saveAndPrintInvoice() {
         try {
+            // Print the invoice by ID
+            if (tempItems.length === 0) {
+                DevExpress.ui.notify('يجب اضافة صنف واحد علي الاقل', "error", 5000);
+                return;
+            }
             // Save the invoice
             await saveInvoice();
 
@@ -874,11 +893,9 @@
             const data = await response.json();
             const invoiceId = data.lastInvoiceId;
 
-            // Print the invoice by ID
             printInvoiceById(invoiceId);
         } catch (error) {
-            console.error('Error:', error);
-            // Handle error appropriately
+
         }
     }
 
@@ -901,11 +918,11 @@
             try {
                 pdfWindow.print();
             } catch (e) {
-                console.error("Error attempting to print:", e);
+                DevExpress.ui.notify(`Error saving invoice : ${e}`, "error", 5000);
             }
         }, false);
     } catch (error) {
-        console.error('Error printing invoice:', error);
+        DevExpress.ui.notify(`Error saving invoice : ${error}`, "error", 5000);
     }
 }
 </script>

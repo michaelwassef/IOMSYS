@@ -7,6 +7,7 @@
         public int ProductId { get; set; }
         public int? RequiredQuantity { get; set; } 
         public int? FreeQuantity { get; set; } 
-        public decimal? DiscountedPrice { get; set; } 
+        public decimal? DiscountedPrice { get; set; }
+        public string? OfferType { get; set; }
     }
 }

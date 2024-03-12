@@ -34,14 +34,14 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesByBranchAsync(int BranchId)
         {
             var sql = @"
-                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp,pi.SupplierId,pi.BranchId,pi.PaymentMethodId,
+                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp, pi.SupplierId, pi.BranchId, pi.PaymentMethodId,
                 pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes
                 FROM PurchaseInvoices pi
                 LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
                 LEFT JOIN Branches b ON pi.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON pi.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON pi.UserId = u.UserId
-                WHERE pi.BranchId = @BranchId";
+                WHERE pi.BranchId = @BranchId ORDER BY pi.PurchaseDate DESC";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -70,8 +70,7 @@ namespace IOMSYS.Services
                     WHERE
                         PaidUpDate = @PaidUpDate
                         AND BranchId = @BranchId
-                        AND TotalAmount > PaidUp;
-                    ";
+                        AND TotalAmount > PaidUp ORDER BY PurchaseDate DESC;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -99,8 +98,7 @@ namespace IOMSYS.Services
                         PurchaseInvoices
                     WHERE
                         BranchId = @BranchId
-                        AND TotalAmount > PaidUp;
-                    ";
+                        AND TotalAmount > PaidUp ORDER BY PurchaseDate DESC;";
 
             using (var db = _dapperContext.CreateConnection())
             {

@@ -83,14 +83,8 @@ namespace IOMSYS.Controllers
 
                 decimal itemsTotal = model.SalesItems.Sum(item => item.Quantity * item.SellPrice);
 
-                // Compare itemsTotal with the TotalAmount of the invoice
-                if (itemsTotal != model.TotalAmount)
-                {
-                    return Json(new { success = false, message = "المجموع الفرعي للأصناف لا يتطابق مع إجمالي المبلغ المعلن في الفاتورة." });
-                }
-
                 decimal paidUp = model.PaidUp;
-                decimal totalAmount = model.TotalAmount;
+                decimal totalAmount = model.TotalAmount ;
                 decimal remainder = totalAmount - paidUp;
 
                 // Check if PaidUp is less than or equal to TotalAmount

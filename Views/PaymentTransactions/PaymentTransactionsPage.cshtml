@@ -12,15 +12,17 @@
         <select id="BranchId" class="form-control"></select>
     </div>
     <div class="form-group col-md-2 mb-3">
-        <div class="form-group col-md-5 mb-3" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
+        <div class="branch-treasury" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
     </div>
+
 </div>
 
-<div class="form-group">
-    <button id="filterTodayBtn" class="btn btn-primary mx-1">عرض بيانات اليوم</button>
-    <button id="showAllBtn" class="btn btn-primary mx-1">عرض جميع البيانات</button>
-    <button onclick="movePayment()" class="btn btn-primary mx-1"> تحويل النقديه </button>
+<div class="row justify-content-center">
+   <button id="filterTodayBtn" class="btn col-md-3 btn-primary btn-block my-1 mx-1">عرض بيانات اليوم</button>
+   <button id="showAllBtn" class="btn col-md-3 btn-primary btn-block my-1 mx-1">عرض جميع البيانات</button>
+   <button onclick="movePayment()" class="btn col-md-3 btn-primary btn-block my-1 mx-1">تحويل النقديه</button>
 </div>
+
 
 <div id="movePaymentPopup" style="display:none;">
     <div>
@@ -200,13 +202,40 @@
     };
 
     $(function () {
-        $("#movePaymentPopup").dxPopup({
+        var moveInventoryPopup = $("#movePaymentPopup").dxPopup({
             title: "تحويل نقدية",
             visible: false,
-            width: 600,
-            height: 500,
+            width: calculatePopupWidth(),
+            height: calculatePopupHeight(),
+        }).dxPopup("instance");
+
+        function calculatePopupWidth() {
+            var windowWidth = $(window).width();
+
+            if (windowWidth < 768) {
+                return "90%";
+            } else {
+                return 600;
+            }
+        }
+
+        function calculatePopupHeight() {
+            var windowHeight = $(window).height();
+            if (windowHeight < 768) {
+                return "90%";
+            } else {
+                return 500;
+            }
+        }
+
+        $(window).resize(function () {
+            moveInventoryPopup.option({
+                width: calculatePopupWidth(),
+                height: calculatePopupHeight()
+            });
         });
     });
+
 
     var transferItems = [];
     
@@ -465,22 +494,23 @@
 </script>
 
 <style>
-    #branchTreasury {
-        background-color: #f0f0f0; 
-        border: 1px solid #d3d3d3; 
-        padding: 18px; 
-        margin-top: 18px; 
-        font-size: 18px; 
-        border-radius: 8px; 
-        width: auto; 
-        max-width: 100%; 
+    .branch-treasury {
+        background-color: #f0f0f0;
+        border: 1px solid #d3d3d3;
+        padding: 18px;
+        margin-top: 18px;
+        font-size: 18px;
+        border-radius: 8px;
+        width: auto;
+        max-width: 100%;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    #branchTreasury #treasuryValue {
-        font-weight: bold; 
-        color: #007bff; 
-    }
+        .branch-treasury #treasuryValue {
+            font-weight: bold;
+            color: #007bff;
+        }
+
 
     .select2-container--open {
         z-index: 9999999 !important;

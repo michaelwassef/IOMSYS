@@ -189,7 +189,7 @@ namespace IOMSYS.Services
                   ,COALESCE(si.TotalSoldQuantity, 0) AS TotalSoldQuantity
                   ,COALESCE(si.TotalSellPrice, 0) AS TotalSellPrice 
                   ,COALESCE(SUM(BI.AvailableQty), 0) AS TotalQuantity
-            FROM IOMSYS.dbo.BranchInventory BI
+            FROM BranchInventory BI
             INNER JOIN
                      Products p ON BI.ProductId = p.ProductId
             INNER JOIN 

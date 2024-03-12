@@ -129,7 +129,7 @@
     COALESCE(SUM(si.TotalSoldQuantity), 0) AS TotalSoldQuantity,
     COALESCE(SUM(si.TotalSellPrice), 0) AS TotalSellPrice
 FROM 
-    IOMSYS.dbo.BranchInventory BI
+    BranchInventory BI
     LEFT JOIN Branches B ON BI.BranchId = B.BranchId
     INNER JOIN Products P ON BI.ProductId = P.ProductId
     INNER JOIN Categories C ON C.CategoryId = P.CategoryId
