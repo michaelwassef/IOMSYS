@@ -24,7 +24,7 @@ namespace IOMSYS.Services
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON si.UserId = u.UserId
-                WHERE si.IsReturn = 0 ORDER BY si.SaleDate DESC";
+                WHERE si.IsReturn = 0 ORDER BY si.SalesInvoiceId DESC";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -42,7 +42,7 @@ namespace IOMSYS.Services
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON si.UserId = u.UserId
-                WHERE si.BranchId = @BranchId AND si.IsReturn = 0 ORDER BY si.SaleDate DESC";
+                WHERE si.BranchId = @BranchId AND si.IsReturn = 0 ORDER BY si.SalesInvoiceId DESC";
 
             using (var db = _dapperContext.CreateConnection())
             {

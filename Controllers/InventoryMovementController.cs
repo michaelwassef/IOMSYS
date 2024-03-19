@@ -1,10 +1,8 @@
-﻿using IOMSYS.IServices;
+﻿using DevExpress.PivotGrid.PivotTable;
+using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Reports;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
@@ -19,7 +17,6 @@ namespace IOMSYS.Controllers
         private readonly IProductsService _productsService;
         private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
         private readonly IPaymentTransactionService _paymentTransactionService;
-        private readonly IBranchInventoryService _branchInventoryService;
         private readonly IPurchaseInvoicesService _purchaseInvoicesService;
         private readonly IPurchaseItemsService _purchaseItemsService;
         private readonly IPurchaseInvoiceItemsService _purchaseInvoiceItemsService;
@@ -34,7 +31,6 @@ namespace IOMSYS.Controllers
             _productsService = productsService;
             _salesInvoiceItemsService = salesInvoiceItemsService;
             _paymentTransactionService = paymentTransactionService;
-            _branchInventoryService = branchInventoryService;
             _purchaseInvoicesService = purchaseInvoicesService;
             _purchaseItemsService = purchaseItemsService;
             _purchaseInvoiceItemsService = purchaseInvoiceItemsService;
@@ -63,10 +59,18 @@ namespace IOMSYS.Controllers
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "InventoryMovement", "AddNewinventoryMovement");
             if (!hasPermission) { return BadRequest(new { message = "ليس لديك صلاحية" }); }
 
+            var fromBranchIds = batchModel.Items.Select(item => item.FromBranchId).Distinct().ToList();
+            var toBranchIds = batchModel.Items.Select(item => item.ToBranchId).Distinct().ToList();
+            if (fromBranchIds.Count > 1 || toBranchIds.Count > 1)
+            {
+                return BadRequest(new { message = "يجب النقل من فرع واحد والي فرع واحد" });
+            }
+
+            int tobranchx = 0;
+            int frombranchx = 0;
             var salesInvoiceModel = new SalesInvoicesModel
             {
-                CustomerId = 1, 
-                BranchId = 0, 
+                BranchId = 0,
                 PaymentMethodId = 1,
                 UserId = userId,
                 SaleDate = DateTime.Now,
@@ -75,7 +79,6 @@ namespace IOMSYS.Controllers
                 IsFullPaidUp = false,
                 SalesItems = new List<SalesItemsModel>(),
             };
-
             var pendingMovements = new List<InventoryMovementModel>();
             try
             {
@@ -87,38 +90,50 @@ namespace IOMSYS.Controllers
                         return Json(new { success = false, message = "ليس لديك صلاحية لنقل من هذا الفرع" });
                     }
 
+                    frombranchx = model.FromBranchId;
+                    tobranchx = model.ToBranchId;
+
                     if (salesInvoiceModel.BranchId == 0)
                     {
                         salesInvoiceModel.BranchId = model.FromBranchId;
-                        var tobranchname = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
-                        salesInvoiceModel.Notes = "منقوله الي فرع " + tobranchname.BranchName;
+                        var tobranch = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
+                        salesInvoiceModel.Notes = "منقوله الي فرع " + tobranch.BranchName;
+                        salesInvoiceModel.CustomerId = tobranch.CustomerId;
                     }
 
-                    // Fetch sell price and create SalesItem
-                    var buyPrice = await FetchBuyPriceForProduct(model.ProductId);
+                    decimal price = await (model.ToBranchId == 1 ? FetchBuyPriceForProduct(model.ProductId) : FetchSellPriceForProduct(model.ProductId));
+
                     salesInvoiceModel.SalesItems.Add(new SalesItemsModel
                     {
                         ProductId = model.ProductId,
                         SizeId = model.SizeId,
                         ColorId = model.ColorId,
                         Quantity = model.Quantity,
-                        SellPrice = buyPrice,
+                        SellPrice = price,
                         BranchId = model.FromBranchId,
                         IsReturn = false,
                     });
-                    // Add to temporary store for updating later
                     pendingMovements.Add(model);
                 }
 
+                var toBranchxx = await _branchesService.SelectBranchByIdAsync(tobranchx);
+                var fromBranchxx = await _branchesService.SelectBranchByIdAsync(frombranchx);
+
                 decimal itemsTotal = salesInvoiceModel.SalesItems.Sum(item => item.Quantity * item.SellPrice);
+                decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(fromBranchxx.CustomerId, toBranchxx.BranchId, itemsTotal);
                 salesInvoiceModel.TotalAmount = itemsTotal;
-                salesInvoiceModel.Remainder = itemsTotal;
+                salesInvoiceModel.PaidUp = amountUtilized;
+                salesInvoiceModel.Remainder = itemsTotal - amountUtilized;
+                if (salesInvoiceModel.Remainder == 0)
+                {
+                    salesInvoiceModel.IsFullPaidUp = true;
+                }
+                else
+                {
+                    salesInvoiceModel.IsFullPaidUp = false;
+                }
 
                 var salesInvoiceResult = await AddNewSaleInvoice(salesInvoiceModel);
-                if (salesInvoiceResult<=0)
-                {
-                    return Json(new { success = false, message = "حذث خطا اثناء عملية النقل" });
-                }
 
                 foreach (var model in pendingMovements)
                 {
@@ -128,7 +143,7 @@ namespace IOMSYS.Controllers
                     await _inventoryMovementService.MoveInventoryAsync(model);
                 }
 
-                return Json(new { success = true, message = "تم نقل الكميات بنجاح وإنشاء قاتوره البيع." });
+                return Json(new { success = true, message = "تم نقل الكميات بنجاح وإنشاء فاتوره البيع." });
             }
             catch (Exception ex)
             {
@@ -137,69 +152,92 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ApproveOrRejectMovement([FromForm] int movementId, [FromForm] bool isApproved)
+        public async Task<IActionResult> ApproveOrRejectMovements([FromBody] ApproveRejectModel model)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
-            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "InventoryMovement", "ApproveOrRejectMovement");
-            if (!hasPermission) { return BadRequest(new { message = "ليس لديك صلاحية" }); }
-            int PurchaseInvoiceId = 0;
-            try
+            if (!await _permissionsService.HasPermissionAsync(userId, "InventoryMovement", "ApproveOrRejectMovement"))
+            {
+                return BadRequest(new { message = "ليس لديك صلاحية" });
+            }
+            List<int> successfulMovements = new List<int>();
+            List<int> failedMovements = new List<int>();
+
+            if (!model.IsApproved)
+            {
+                foreach (var movementId in model.MovementIds)
+                {
+                    var movement = await _inventoryMovementService.SelectInventoryMovementByIdAsync(movementId);
+                    await DeleteMoveSaleInvoice(movement.SalesInvoiceId);
+                    failedMovements.Add(movementId);
+                }
+                foreach (var movementId in failedMovements)
+                {
+                    var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, false, 0);
+                }
+                return Ok(new { success = true, message = "Movements rejected." });
+            }
+
+            List<PurchaseItemsModel> purchaseItems = new List<PurchaseItemsModel>();
+            int? fromBranchId = null;
+            int? toBranchId = null;
+            int SalesInvoiceId = 0;
+
+            foreach (var movementId in model.MovementIds)
             {
                 var movement = await _inventoryMovementService.SelectInventoryMovementByIdAsync(movementId);
-                var salesinovice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(movement.SalesInvoiceId);
+                fromBranchId = movement.FromBranchId;
+                toBranchId = movement.ToBranchId;
+                SalesInvoiceId = movement.SalesInvoiceId;
 
-                if (!isApproved)
-                {
-                    var deleteResult = await DeleteMoveSaleInvoice(movement.SalesInvoiceId);
-                    if (deleteResult<=0)
-                    {
-                        return Json(new { success = false, message = "حدث خطا اثناء الحذف" });
-                    }
-                }
-                else
-                {
-                    var frombranchname = await _branchesService.SelectBranchByIdAsync(salesinovice.BranchId);
+                decimal price = await (movement.ToBranchId == 1 ? FetchBuyPriceForProduct(movement.ProductId) : FetchSellPriceForProduct(movement.ProductId));
 
-                    var purchaseInvoicesModel = new PurchaseInvoicesModel
-                    {
-                        SupplierId = 1,
-                        BranchId = movement.ToBranchId,
-                        PaymentMethodId = 1,
-                        UserId = userId,
-                        PurchaseDate = DateTime.Now,
-                        PurchaseItems = new List<PurchaseItemsModel>(),
-                        Notes = "منقوله من " + frombranchname.BranchName,
-                    };
-
-                    var buyPrice = await FetchBuyPriceForProduct(movement.ProductId);
-                    purchaseInvoicesModel.PurchaseItems.Add(new PurchaseItemsModel
-                    {
-                        ProductId = movement.ProductId,
-                        SizeId = movement.SizeId,
-                        ColorId = movement.ColorId,
-                        Quantity = movement.Quantity,
-                        BuyPrice = buyPrice,
-                        BranchId = movement.ToBranchId,
-                    });
-                    PurchaseInvoiceId = await AddNewPurchaseInvoice(purchaseInvoicesModel);
-                }
-
-                var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, isApproved, PurchaseInvoiceId);
-                
-                if (result)
+                var item = new PurchaseItemsModel
                 {
-                    return Json(new { success = true, message = isApproved ? "Movement approved successfully." : "Movement rejected successfully." });
-                }
-                else
-                {
-                    return Json(new { success = false, message = "Error processing request." });
-                }
+                    ProductId = movement.ProductId,
+                    Quantity = movement.Quantity,
+                    BuyPrice = price,
+                    BranchId = movement.ToBranchId,
+                    ColorId = movement.ColorId,
+                    SizeId = movement.SizeId,
+                    Statues = 1,
+                    ModDate = DateTime.Now,
+                };
+                purchaseItems.Add(item);
+                successfulMovements.Add(movementId);
             }
-            catch (Exception ex)
+
+            var fromBranch = await _branchesService.SelectBranchByIdAsync(fromBranchId.Value);
+            var toBranch = await _branchesService.SelectBranchByIdAsync(toBranchId.Value);
+
+            decimal amountToSpend = purchaseItems.Sum(item => item.Quantity * item.BuyPrice);
+            decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalances(toBranch.SupplierId, fromBranchId.Value, amountToSpend);
+
+            var purchaseInvoiceModel = new PurchaseInvoicesModel
             {
-                return Json(new { success = false, message = "An error occurred.", exceptionMessage = ex.Message });
+                SupplierId = fromBranch.SupplierId,
+                BranchId = toBranchId.Value,
+                PaymentMethodId = 1,
+                UserId = userId,
+                PurchaseDate = DateTime.Now,
+                PurchaseItems = purchaseItems,
+                Notes = "منقوله من " + fromBranch.BranchName,
+                TotalAmount = amountToSpend,
+                PaidUp = amountUtilized,
+                Remainder = amountToSpend - amountUtilized,
+                IsFullPaidUp = (amountToSpend - amountUtilized) == 0,
+                SalesInvoiceId = SalesInvoiceId,
+            };
+
+            int PurchaseInvoiceId = await AddNewPurchaseInvoice(purchaseInvoiceModel);
+            foreach (var movementId in successfulMovements)
+            {
+                var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, true, PurchaseInvoiceId);
             }
+
+            return Json(new { success = true, message = "تمت عملية النقل وعمل فاتورة المشتريات" });
         }
+
+
 
         public async Task<int> AddNewSaleInvoice(SalesInvoicesModel model)
         {
@@ -239,17 +277,64 @@ namespace IOMSYS.Controllers
                 return 0;
             }
         }
+        public async Task<int> AddNewPurchaseInvoice(PurchaseInvoicesModel model)
+        {
+            try
+            {
+                model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
+                int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
+                if (invoiceId <= 0)
+                    return 0;
+
+                foreach (var item in model.PurchaseItems)
+                {
+                    item.BranchId = model.BranchId;
+                    item.Statues = 1;
+                    item.ModDate = DateTime.Now;
+                    item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
+                    await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
+                }
+
+                var paymentTransaction = new PaymentTransactionModel
+                {
+                    BranchId = model.BranchId,
+                    PaymentMethodId = model.PaymentMethodId,
+                    Amount = model.PaidUp,
+                    TransactionType = "خصم",
+                    TransactionDate = model.PurchaseDate,
+                    ModifiedUser = model.UserId,
+                    ModifiedDate = DateTime.Now,
+                    InvoiceId = invoiceId,
+                    Details = model.Notes,
+                };
+                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+
+                return invoiceId;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+        public async Task<decimal> FetchSellPriceForProduct(int productId)
+        {
+            var product = await _productsService.SelectProductByIdAsync(productId);
+            if (product != null)
+            {
+                return product.SellPrice;
+            }
+            return 0;
+        }
         public async Task<decimal> FetchBuyPriceForProduct(int productId)
         {
-           var product = await _productsService.SelectProductByIdAsync(productId);
-           if (product != null)
-           {
+            var product = await _productsService.SelectProductByIdAsync(productId);
+            if (product != null)
+            {
                 return product.BuyPrice;
-           }
-           return 0;
+            }
+            return 0;
         }
-
         public async Task<int> DeleteMoveSaleInvoice(int invoiceId)
         {
             try
@@ -296,52 +381,5 @@ namespace IOMSYS.Controllers
             }
         }
 
-        public async Task<int> AddNewPurchaseInvoice(PurchaseInvoicesModel model)
-        {
-            try
-            {
-                model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
-                decimal itemsTotal = model.PurchaseItems.Sum(item => item.Quantity * item.BuyPrice);
-
-                model.TotalAmount = itemsTotal;
-                model.PaidUp = 0;
-                model.Remainder = itemsTotal;
-                model.IsFullPaidUp = false;
-                model.SupplierId = 1;
-
-                int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
-                if (invoiceId <= 0)
-                    return 0;
-
-                foreach (var item in model.PurchaseItems)
-                {
-                    item.BranchId = model.BranchId;
-                    item.Statues = 1;
-                    item.ModDate = DateTime.Now;
-                    item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
-                    await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
-                }
-
-                var paymentTransaction = new PaymentTransactionModel
-                {
-                    BranchId = model.BranchId,
-                    PaymentMethodId = model.PaymentMethodId,
-                    Amount = model.PaidUp,
-                    TransactionType = "خصم",
-                    TransactionDate = model.PurchaseDate,
-                    ModifiedUser = model.UserId,
-                    ModifiedDate = DateTime.Now,
-                    InvoiceId = invoiceId,
-                    Details = model.Notes,
-                };
-                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
-
-                return invoiceId;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
     }
 }

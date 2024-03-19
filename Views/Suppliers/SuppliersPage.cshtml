@@ -4,7 +4,14 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>الموردين</h1>
+<div class="page-title">
+    <h1>الموردين</h1>
+</div>
+
+<div class="row justify-content-center">
+    <button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">كشف فواتير الموردين</button>
+</div>
+
 
 @(Html.DevExtreme().DataGrid<SuppliersModel>()
     .ID("gridContainer")
@@ -69,6 +76,10 @@
 )
 
 <script>
+    function returnProdutsPage() {
+        window.location.href = '@Url.Action("SuppliersAccountPage", "Suppliers")';
+    }
+
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
         var worksheet = workbook.addWorksheet('Suppliers');

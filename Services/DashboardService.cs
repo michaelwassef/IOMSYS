@@ -72,7 +72,7 @@ namespace IOMSYS.Services
             var sql = @"
                 SELECT SUM(TotalAmount) AS TotalAmount 
                 FROM SalesInvoices
-                WHERE SaleDate >= @FromDate AND SaleDate <= @ToDate AND BranchId = @BranchId";
+                WHERE SaleDate >= @FromDate AND SaleDate <= @ToDate AND BranchId = @BranchId AND IsReturn = 0";
 
             using (var db = _dapperContext.CreateConnection())
             {

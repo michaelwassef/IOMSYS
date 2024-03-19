@@ -1,24 +1,30 @@
 ﻿
 @{
-    ViewData["Title"] = "PurchaseInvoicesPage";
+    ViewData["Title"] = "SuppliersAccountPage";
     Layout = "_DevExtremeLayout";
 }
 
 <div class="page-title">
-    <h1>فواتير المشتريات</h1>
+    <h1>كشف فواتير الموردين</h1>
 </div>
 
-<div class="row">
-    <div class="form-group col-md-3 mb-3">
-        <label for="branchId">اسم الفرع</label>
-        <select id="BranchId" class="form-control"></select>
+<div class="dashboard-container">
+    <div class="dashboard-item supplier-select">
+        <label for="BranchId" class="dashboard-label">اسم المورد</label>
+        <select id="BranchId" class="dashboard-select"></select>
     </div>
-</div>
-
-<div class="row justify-content-center">
-    <button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">كشف فواتير الموردين</button>
-    <button id="showAllBtn" class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="window.location.href='/PurchaseInvoices/PaymentsNotMade';">عرض المدفوعات المؤجله اليوم</button>
-    <button id="showAllBtn" class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="window.location.href='/PurchaseInvoices/AllPaymentsNotMade';">عرض جميع المدفوعات المؤجله</button>
+    <div class="dashboard-item dashboard-summary total-invoices">
+        <div class="summary-title">اجمالي الفواتير</div>
+        <div class="summary-value" id="totalInvoicesSum">0</div>
+    </div>
+    <div class="dashboard-item dashboard-summary total-paidup">
+        <div class="summary-title">اجمالي المدفوع</div>
+        <div class="summary-value" id="totalPaidUpSum">0</div>
+    </div>
+    <div class="dashboard-item dashboard-summary total-remainder">
+        <div class="summary-title">اجمالي المتبقي</div>
+        <div class="summary-value" id="totalRemainderSum">0</div>
+    </div>
 </div>
 
 
@@ -26,26 +32,44 @@
 <div id="gridContainer"></div>
 
 <script>
-        function returnProdutsPage() {
-        window.location.href = '@Url.Action("SuppliersAccountPage", "Suppliers")';
+    function updateSupplierSums(supplierId) {
+        $.getJSON('/Suppliers/LoadSupplierSums', { SupplierId: supplierId }, function (data) {
+            var totalInvoicesSum = data.TotalAmountSum !== null ? data.TotalAmountSum.toFixed(2) : '0.00';
+            var totalPaidUpSum = data.PaidUpSum !== null ? data.PaidUpSum.toFixed(2) : '0.00';
+            var totalRemainderSum = data.RemainderSum !== null ? data.RemainderSum.toFixed(2) : '0.00';
+
+            $('#totalInvoicesSum').text(totalInvoicesSum);
+            $('#totalPaidUpSum').text(totalPaidUpSum);
+            $('#totalRemainderSum').text(totalRemainderSum);
+        });
     }
+    updateSupplierSums($('#BranchId').val());
+
+    $('#BranchId').change(function () {
+        updateSupplierSums($(this).val());
+    });
 
     $(function () {
-        $.getJSON('/Branches/LoadBranchesByUser', function (data) {
+        $.getJSON('/Suppliers/LoadSuppliers', function (data) {
             var branchSelect = $('#BranchId');
             $.each(data, function () {
-                branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
+                branchSelect.append($('<option/>').val(this.SupplierId).text(this.SupplierName));
             });
+            if (data.length > 0) {
+                branchSelect.val(data[0].SupplierId); 
+                updateSupplierSums(data[0].SupplierId);
+            }
         });
+
 
         $("#gridContainer").dxDataGrid({
             dataSource: new DevExpress.data.CustomStore({
                 key: "PurchaseInvoiceId",
                 load: function (loadOptions) {
                     var d = $.Deferred();
-                    var params = { branchId: $('#BranchId').val() };
+                    var params = { SupplierId: $('#BranchId').val() };
 
-                    $.getJSON('/PurchaseInvoices/LoadPurchaseInvoicesByBranch', params)
+                    $.getJSON('/Suppliers/LoadSuppliersAccount', params)
                         .done(function (result) { d.resolve(result); })
                         .fail(function () { d.reject("Data Loading Error"); });
 
@@ -64,7 +88,6 @@
                 update: function (key, values) {
                     var url = '/PurchaseInvoices/UpdatePurchaseInvoice/' + encodeURIComponent(key);
 
-                    // Construct the data object with a "values" property
                     var dataToSend = JSON.stringify({ values: values });
 
                     return $.ajax({
@@ -74,11 +97,9 @@
                         data: dataToSend
                     })
                         .done(function (response) {
-                            // Success notification
                             DevExpress.ui.notify({ message: "Invoice updated successfully" }, "success", 3000);
                         })
                         .fail(function (jqXHR) {
-                            // Error handling
                             var message = "Could not update invoice";
                             if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
                                 message = jqXHR.responseJSON.ErrorMessage;
@@ -224,26 +245,26 @@
             masterDetail: {
                 enabled: true,
                 template: function (container, options) {
-                $("<div>")
-                    .addClass("master-detail-grid")
-                    .dxDataGrid({
-                        columnAutoWidth: true,
-                        showBorders: true,
-                        columns: [
-                            { dataField: "ProductName", caption: "اسم المنتج" },
-                            { dataField: "SizeName", caption: "المقاس" },
-                            { dataField: "ColorName", caption: "اللون" },
-                            { dataField: "Quantity", caption: "الكمية" },
-                            { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
-                        ],
-                        dataSource: new DevExpress.data.CustomStore({
-                            load: function (loadOptions) {
-                                return $.getJSON('/PurchaseItems/LoadPurchaseItemsByInvoiceId', {
-                                    purchaseInvoiceId: options.key
-                                });
-                            }
-                        })
-                    }).appendTo(container);
+                    $("<div>")
+                        .addClass("master-detail-grid")
+                        .dxDataGrid({
+                            columnAutoWidth: true,
+                            showBorders: true,
+                            columns: [
+                                { dataField: "ProductName", caption: "اسم المنتج" },
+                                { dataField: "SizeName", caption: "المقاس" },
+                                { dataField: "ColorName", caption: "اللون" },
+                                { dataField: "Quantity", caption: "الكمية" },
+                                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
+                            ],
+                            dataSource: new DevExpress.data.CustomStore({
+                                load: function (loadOptions) {
+                                    return $.getJSON('/PurchaseItems/LoadPurchaseItemsByInvoiceId', {
+                                        purchaseInvoiceId: options.key
+                                    });
+                                }
+                            })
+                        }).appendTo(container);
                 }
             }
         });
@@ -282,3 +303,64 @@
         });
     }
 </script>
+<style>
+    :root {
+        --bg-color: #f0f4f8;
+        --primary-color: #007bff;
+        --info-color: #17a2b8;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --text-color: #333;
+        --border-radius: 10px;
+    }
+
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 20px;
+        padding: 20px;
+        background-color: var(--bg-color);
+    }
+
+    .dashboard-item {
+        background: white;
+        padding: 20px;
+        border-radius: var(--border-radius);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .supplier-select {
+        grid-column: span 2;
+    }
+
+    .dashboard-select, .dashboard-label {
+        width: 100%;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    .summary-title {
+        color: var(--text-color);
+        font-size: 1rem;
+        margin-bottom: 5px;
+    }
+
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .total-invoices .summary-value {
+        color: var(--primary-color);
+    }
+
+    .total-paidup .summary-value {
+        color: var(--success-color);
+    }
+
+    .total-remainder .summary-value {
+        color: var(--danger-color);
+    }
+
+</style>
+<link rel="stylesheet" href="~/css/site.css">

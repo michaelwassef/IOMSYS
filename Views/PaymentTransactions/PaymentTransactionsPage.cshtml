@@ -4,7 +4,9 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>ادارة الخزنة</h1>
+<div class="page-title">
+    <h1>ادارة الخزنة</h1>
+</div>
 
 <div class="row">
     <div class="form-group col-md-2 mb-3">
@@ -14,7 +16,6 @@
     <div class="form-group col-md-2 mb-3">
         <div class="branch-treasury" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
     </div>
-
 </div>
 
 <div class="row justify-content-center">
@@ -43,8 +44,8 @@
             <div class="form-group">
                 <label for="ToPaymentMethodId">اختر الخزنة:</label>
                 <select id="toPaymentMethodId" class="form-control"></select>
-                <div id="availableAmountDisplay2" class="text-primary mt-2"></div>
-            </div>
+@*                <div id="availableAmountDisplay2" class="text-primary mt-2"></div>
+*@            </div>
             <div class="form-group">
                 <label for="Amount">المبلغ المحول:</label>
                 <input type="number" id="amount" class="form-control" min="1" required>
@@ -70,10 +71,6 @@
     .DataSource(d => d
         .Mvc()
         .Controller("PaymentTransactions")
-        .LoadAction("LoadPaymentTransactions")
-        .InsertAction("AddNewPaymentTransaction")
-        .UpdateAction("UpdatePaymentTransaction")
-        .DeleteAction("DeletePaymentTransaction")
         .Key("TransactionId")
     ).Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
@@ -287,13 +284,13 @@
 
         // Check if the destination is the same as the source
         if (item.FromBranchId === item.ToBranchId && item.FromPaymentMethodId === item.ToPaymentMethodId) {
-            alert('لا يمكن نقل النقدية لنفس الخزنة...اختر خزنة أخرى');
+            DevExpress.ui.notify("لا يمكن نقل النقدية لنفس الخزنة...اختر خزنة أخرى", "error", 3000);
             return;
         }
 
         // Perform validation
         if (!validateTransferItem(item)) {
-            alert('برجاء ملاء جميع البيانات وتاكد من المبلغ المرسل اكبر من 0');
+            DevExpress.ui.notify("برجاء ملاء جميع البيانات وتاكد من المبلغ المرسل اكبر من 0", "error", 3000);
             return;
         }
 
@@ -301,18 +298,18 @@
         try {
             const availableBalanceResponse = await fetch(`/PaymentTransactions/GetAccountBalanceByPaymentMethodIdAndBranchId?BranchId=${item.FromBranchId}&PaymentMethodId=${item.FromPaymentMethodId}`);
             if (!availableBalanceResponse.ok) {
-                alert('An error occurred while checking the available balance.');
+                DevExpress.ui.notify("لا يمكن نقل نقدية اكبر من الرصيد المتاح", "error", 3000);
                 return;
             }
 
             const availableBalance = await availableBalanceResponse.json();
             if (item.Amount > availableBalance) {
-                alert('المبلغ الذي تريد نقله اكبر من رصيد الخزنة');
+                DevExpress.ui.notify("المبلغ الذي تريد نقله اكبر من رصيد الخزنة", "error", 3000);
                 return;
             }
 
         } catch (error) {
-            alert('An error occurred while checking the available balance.');
+            DevExpress.ui.notify(error, "error", 3000);
             return;
         }
 
@@ -339,8 +336,10 @@
     }
 
     async function moveInventory() {
+        $('#loadingIndicator').show();
         if (transferItems.length === 0) {
-            alert('Please add at least one item to transfer.');
+            DevExpress.ui.notify("برجاء اضافة عمليه واحده علي الاقل","error", 3000);
+            $('#loadingIndicator').hide();
             return;
         }
 
@@ -367,15 +366,18 @@
             const responseData = await response.json();
 
             if (!responseData.success) {
-                alert(responseData.message);
+                DevExpress.ui.notify(responseData.message, "error", 3000);
+                $('#loadingIndicator').hide();
                 return;
             }
 
-            alert(responseData.message);
+            DevExpress.ui.notify(responseData.message, "success", 3000);
             transferItems = [];
             displayTransferItems();
+            $('#loadingIndicator').hide();
         } catch (error) {
-            alert(responseData.message);
+            DevExpress.ui.notify(error, "error", 3000);
+            $('#loadingIndicator').hide();
         }
     }
 

@@ -323,7 +323,7 @@
                 },
                 error: function (xhr, status, error) {
                     var errorMessage = xhr.status + ': ' + xhr.statusText;
-                    alert('Error - ' + errorMessage);
+                    DevExpress.ui.notify(errorMessage, "error", 3000);
                 }
             });
         });
@@ -816,8 +816,10 @@
     }
 
     async function saveInvoice() {
+        $('#loadingIndicator').show();
         if (tempItems.length === 0) {
            DevExpress.ui.notify('يجب اضافة صنف واحد علي الاقل', "error", 5000);
+           $('#loadingIndicator').hide();
            return; 
         }
 
@@ -827,6 +829,7 @@
         if (!permissionResult.success) {
             displayMessage('error', permissionResult.message);
             DevExpress.ui.notify(permissionResult.message, "error", 5000);
+            $('#loadingIndicator').hide();
             return;
         }
 
@@ -863,13 +866,16 @@
                     document.getElementById('paidUp').value = '0';
                     document.getElementById('remainder').value = '0';
                     DevExpress.ui.notify(result.message, "success", 5000);
+                    $('#loadingIndicator').hide();
                 } else {
                     displayMessage('error', result.message);
                     DevExpress.ui.notify(result.message, "error", 5000);
+                    $('#loadingIndicator').hide();
                 }
             }
         } catch (error) {
             DevExpress.ui.notify(`Error saving invoice : ${error}`, "error", 5000);
+            $('#loadingIndicator').hide();
         }
     }
 

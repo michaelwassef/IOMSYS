@@ -26,6 +26,28 @@ namespace IOMSYS.Controllers
             return View();
         }
 
+        public async Task<IActionResult> SuppliersAccountPage()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Suppliers", "SuppliersAccountPage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadSupplierSums(int SupplierId)
+        {
+            var sums = await _SuppliersService.SelectSupplierSumsByIdAsync(SupplierId);
+            return Json(sums);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadSuppliersAccount(int SupplierId)
+        {
+            var Suppliers = await _SuppliersService.SelectSupplierInvoicesByIdAsync(SupplierId);
+            return Json(Suppliers);
+        }
+
         [HttpGet]
         public async Task<IActionResult> LoadSuppliers()
         {

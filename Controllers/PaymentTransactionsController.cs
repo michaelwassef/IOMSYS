@@ -111,6 +111,10 @@ namespace IOMSYS.Controllers
                         Details = "محولة من "+ frombranchname.BranchName + " - "+model.Notes,
                     };
                     await _paymentTransactionService.InsertPaymentTransactionAsync(topaymentTransaction);
+
+                    var frombranshCus = await _branchesService.SelectBranchByIdAsync(model.FromBranchId);
+                    var tobranshCus = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
+                    decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesBRANSHES(model.FromBranchId, tobranshCus.SupplierId, model.Amount);
                 }
                 return Json(new { success = true, message = "تم نقل المبالغ بنجاح." });
             }

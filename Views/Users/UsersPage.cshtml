@@ -5,7 +5,13 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>الحسابات</h1>
+<div class="page-title">
+    <h1>الحسابات</h1>
+</div>
+<div class="row justify-content-center">
+    <button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">اضافة فروع لمستخدم</button>
+    <button type="button" onclick="returnProdutsPage2()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">اضافة صلاحيات</button>
+</div>
 
 @(
 Html.DevExtreme().DataGrid<UsersModel>()
@@ -19,8 +25,7 @@ Html.DevExtreme().DataGrid<UsersModel>()
         .DeleteAction("DeleteUser")
         .Key("UserId")
     )
-      .OnToolbarPreparing("onToolbarPreparing")
-      .Selection(s => s.Mode(SelectionMode.Multiple))
+     .Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
@@ -30,6 +35,7 @@ Html.DevExtreme().DataGrid<UsersModel>()
         .AllowAdding(true)
         .AllowUpdating(true)
         .AllowDeleting(true)
+        .Texts(texts => texts.AddRow("اضافة مستخدم جديد"))
         .Popup(p => p
                 .Title("بيانات المستخدم")
                 .ShowTitle(true)
@@ -67,6 +73,13 @@ Html.DevExtreme().DataGrid<UsersModel>()
 
 
 <script>
+    function returnProdutsPage() {
+        window.location.href = '@Url.Action("AssignBranches", "UserBranches")';
+    }
+    function returnProdutsPage2() {
+        window.location.href = '@Url.Action("AssignPermission", "UserPermissions")';
+    }
+
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
         var worksheet = workbook.addWorksheet('Users');
@@ -81,39 +94,4 @@ Html.DevExtreme().DataGrid<UsersModel>()
             });
         });
     }
-        function onToolbarPreparing(e) {
-            var toolbarItems = e.toolbarOptions.items;
-
-            // Custom button configuration
-            var customButton1 = {
-                widget: 'dxButton',
-                options: {
-                    icon: 'fas fa-plus',
-                    text: 'اضافة فرع لحساب',
-                    onClick: function () {
-                        window.location.href = '@Url.Action("AssignBranches", "UserBranches")';
-                    }
-                },
-                location: 'after',
-                name: 'customButton1'
-            };
-
-            // Custom button configuration
-            var customButton2 = {
-                widget: 'dxButton',
-                options: {
-                    icon: 'fas fa-plus',
-                    text: 'اضافة صلاحيات',
-                    onClick: function () {
-                    window.location.href = '@Url.Action("AssignPermission", "UserPermissions")';
-                    }
-                },
-                location: 'after',
-                name: 'customButton2'
-            };
-
-            // Add the custom button to the toolbar
-        toolbarItems.push(customButton1);
-        toolbarItems.push(customButton2);
-        }
 </script>

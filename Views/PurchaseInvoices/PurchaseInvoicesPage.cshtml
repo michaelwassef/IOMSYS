@@ -103,11 +103,9 @@
                     const option = new Option(item[textField], item[valueField]);
                     selectElement.add(option);
                 });
-            } else {
-                console.error('Failed to load data for:', elementId);
             }
         } catch (error) {
-            console.error('Error fetching data for:', elementId, error);
+            DevExpress.ui.notify(error, "error", 3000);
         }
     }
 
@@ -135,11 +133,9 @@
                 });
 
                 selectElement.data('select2').$container.addClass('custom-font-size');
-            } else {
-                console.error('Failed to load data for:', elementId);
             }
         } catch (error) {
-            console.error('Error fetching data for:', elementId, error);
+            DevExpress.ui.notify(error, "error", 3000);
         }
     }
 
@@ -162,8 +158,8 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         populateDropdownSEARCH('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
-        populateDropdown('/Sizes/LoadSizes', 'SizeId', 'SizeId', 'SizeName');
-        populateDropdown('/Colors/LoadColors', 'ColorId', 'ColorId', 'ColorName');
+        populateDropdownSEARCH('/Sizes/LoadSizes', 'SizeId', 'SizeId', 'SizeName');
+        populateDropdownSEARCH('/Colors/LoadColors', 'ColorId', 'ColorId', 'ColorName');
         populateDropdownSEARCH('/Suppliers/LoadSuppliers', 'SupplierId', 'SupplierId', 'SupplierName');
         populateDropdown('/Branches/LoadBranchesByUser', 'BranchId', 'BranchId', 'BranchName');
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodId', 'PaymentMethodId', 'PaymentMethodName');
@@ -211,11 +207,11 @@
 
         // Check if any field is empty
         if (!productId || !sizeId || !colorId || !quantity || !buyPrice || !sellPrice) {
-            alert('برجاء ملاء بيانات الاصناف');
+            DevExpress.ui.notify('برجاء ملاء بيانات الاصناف', "error", 3000);
             return;
         }
         if (buyPrice > sellPrice) {
-            alert('يجب ان يكون سعر البيع اكبر من الشراء');
+            DevExpress.ui.notify('يجب ان يكون سعر البيع اكبر من الشراء', "error", 3000);
             return;
         }
 
@@ -352,9 +348,12 @@
 
 
     async function saveInvoice() {
-         if (tempItems.length === 0) {
-            alert('يجب اضافة صنف واحد علي الاقل');
-            return; // Stop the function execution
+        $('#loadingIndicator').show();
+
+        if (tempItems.length === 0) {
+            DevExpress.ui.notify('يجب اضافة صنف واحد علي الاقل', "error", 3000);
+            $('#loadingIndicator').hide();
+            return;
         }
 
         // Create FormData object
@@ -381,6 +380,7 @@
                 let result = await response.json();
                 if (result.success) {
                     displayMessage('success', result.message);
+                    DevExpress.ui.notify(result.message, "success", 3000);
                     document.getElementById('invoiceForm').reset();
                     tempItems = [];
                     refreshItemsGrid();
@@ -391,13 +391,17 @@
                     var yyyy = today.getFullYear();
                     today = yyyy + '-' + mm + '-' + dd;
                     document.getElementById('purchaseDate').value = today;
+
+                    $('#loadingIndicator').hide();
                 } else {
                     displayMessage('error', result.message);
+                    DevExpress.ui.notify(result.message, "error", 3000);
+                    $('#loadingIndicator').hide();
                 }
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error saving invoice');
+            DevExpress.ui.notify(error, "error", 3000);
+            $('#loadingIndicator').hide();
         }
     }
     refreshItemsGrid();

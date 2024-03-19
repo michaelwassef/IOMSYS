@@ -18,7 +18,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp,pi.SupplierId,pi.BranchId,pi.PaymentMethodId, 
-                pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes
+                pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes, pi.SalesInvoiceId
                 FROM PurchaseInvoices pi
                 LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
                 LEFT JOIN Branches b ON pi.BranchId = b.BranchId
@@ -35,13 +35,13 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp, pi.SupplierId, pi.BranchId, pi.PaymentMethodId,
-                pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes
+                pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes, pi.SalesInvoiceId
                 FROM PurchaseInvoices pi
                 LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
                 LEFT JOIN Branches b ON pi.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON pi.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON pi.UserId = u.UserId
-                WHERE pi.BranchId = @BranchId ORDER BY pi.PurchaseDate DESC";
+                WHERE pi.BranchId = @BranchId ORDER BY pi.PurchaseInvoiceId DESC";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -64,7 +64,8 @@ namespace IOMSYS.Services
                         PurchaseDate,
                         PaidUpDate,
                         IsFullPaidUp,
-                        Notes
+                        Notes,
+                        SalesInvoiceId
                     FROM
                         PurchaseInvoices
                     WHERE
@@ -93,7 +94,8 @@ namespace IOMSYS.Services
                         PurchaseDate,
                         PaidUpDate,
                         IsFullPaidUp,
-                        Notes
+                        Notes,
+                        SalesInvoiceId
                     FROM
                         PurchaseInvoices
                     WHERE
@@ -110,7 +112,7 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp,pi.SupplierId,pi.BranchId,pi.PaymentMethodId, pi.Remainder, s.SupplierName, 
-                b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes
+                b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes, pi.SalesInvoiceId
                 FROM PurchaseInvoices pi
                 LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
                 LEFT JOIN Branches b ON pi.BranchId = b.BranchId
@@ -127,8 +129,8 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertPurchaseInvoiceAsync(PurchaseInvoicesModel purchaseInvoice)
         {
-            var sql = @"INSERT INTO PurchaseInvoices (TotalAmount, PaidUp, Remainder, SupplierId, BranchId, PaymentMethodId, UserId, PurchaseDate, PaidUpDate, IsFullPaidUp, Notes) 
-                        VALUES (@TotalAmount, @PaidUp, @Remainder, @SupplierId, @BranchId, @PaymentMethodId, @UserId, @PurchaseDate, @PaidUpDate, @IsFullPaidUp, @Notes);
+            var sql = @"INSERT INTO PurchaseInvoices (TotalAmount, PaidUp, Remainder, SupplierId, BranchId, PaymentMethodId, UserId, PurchaseDate, PaidUpDate, IsFullPaidUp, Notes, SalesInvoiceId) 
+                        VALUES (@TotalAmount, @PaidUp, @Remainder, @SupplierId, @BranchId, @PaymentMethodId, @UserId, @PurchaseDate, @PaidUpDate, @IsFullPaidUp, @Notes, @SalesInvoiceId);
                         SELECT CAST(SCOPE_IDENTITY() as int);";
             using (var db = _dapperContext.CreateConnection())
             {
@@ -141,6 +143,18 @@ namespace IOMSYS.Services
             var sql = @"UPDATE PurchaseInvoices SET TotalAmount = @TotalAmount, PaidUp = @PaidUp, Remainder = @Remainder, 
                         SupplierId = @SupplierId, BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, UserId = @UserId, 
                         PurchaseDate = @PurchaseDate, PaidUpDate = @PaidUpDate, IsFullPaidUp = @IsFullPaidUp, Notes = @Notes     
+                        WHERE PurchaseInvoiceId = @PurchaseInvoiceId";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.ExecuteAsync(sql, purchaseInvoice).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<int> UpdatePurchaseInvoiceAsync2(PurchaseInvoicesModel purchaseInvoice)
+        {
+            var sql = @"UPDATE PurchaseInvoices SET TotalAmount = @TotalAmount, PaidUp = @PaidUp, Remainder = @Remainder, 
+                        SupplierId = @SupplierId, BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, UserId = @UserId, 
+                        PurchaseDate = @PurchaseDate, PaidUpDate = @PaidUpDate, IsFullPaidUp = @IsFullPaidUp, Notes = @Notes, SalesInvoiceId = @SalesInvoiceId     
                         WHERE PurchaseInvoiceId = @PurchaseInvoiceId";
             using (var db = _dapperContext.CreateConnection())
             {

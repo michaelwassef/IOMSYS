@@ -4,7 +4,9 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>فواتير المبيعات</h1>
+<div class="page-title">
+    <h1>فواتير المبيعات</h1>
+</div>
 
 <div class="row">
     <div class="form-group col-md-3 mb-3">
@@ -12,19 +14,13 @@
         <select id="BranchId" class="form-control"></select>
     </div>
 </div>
-
-<button type="button" onclick="returnProdutsPage()" class="btn btn-primary col-md-3 mx-3">عرض مرتجعات الفروع</button>
+<div class="row justify-content-center">
+<button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">عرض مرتجعات الفروع</button>
+</div>
 
 @(Html.DevExtreme().DataGrid<SalesInvoicesModel>()
     .ID("gridContainer")
-    .DataSource(d => d
-        .Mvc()
-        .Controller("SalesInvoices")
-        .LoadAction("LoadSalesInvoicesByBranch")
-        .UpdateAction("UpdateSaleInvoice")
-        .DeleteAction("DeleteSaleInvoice")
-        .Key("SalesInvoiceId")
-    ).OnToolbarPreparing("onToolbarPreparing")
+    .OnToolbarPreparing("onToolbarPreparing")
     .Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
@@ -33,12 +29,6 @@
      .Editing(e => e
         .Mode(GridEditMode.Popup)
         .AllowDeleting(true)
-        @*.AllowUpdating(true)*@
-        .Popup(p => p
-                .Title("فاتورة مبيعات")
-                .ShowTitle(true)
-                .Width(800)
-                .Height(700))
     )
     .RtlEnabled(true)
     .SearchPanel(s => s
@@ -177,10 +167,12 @@
     }
 
     async function generatePDFReport(invoiceId) {
+        $('#loadingIndicator').show();
         try {
             const response = await fetch(`/SalesInvoices/SaleInvoiceReport?invoiceId=${invoiceId}`);
             if (!response.ok) {
-                console.error('Failed to generate PDF report');
+                DevExpress.ui.notify('حدث خطأ اثناء فتح الفاتوره', "error", 3000);
+                $('#loadingIndicator').hide();
                 return;
             }
             const blob = await response.blob();
@@ -192,7 +184,7 @@
             a.click();
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error generating PDF report:', error);
+           DevExpress.ui.notify(error, "error", 3000);
         }
     }
 
@@ -385,9 +377,206 @@
             }
             });
 
+
+        $(function () {
+            $("#gridContainer").dxDataGrid({
+                dataSource: new DevExpress.data.CustomStore({
+                    key: "SalesInvoiceId",
+                    load: function (loadOptions) {
+                        var d = $.Deferred();
+                        var params = { branchId: $('#BranchId').val() };
+
+                        $.getJSON('/SalesInvoices/LoadSalesInvoicesByBranch', params)
+                            .done(function (result) { d.resolve(result); })
+                            .fail(function () { d.reject("Data Loading Error"); });
+
+                        return d.promise();
+                    },
+                    onRowUpdating: function (e) {
+                        var oldData = e.oldData;
+                        var newData = e.newData;
+                        e.newData = Object.assign({}, oldData, newData);
+                    },
+                    update: function (key, values) {
+                        return $.ajax({
+                            url: '/SalesInvoices/UpdateSaleInvoice',
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                ...values,
+                                SalesInvoiceId: key,
+                            })
+                        });
+                    },
+                    remove: function (key) {
+                        return $.ajax({
+                            url: '/SalesInvoices/DeleteSaleInvoice?invoiceId=' + encodeURIComponent(key),
+                            method: 'DELETE'
+                        });
+                    }
+                }),
+                showBorders: true,
+                paging: {
+                    pageSize: 30
+                },
+                pager: {
+                    showPageSizeSelector: true,
+                    allowedPageSizes: [10, 25, 50]
+                },
+                selection: {
+                    mode: "multiple"
+                },
+                export: {
+                    enabled: true,
+                    allowExportSelectedData: true
+                },
+                onExporting: exporting,
+                allowColumnResizing: true,
+                columnAutoWidth: true,
+                rtlEnabled: true,
+                searchPanel: {
+                    visible: true,
+                    highlightCaseSensitive: true
+                },
+                groupPanel: { visible: false },
+                rowAlternationEnabled: true,
+                width: "100%",
+                columns: [
+                    {
+                        caption: "استرجاع",
+                        cellTemplate: function (container, options) {
+                            $("<a>").addClass("dx-link")
+                                .text("استرجاع الفاتورة")
+                                .on("click", function () {
+                                    window.location.href = "/SalesInvoices/ReturnInvoice?invoiceId=" + options.data.SalesInvoiceId;
+                                })
+                                .appendTo(container);
+                        }
+                    },
+                    {
+                        dataField: "SalesInvoiceId",
+                        caption: "رقم الفاتورة"
+                    },
+                    {
+                        dataField: "TotalAmount",
+                        caption: "اجمالي الفاتورة بعد الخصم"
+                    },
+                    {
+                        dataField: "TotalDiscount",
+                        caption: "اجمالي الخصم"
+                    },
+                    {
+                        dataField: "PaidUp",
+                        caption: "المدفوع من الفاتورة"
+                    },
+                    {
+                        dataField: "Remainder",
+                        caption: "الباقي من المبلغ"
+                    },
+                    {
+                        dataField: "CustomerId",
+                        caption: "اسم العميل",
+                        allowEditing: false,
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "CustomerId",
+                                loadUrl: "/Customers/LoadCustomers"
+                            }),
+                            valueExpr: "CustomerId",
+                            displayExpr: "CustomerName"
+                        }
+                    },
+                    {
+                        dataField: "Notes",
+                        caption: "ملاحظات"
+                    },
+                    {
+                        dataField: "PaymentMethodId",
+                        caption: "الخزنة",
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "PaymentMethodId",
+                                loadUrl: "/PaymentMethods/LoadPaymentMethods"
+                            }),
+                            valueExpr: "PaymentMethodId",
+                            displayExpr: "PaymentMethodName"
+                        }
+                    },
+                    {
+                        dataField: "SaleDate",
+                        caption: "تاريخ الفاتوره",
+                        dataType: "date"
+                    },
+                    {
+                        dataField: "PaidUpDate",
+                        caption: "تاريخ التحصيل",
+                        dataType: "date"
+                    },
+                    {
+                        dataField: "UserId",
+                        caption: "مدخل الفاتوره",
+                        allowEditing: false,
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "UserId",
+                                loadUrl: "/Users/LoadUsers"
+                            }),
+                            valueExpr: "UserId",
+                            displayExpr: "UserName"
+                        }
+                    },
+                    {
+                        dataField: "BranchId",
+                        caption: "الفرع",
+                        lookup: {
+                            dataSource: DevExpress.data.AspNet.createStore({
+                                key: "BranchId",
+                                loadUrl: "/Branches/LoadBranches"
+                            }),
+                            valueExpr: "BranchId",
+                            displayExpr: "BranchName"
+                        }
+                    },
+                ],
+                onToolbarPreparing: function (e) {
+                    var toolbarItems = e.toolbarOptions.items;
+                    var addButton = {
+                        widget: 'dxButton',
+                        options: {
+                            icon: 'fas fa-plus',
+                            text: 'اضافة فاتورة مبيعات جديدة',
+                            onClick: function () {
+                                window.location.href = '@Url.Action("SalesInvoicesPage", "SalesInvoices")';
+                            }
+                        },
+                        location: 'after',
+                        name: 'addButton'
+                    };
+                    var pdfButton = {
+                        widget: 'dxButton',
+                        options: {
+                            icon: 'fas fa-file-pdf',
+                            text: 'طباعة فاتورة',
+                            onClick: function () {
+                                var selectedRowKeys = $("#gridContainer").dxDataGrid("instance").getSelectedRowKeys();
+                                if (selectedRowKeys.length > 0) {
+                                    var invoiceId = selectedRowKeys[0];
+                                    generatePDFReport(invoiceId);
+                                } else {
+                                    DevExpress.ui.notify("يرجى تحديد فاتورة لإنشاء التقرير", "error", 1500);
+                                }
+                            }
+                        },
+                        location: 'after',
+                        name: 'pdfButton'
+                    };
+                    toolbarItems.push(addButton, pdfButton);
+                }
+            });
+        });
+
         $('#BranchId').change(function () {
             $("#gridContainer").dxDataGrid("instance").refresh();
         });
     });
-
 </script>

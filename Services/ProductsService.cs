@@ -231,110 +231,154 @@ namespace IOMSYS.Services
         //تحركات المخزن
         public async Task<IEnumerable<ProductsModel>> WarehouseMovementsAsync(int BranchId)
         {
-            var sql = @"
-            WITH InventoryMovementsRanked AS (
-                SELECT
-                    IM.MovementId,
-                    IM.ProductId,
-                    CASE 
-                        WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity 
-                        ELSE IM.Quantity 
-                    END AS Quantity,
-                    IM.FromBranchId,
-                    IM.ToBranchId,
-                    IM.MovementDate,
-                    IM.Notes AS MovementNotes,
-                    SZ.SizeName,
-                    CLR.ColorName,
-                    CAT.CategoryName,
-                    PTY.ProductTypeName,
-                    'منقوله بين الفروع' AS RecordType,
-                    ROW_NUMBER() OVER(PARTITION BY IM.ProductId ORDER BY IM.MovementDate DESC) AS RowNum
-                FROM InventoryMovements IM
-                JOIN Products PR ON IM.ProductId = PR.ProductId
-                JOIN Sizes SZ ON IM.SizeId = SZ.SizeId
-                JOIN Colors CLR ON IM.ColorId = CLR.ColorId
-                JOIN Categories CAT ON PR.CategoryId = CAT.CategoryId
-                JOIN ProductTypes PTY ON PR.ProductTypeId = PTY.ProductTypeId
-                WHERE IM.ToBranchId = @BranchId OR IM.FromBranchId = @BranchId
-            ),
-            PurchaseItemsFiltered AS (
-                SELECT
-                    PI.PurchaseItemId,
-                    PI.ProductId,
-                    PI.Quantity,
-                    PI.BuyPrice,
-                    PI.Notes AS PurchaseNotes,
-                    PI.BranchId,
-                    PI.ModDate AS DateAdded,
-                    SZ.SizeName,
-                    CLR.ColorName,
-                    CAT.CategoryName,
-                    PTY.ProductTypeName,
-                    'مشتريات' AS RecordType
-                FROM PurchaseItems PI
-                JOIN Products PR ON PI.ProductId = PR.ProductId
-                JOIN Sizes SZ ON PI.SizeId = SZ.SizeId
-                JOIN Colors CLR ON PI.ColorId = CLR.ColorId
-                JOIN Categories CAT ON PR.CategoryId = CAT.CategoryId
-                JOIN ProductTypes PTY ON PR.ProductTypeId = PTY.ProductTypeId
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM InventoryMovements
-                    WHERE ProductId = PI.ProductId AND ToBranchId = @BranchId
-                )
-                AND PI.BranchId = @BranchId
-            ),
-            MovementsSelected AS (
-                SELECT
-                    M.MovementId AS ID,
-                    M.ProductId,
-                    M.Quantity,
-                    NULL AS BuyPrice,
-                    M.MovementNotes,
-                    CASE WHEN M.ToBranchId = @BranchId THEN M.ToBranchId ELSE M.FromBranchId END AS BranchId,
-                    M.MovementDate,
-                    M.SizeName,
-                    M.ColorName,
-                    M.CategoryName,
-                    M.ProductTypeName,
-                    M.RecordType
-                FROM InventoryMovementsRanked M
-                WHERE M.RowNum = 1
-                AND (M.ToBranchId = @BranchId OR M.FromBranchId = @BranchId)
-            )
-            SELECT
-                P.PurchaseItemId AS ID,
-                P.ProductId,
-                P.Quantity,
-                P.BuyPrice,
-                P.PurchaseNotes AS Notes,
-                P.BranchId,
-                P.DateAdded,
-                P.SizeName,
-                P.ColorName,
-                P.CategoryName,
-                P.ProductTypeName,
-                P.RecordType
-            FROM PurchaseItemsFiltered P
-            UNION ALL
-            SELECT
-                M.ID,
-                M.ProductId,
-                M.Quantity,
-                M.BuyPrice,
-                M.MovementNotes AS Notes,
-                M.BranchId,
-                M.MovementDate,
-                M.SizeName,
-                M.ColorName,
-                M.CategoryName,
-                M.ProductTypeName,
-                M.RecordType
-            FROM MovementsSelected M
-            ORDER BY DateAdded DESC;
-            ";
+            //var sql = @"
+            //WITH CombinedData AS (
+            //    SELECT
+            //        'مشتريات' AS RecordType,
+            //        PI.ProductId,
+            //        P.ProductName,
+            //        PI.SizeId,
+            //        S.SizeName,
+            //        PI.ColorId,
+            //        C.ColorName,
+            //        CAT.CategoryName,
+            //        PT.ProductTypeName,
+            //        PI.Quantity,
+            //        PI.BranchId,
+            //        PI.ModDate AS DateAdded
+            //    FROM PurchaseItems PI
+            //    INNER JOIN Products P ON PI.ProductId = P.ProductId
+            //    INNER JOIN Sizes S ON PI.SizeId = S.SizeId
+            //    INNER JOIN Colors C ON PI.ColorId = C.ColorId
+            //    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+            //    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+            //    WHERE PI.BranchId = @BranchId
+            //    AND NOT EXISTS (
+            //        SELECT 1
+            //        FROM InventoryMovements IM
+            //        WHERE IM.PurchaseInvoiceId IS NOT NULL
+            //        AND IM.ProductId = PI.ProductId
+            //        AND IM.SizeId = PI.SizeId
+            //        AND IM.ColorId = PI.ColorId
+            //        AND IM.ToBranchId = PI.BranchId
+            //    )
 
+            //    UNION ALL
+
+            //    SELECT
+            //        CASE 
+            //            WHEN IM.ToBranchId = @BranchId THEN 'منتجات منقوله للفرع'
+            //            WHEN IM.FromBranchId = @BranchId THEN 'منتجات منقوله من الفرع'
+            //            ELSE NULL
+            //        END AS RecordType,
+            //        IM.ProductId,
+            //        P.ProductName,
+            //        IM.SizeId,
+            //        S.SizeName,
+            //        IM.ColorId,
+            //        C.ColorName,
+            //        CAT.CategoryName,
+            //        PT.ProductTypeName,
+            //        CASE 
+            //            WHEN IM.ToBranchId = @BranchId THEN IM.Quantity
+            //            WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity
+            //            ELSE 0
+            //        END AS Quantity,
+            //        CASE 
+            //            WHEN IM.ToBranchId = @BranchId THEN IM.ToBranchId
+            //            WHEN IM.FromBranchId = @BranchId THEN IM.FromBranchId
+            //            ELSE NULL
+            //        END AS BranchId,
+            //        IM.MovementDate AS DateAdded
+            //    FROM InventoryMovements IM
+            //    INNER JOIN Products P ON IM.ProductId = P.ProductId
+            //    INNER JOIN Sizes S ON IM.SizeId = S.SizeId
+            //    INNER JOIN Colors C ON IM.ColorId = C.ColorId
+            //    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+            //    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+            //    WHERE (IM.ToBranchId = @BranchId OR IM.FromBranchId = @BranchId)
+            //    AND IM.IsApproved = 1
+            //)
+            //SELECT *
+            //FROM CombinedData
+            //ORDER BY DateAdded DESC;";
+            var sql = @"
+                WITH CombinedData AS (
+                    SELECT
+                        CASE 
+                            WHEN PII.PurchaseItemId IS NULL THEN 'بداية المخزن'
+                            ELSE 'مشتريات'
+                        END AS RecordType,
+                        PI.ProductId,
+                        P.ProductName,
+                        PI.SizeId,
+                        S.SizeName,
+                        PI.ColorId,
+                        C.ColorName,
+                        CAT.CategoryName,
+                        PT.ProductTypeName,
+                        PI.Quantity,
+                        PI.BranchId,
+                        PI.ModDate AS DateAdded,
+                        pi.Notes AS Notes
+                    FROM PurchaseItems PI
+                    LEFT JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                    INNER JOIN Products P ON PI.ProductId = P.ProductId
+                    INNER JOIN Sizes S ON PI.SizeId = S.SizeId
+                    INNER JOIN Colors C ON PI.ColorId = C.ColorId
+                    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                    WHERE PI.BranchId = @BranchId
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM InventoryMovements IM
+                        WHERE IM.PurchaseInvoiceId IS NOT NULL
+                        AND IM.ProductId = PI.ProductId
+                        AND IM.SizeId = PI.SizeId
+                        AND IM.ColorId = PI.ColorId
+                        AND IM.ToBranchId = PI.BranchId
+                    )
+
+                    UNION ALL
+
+                    SELECT
+                        CASE 
+                            WHEN IM.ToBranchId = @BranchId THEN 'منتجات منقوله للفرع'
+                            WHEN IM.FromBranchId = @BranchId THEN 'منتجات منقوله من الفرع'
+                            ELSE NULL
+                        END AS RecordType,
+                        IM.ProductId,
+                        P.ProductName,
+                        IM.SizeId,
+                        S.SizeName,
+                        IM.ColorId,
+                        C.ColorName,
+                        CAT.CategoryName,
+                        PT.ProductTypeName,
+                        CASE 
+                            WHEN IM.ToBranchId = @BranchId THEN IM.Quantity
+                            WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity
+                            ELSE 0
+                        END AS Quantity,
+                        CASE 
+                            WHEN IM.ToBranchId = @BranchId THEN IM.ToBranchId
+                            WHEN IM.FromBranchId = @BranchId THEN IM.FromBranchId
+                            ELSE NULL
+                        END AS BranchId,
+                        IM.MovementDate AS DateAdded,
+                        IM.Notes AS Notes
+                    FROM InventoryMovements IM
+                    INNER JOIN Products P ON IM.ProductId = P.ProductId
+                    INNER JOIN Sizes S ON IM.SizeId = S.SizeId
+                    INNER JOIN Colors C ON IM.ColorId = C.ColorId
+                    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                    WHERE (IM.ToBranchId = @BranchId OR IM.FromBranchId = @BranchId)
+                    AND IM.IsApproved = 1
+                )
+                SELECT *
+                FROM CombinedData
+                ORDER BY DateAdded DESC;";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<ProductsModel>(sql, new { BranchId }).ConfigureAwait(false);

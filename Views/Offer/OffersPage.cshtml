@@ -3,7 +3,9 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>العروض</h1>
+<div class="page-title">
+    <h1>العروض</h1>
+</div>
 
 <button type="button" id="btnAddOfferDetail" class="btn btn-primary">اضافة تفاصيل العرض</button>
 
@@ -163,19 +165,18 @@
         $('#formAddOfferDetail').submit(function (event) {
             event.preventDefault();
 
-            var offerDetailData = $(this).serialize(); // Serialize form data
-            console.log("Serialized data:", offerDetailData); // Add this line for debugging
+            var offerDetailData = $(this).serialize();
             $.ajax({
                 type: 'POST',
                 url: '/Offer/CreateOfferDetail',
                 data: offerDetailData,
                 success: function (response) {
-                    alert('Offer detail added successfully.');
+                    DevExpress.ui.notify("تم اضافة تفاصيل العرض بنجاح", "success", 3000);
                     $('#addOfferDetailModal').modal('hide');
                 },
                 error: function (xhr, status, error) {
                     var errorMessage = xhr.status + ': ' + xhr.statusText;
-                    alert('Error - ' + errorMessage);
+                    DevExpress.ui.notify('Error - ' + errorMessage, "error", 3000);
                 }
             });
 

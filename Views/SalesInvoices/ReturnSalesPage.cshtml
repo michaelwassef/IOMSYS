@@ -4,7 +4,9 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>مرتجعات الفروع</h1>
+<div class="page-title">
+    <h1>مرتجعات الفروع</h1>
+</div>
 
 <div class="row">
     <div class="form-group col-md-3 mb-3">
@@ -34,7 +36,7 @@
                         select.add(option);
                     });
                     if (data.length > 0) {
-                        loadGridData(data[0].BranchId); // Load grid for the first branch initially
+                        loadGridData(data[0].BranchId);
                     }
                 })
                 .catch(error => console.error('Unable to load branches.', error));

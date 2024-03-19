@@ -10,5 +10,7 @@
         public byte[]? BranchLogo { get; set; }
         public int? BranchMangerId { get; set; }
         public string? Password { get; set; }
+        public int SupplierId { get; set; }
+        public int CustomerId { get; set; }
     }
 }

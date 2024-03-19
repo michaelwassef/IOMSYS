@@ -32,6 +32,41 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<PurchaseInvoicesModel>> SelectSupplierInvoicesByIdAsync(int supplierId)
+        {
+            var sql = @"
+                SELECT pi.PurchaseInvoiceId, pi.TotalAmount, pi.PaidUp, pi.SupplierId, pi.BranchId, pi.PaymentMethodId,
+                pi.Remainder, s.SupplierName, b.BranchName, pm.PaymentMethodName, u.UserName, pi.PurchaseDate, pi.UserId, pi.PaidUpDate, pi.IsFullPaidUp, pi.Notes, pi.SalesInvoiceId
+                FROM PurchaseInvoices pi
+                LEFT JOIN Suppliers s ON pi.SupplierId = s.SupplierId
+                LEFT JOIN Branches b ON pi.BranchId = b.BranchId
+                LEFT JOIN PaymentMethods pm ON pi.PaymentMethodId = pm.PaymentMethodId
+                LEFT JOIN Users u ON pi.UserId = u.UserId
+                WHERE pi.SupplierId = @SupplierId ORDER BY pi.PurchaseInvoiceId DESC";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<PurchaseInvoicesModel>(sql, new { SupplierId = supplierId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<dynamic> SelectSupplierSumsByIdAsync(int supplierId)
+        {
+            var sql = @"
+            SELECT 
+                COALESCE(SUM(pi.TotalAmount), 0) AS TotalAmountSum, 
+                COALESCE(SUM(pi.PaidUp), 0) AS PaidUpSum, 
+                COALESCE(SUM(pi.Remainder), 0) AS RemainderSum
+            FROM PurchaseInvoices pi
+            WHERE pi.SupplierId = @SupplierId;
+            ";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                var result = await db.QuerySingleOrDefaultAsync(sql, new { SupplierId = supplierId }).ConfigureAwait(false);
+                return result;
+            }
+        }
+
         public async Task<int> InsertSupplierAsync(SuppliersModel supplier)
         {
             var sql = @"INSERT INTO Suppliers (SupplierName, PhoneNumber1, PhoneNumber2, Address) 

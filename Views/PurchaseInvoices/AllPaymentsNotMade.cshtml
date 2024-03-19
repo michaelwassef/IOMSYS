@@ -4,7 +4,9 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1> جميع المدفوعات المؤجله</h1>
+<div class="page-title">
+    <h1> جميع المدفوعات المؤجله</h1>
+</div>
 
 <div class="row">
     <div class="form-group col-md-3 mb-3">
@@ -34,8 +36,6 @@
                     var deferred = $.Deferred();
                     var branchId = $('#BranchId').val();
                     var url = '/PurchaseInvoices/LoadAllNotPaidPurchaseInvoicesByBranch?branchId=' + branchId;
-
-                    console.log('URL:', url);
 
                     $.getJSON(url)
                         .done(function (result) {

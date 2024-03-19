@@ -16,3 +16,35 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        grid-template-columns: 1fr; /* Stack items in a single column */
+    }
+
+    .supplier-select, .dashboard-item {
+        grid-column: span 1; /* Ensure all items fill the container */
+    }
+
+    .dashboard-item {
+        padding: 15px; /* Slightly reduce padding for more space efficiency */
+    }
+
+    .summary-title, .dashboard-label {
+        font-size: 0.9rem; /* Adjust font size for smaller screens */
+    }
+
+    .summary-value {
+        font-size: 1.2rem; /* Adjust summary values font size for readability */
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-select, .dashboard-label {
+        font-size: 0.8rem; /* Further reduce font size for very small screens */
+    }
+
+    .summary-title {
+        margin-bottom: 3px; /* Reduce spacing for a more compact layout */
+    }
+}

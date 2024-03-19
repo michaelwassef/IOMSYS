@@ -11,6 +11,7 @@ namespace IOMSYS.IServices
         Task<IEnumerable<PurchaseInvoicesModel>> GetAllNotPaidPurchaseInvoicesByBranchAsync(int BranchId);
         Task<int> InsertPurchaseInvoiceAsync(PurchaseInvoicesModel purchaseInvoice);
         Task<int> UpdatePurchaseInvoiceAsync(PurchaseInvoicesModel purchaseInvoice);
+        Task<int> UpdatePurchaseInvoiceAsync2(PurchaseInvoicesModel purchaseInvoice);
         Task<int> DeletePurchaseInvoiceAsync(int purchaseInvoiceId);
         Task<int> GetLastInvoiceIdAsync();
     }

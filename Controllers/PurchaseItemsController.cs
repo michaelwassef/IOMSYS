@@ -47,6 +47,10 @@ namespace IOMSYS.Controllers
         [HttpPost]
         public async Task<IActionResult> AddNewPurchaseItem([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission2 = await _permissionsService.HasPermissionAsync(userId, "PurchaseItems", "AddNewPurchaseItem");
+            if (!hasPermission2)
+            { return Json(new { success = false, message = "ليس لديك صلاحية للاضافة" }); }
             try
             {
                 var values = formData["values"];
@@ -58,7 +62,6 @@ namespace IOMSYS.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
                 int? BranchId = await _branchesService.SelectBranchIdByManagerIdAsync(userId);
 
                 if (newPurchaseItems.BranchId != BranchId)

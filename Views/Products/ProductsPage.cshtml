@@ -3,17 +3,17 @@
     Layout = "_DevExtremeLayout";
 }
 
-<h1>بيانات المنتجات</h1>
-<div>
-@*    <button class="btn btn-primary mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
-*@    <button class="btn btn-primary mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
+<div class="page-title">
+    <h1>المنتجات</h1>
 </div>
-
+@*<div>
+    <button class="btn btn-primary mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
+    <button class="btn btn-primary mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
+</div>*@
 
 @(Html.DevExtreme().DataGrid<ProductsModel>()
     .ID("gridContainer")
     .DataSource(d => d.Mvc().Controller("Products").LoadAction("LoadProducts").InsertAction("AddNewProduct").UpdateAction("UpdateProduct").DeleteAction("DeleteProduct").Key("ProductId"))
-  .OnToolbarPreparing("onToolbarPreparing")
     .Selection(s => s.Mode(SelectionMode.Multiple))
     .Export(e => e.Enabled(true).AllowExportSelectedData(true))
     .OnExporting("exporting")
@@ -40,6 +40,8 @@
         columns.AddFor(m => m.Notes).Caption("ملاحظات");
         columns.AddFor(m => m.CategoryId).Caption("التصنيف").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories")).ValueExpr("CategoryId").DisplayExpr("CategoryName"));
         columns.AddFor(m => m.ProductTypeId).Caption("النوع").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes")).ValueExpr("ProductTypeId").DisplayExpr("ProductTypeName"));
+
+
        @* columns.AddFor(m => m.ProductPhoto).Caption("صورة المنتج").EditCellTemplate(@<text>
             @(Html.DevExtreme().FileUploader().ID("fileUploader").SelectButtonText("اختر صورة المنتج").Accept("image/*"))
             </text>);*@
@@ -48,7 +50,7 @@
     .HeaderFilter(f => f.Visible(true))
 )
 
-@*<div id="productDetailsPopup" style="display:none;">
+<div id="productDetailsPopup" style="display:none;">
     <div class="row">
         <div class="form-group mb-3">
             <label for="ProductId">اسم المنتج</label>
@@ -90,7 +92,7 @@
     </div>
 
 </div>
-*@
+
 <div id="moveInventoryPopup" style="display:none;">
     <div>
         <form id="moveInventoryForm">
@@ -274,13 +276,13 @@
 
         // Check if the destination is not the same as the source
         if (item.FromBranchId === item.ToBranchId) {
-            alert('The destination branch must be different from the source branch.');
+            DevExpress.ui.notify("لا يمكن النقل الي نفس الفرع", "error", 3000);
             return;
         }
 
         // Perform validation
         if (!validateTransferItem(item)) {
-            alert('Please fill in all fields and ensure quantity is a valid number.');
+            DevExpress.ui.notify("تاكد من ملاء جميع الخانات", "error", 3000);
             return;
         }
 
@@ -290,7 +292,7 @@
             const availableQtyFromBranch = await response.json();
 
             if (availableQtyFromBranch < item.Quantity) {
-                alert('The available quantity in the source branch is not sufficient for the transfer.');
+                DevExpress.ui.notify("لا توجد كمية كافية للنقل", "error", 3000);
                 return;
             }
 
@@ -322,8 +324,10 @@
     }
 
     async function moveInventory() {
+        $('#loadingIndicator').show();
         if (transferItems.length === 0) {
-            alert('Please add at least one item to transfer.');
+             DevExpress.ui.notify("اضف صنف واحد علي الاقل للنقل", "error", 3000);
+            $('#loadingIndicator').hide();
             return;
         }
 
@@ -351,15 +355,19 @@
             const responseData = await response.json();
 
             if (!responseData.success) {
-                alert(responseData.message);
+                DevExpress.ui.notify(responseData.message, "error", 3000);
+                $('#loadingIndicator').hide();
                 return;
             }
 
-            alert(responseData.message);
+            DevExpress.ui.notify(responseData.message, "success", 3000);
             transferItems = [];
             displayTransferItems() ;
     } catch (error) {
-            alert(responseData.message);
+            DevExpress.ui.notify(responseData.message, "error", 3000);
+        }
+        finally {
+            $('#loadingIndicator').hide(); 
         }
     }
 
@@ -417,10 +425,7 @@
         });
     });
 
-
-    // Function to display a message
     function displayMessage(type, message) {
-        console.log('Displaying message:', type, message); // Add this line for debugging
         const messageContainer = document.createElement("div");
         messageContainer.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
         messageContainer.role = "alert";
@@ -481,12 +486,39 @@
         var productDetailsPopup = $("#productDetailsPopup").dxPopup({
             title: "إدخال إلى المخزن",
             visible: false,
-            width: 800,
-            height: 500,
+            width: calculatePopupWidth(),
+            height: calculatePopupHeight(),
             onShown: function () {
                 initSelectBoxes();
             }
         }).dxPopup("instance");
+
+        function calculatePopupWidth() {
+            var windowWidth = $(window).width();
+
+            if (windowWidth < 768) {
+                return "90%";
+            } else {
+                return 600;
+            }
+        }
+
+        function calculatePopupHeight() {
+            var windowHeight = $(window).height();
+            if (windowHeight < 768) {
+                return "90%";
+            } else {
+                return 500;
+            }
+        }
+
+
+        $(window).resize(function () {
+            productDetailsPopup.option({
+                width: calculatePopupWidth(),
+                height: calculatePopupHeight()
+            });
+        });
 
         // Array to hold invoice items
         var invoiceItems = [];
@@ -537,10 +569,10 @@
                     $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
                     clearFormFields();
                 } else {
-                    alert('Quantity must be a non-zero value.');
+                  DevExpress.ui.notify("الكمية يجب ان لا تكون = 0","error", 3000);
                 }
             } else {
-                alert('Please fill in all fields.');
+                DevExpress.ui.notify("برجاء ملاء جميع البيانات","error", 3000);
             }
         };
 
@@ -559,8 +591,10 @@
         }
 
         window.saveInvoice = async function () {
+            $('#loadingIndicator').show();
             if (invoiceItems.length === 0) {
-                displayMessage('error', "يرجى إضافة منتج واحد على الأقل قبل الحفظ.");
+                $('#loadingIndicator').hide();
+                 DevExpress.ui.notify("يرجى إضافة منتج واحد على الأقل قبل الحفظ.","error", 3000);
                 return;
             }
 
@@ -577,15 +611,17 @@
                     const result = await response.json();
 
                     if (!result.success) {
-                        displayMessage('error', result.message);
+                        DevExpress.ui.notify(result.message, "error", 3000);
+                        $('#loadingIndicator').hide();
                         return;
                     }
 
-                    displayMessage('success', result.message);
+                    DevExpress.ui.notify(result.message, "success", 3000);
+                    $('#loadingIndicator').hide();
 
                 } catch (error) {
-                    console.error('Could not save the invoice item:', error);
-                    displayMessage('error', "حدث خطأ أثناء الحفظ، يرجى المحاولة مرة أخرى.");
+                    DevExpress.ui.notify(error, "error", 3000);
+                    $('#loadingIndicator').hide();
                     return;
                 }
             }
@@ -608,24 +644,6 @@
             });
         });
     }
-
-    function onToolbarPreparing(e) {
-        var toolbarItems = e.toolbarOptions.items;
-        var customButton = {
-            widget: 'dxButton',
-            options: {
-                icon: 'fas fa-plus',
-                text: 'اضافة تصنيف جديد',
-                onClick: function () {
-                    window.location.href = '@Url.Action("CategoriesPage", "Categories")';
-                }
-            },
-            location: 'after',
-            name: 'customButton'
-        };
-        toolbarItems.push(customButton);
-    }
-
 </script>
 
 <style>
