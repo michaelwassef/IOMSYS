@@ -18,13 +18,12 @@
 <div class="row justify-content-center">
     <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
     <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
+    <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="showfactoryPopup()"> تصنيع </button>
     <button type="button" class="btn col-md-2 btn-primary btn-block my-1 mx-1" data-toggle="modal" data-target="#dataGridPopup">
         المخزن المعلق <span id="dataCountBadge" class="custom-badge-danger mx-1"></span>
     </button>
     <button type="button" onclick="printreportofwarehouse()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">عرض الجرد المجمع اليومي</button>
 </div>
-
-
 
 <div class="modal fade" id="dataGridPopup" tabindex="-1" role="dialog" aria-labelledby="dataGridPopupLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
@@ -48,7 +47,7 @@
     </div>
 </div>
 
-<div id="productDetailsPopup" style="display:none;">
+<div class="modal fade" id="productDetailsPopup" tabindex="-1" role="dialog" aria-labelledby="productDetailsPopupLabel" aria-hidden="true">
     <div class="row">
         <div class="form-group mb-3">
             <label for="ProductId">اسم المنتج</label>
@@ -88,10 +87,9 @@
         <button type="button" class="btn btn-secondary mx-3" onclick="closePopup()">إغلاق</button>
         <button type="button" class="btn btn-success" onclick="saveInvoice()">حفظ</button>
     </div>
-
 </div>
 
-<div id="moveInventoryPopup" style="display:none;">
+<div class="modal fade" id="moveInventoryPopup" tabindex="-1" role="dialog" aria-labelledby="moveInventoryPopupLabel" aria-hidden="true">
     <div>
         <form id="moveInventoryForm">
             <div class="form-group">
@@ -128,11 +126,61 @@
             <div>
                 <div id="transferItemsGrid" class="my-3"></div>
             </div>
-            <div class="my-3">
-                <button type="button" class="btn btn-secondary mx-3" onclick="closePopup2()">إغلاق</button>
-                <button type="button" class="btn btn-success" onclick="moveInventory()">تأكيد النقل</button>
+            <div class="my-4 d-flex flex-column align-items-start">
+                <div class="d-flex justify-content-center w-100">
+                    <div class="form-group form-check mx-2">
+                        <input type="checkbox" class="form-check-input" id="makeInvoice">
+                        <label class="form-check-label" for="makeInvoice" style="user-select: none; cursor: pointer;">إنشاء فاتورة</label>
+                    </div>
+                    <button type="button" class="btn btn-success mx-2" onclick="moveInventory()">تأكيد النقل</button>
+                    <button type="button" class="btn btn-secondary mx-2" onclick="closePopup2()">إغلاق</button>
+                </div>
             </div>
+
         </form>
+    </div>
+</div>
+
+<div class="modal fade" id="factoryPopup" tabindex="-1" role="dialog" aria-labelledby="productDetailsPopupLabel" aria-hidden="true">
+    <div class="row">
+        <div class="form-group mb-3">
+            <label for="ProductId3">اسم المنتج</label>
+            <select id="ProductId3" class="form-control"  onchange="productChanged3()" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="SizeId3">المقاس</label>
+            <select id="SizeId3" class="form-control" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="ColorId3">اللون</label>
+            <select id="ColorId3" class="form-control" required></select>
+        </div>
+        <div class="form-group mb-3">
+            <label for="BranchId3">اسم الفرع</label>
+            <select id="BranchId3" class="form-control" required></select>
+            <div id="availableQtyDisplay3" class="text-primary mt-2"></div>
+        </div>
+        <div class="form-group mb-3">
+            <label for="Quantity3">الكمية</label>
+            <input type="number" id="Quantity3" class="form-control" required />
+        </div>
+        <div class="form-group mb-3">
+            <label for="Notes3">ملاحظات</label>
+            <input type="text" id="Notes3" class="form-control" required />
+        </div>
+        <div class="form-group mb-3">
+            <button type="button" class="btn btn-primary mx-3" onclick="addItemToGrid3()">إضافة</button>
+        </div>
+        <div>
+            <div id="invoiceItemsGrid3" class="my-3"></div>
+        </div>
+    </div>
+
+    <div class="mb-3" id="alertPlaceholder"></div>
+
+    <div class="my-3">
+        <button type="button" class="btn btn-secondary mx-3" onclick="closePopup3()">إغلاق</button>
+        <button type="button" class="btn btn-success" onclick="saveInvoice3()">حفظ</button>
     </div>
 </div>
 
@@ -204,16 +252,19 @@
     };
 
     async function printreportofwarehouse() {
+        $('#loadingIndicator').show();
         try {
             const branchId = document.getElementById('BranchId2').value;
             if (!branchId) {
                 DevExpress.ui.notify("برجاء اختيار فرع اولا", "error", 3000);
+                $('#loadingIndicator').hide();
                 return;
             }
 
             const response = await fetch(`/Products/TotalBranchInventoryReport?BranchId=${branchId}`);
             if (!response.ok) {
                 throw new Error(`Failed to fetch PDF content: ${response.statusText}`);
+                $('#loadingIndicator').hide();
             }
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
@@ -224,15 +275,19 @@
                     try {
                         pdfWindow.focus(); 
                         pdfWindow.print();
+                        $('#loadingIndicator').hide();
                     } catch (e) {
                         console.error("Error attempting to print:", e);
+                        $('#loadingIndicator').hide();
                     }
                 };
             } else {
                 throw new Error('Failed to open new window. Please check your popup blocker settings.');
+                $('#loadingIndicator').hide();
             }
         } catch (error) {
             DevExpress.ui.notify(error, "error", 3000);
+            $('#loadingIndicator').hide();
         }
     }
 
@@ -513,27 +568,26 @@
 
 <script>
     window.closePopup2 = function () {
-        $("#moveInventoryPopup").dxPopup("hide");
-    };
+        $("#moveInventoryPopup").dxPopup("instance").hide();
+        transferItems = [];
+        clearTransferForm();
+        $("#transferItemsGrid").dxDataGrid("instance").option('dataSource', transferItems);
+     };
 
     $(document).ready(function () {
-        // Shared event handler for product, size, color changes
         $('#productId, #sizeId, #colorId').change(function () {
-            // Fetch for both branches if they are selected
             var productId = $('#productId').val();
             var sizeId = $('#sizeId').val();
             var colorId = $('#colorId').val();
             var fromBranchId = $('#fromBranch').val();
             var toBranchId = $('#toBranch').val();
 
-            // Fetch available quantity for the fromBranch if all necessary selections are made
             if (productId && sizeId && colorId && fromBranchId) {
                 fetchAvailableQuantity(productId, sizeId, colorId, fromBranchId, '#availableQtyDisplay');
             } else {
                 $('#availableQtyDisplay').text(`الكمية المتاحة: 0`);
             }
 
-            // Fetch available quantity for the toBranch if all necessary selections are made
             if (productId && sizeId && colorId && toBranchId) {
                 fetchAvailableQuantity(productId, sizeId, colorId, toBranchId, '#availableQtyDisplay2');
             } else {
@@ -541,19 +595,15 @@
             }
         });
 
-        // Change event for fromBranch and toBranch to update their available quantity display
         $('#fromBranch, #toBranch').change(function () {
-            // Trigger the change event for the product to re-fetch for both branches
             $('#productId').change();
         });
-
     });
 
     document.addEventListener('DOMContentLoaded', (event) => {
         document.getElementById('addTransferItemButton').addEventListener('click', addItemToTransferList);
     });
 
-    // Updated function to fetch available quantity and specify the display element
     async function fetchAvailableQuantity(productId, sizeId, colorId, branchId, displayElement) {
         try {
             const response = await fetch(`/Products/GetAvailable?productId=${productId}&sizeId=${sizeId}&colorId=${colorId}&branchId=${branchId}`);
@@ -565,7 +615,6 @@
         }
     }
 
-    // Function to populate dropdowns
     async function populateDropdown(url, elementId, valueField, textField, prevSelectedValue) {
         try {
             const response = await fetch(url);
@@ -633,7 +682,6 @@
 
     var transferItems = [];
 
-    // Function to add an item to the transfer list
     async function addItemToTransferList(event) {
         event.preventDefault();
 
@@ -644,7 +692,6 @@
             FromBranchId: $('#fromBranch').val(),
             ToBranchId: $('#toBranch').val(),
             Quantity: parseInt($('#quantity').val(), 10),
-            Notes: $('#notes').val()
         };
 
         // Check if the destination is not the same as the source
@@ -713,7 +760,8 @@
                 ToBranchId: item.ToBranchId,
                 Quantity: item.Quantity,
                 Notes: item.Notes,
-            }))
+            })),
+            makeInvoice: $('#makeInvoice').is(':checked')
         };
 
         try {
@@ -749,7 +797,6 @@
     $(document).ready(function () {
         initializeItemsGrid();
         $('#ProductId, #SizeId, #ColorId, #fromBranch').change(function () {
-            // Get the current selected values
             var productId = $('#ProductId').val();
             var sizeId = $('#SizeId').val();
             var colorId = $('#ColorId').val();
@@ -777,7 +824,7 @@
             if (windowWidth < 768) {
                 return "90%";
             } else {
-                return 600;
+                return 730;
             }
         }
 
@@ -812,17 +859,33 @@
         alertPlaceholder.appendChild(messageContainer);
     }
 
-    // Function to initialize invoice items grid
     function initializeItemsGrid() {
         $("#invoiceItemsGrid").dxDataGrid({
             dataSource: invoiceItems,
             columns: [
-                { dataField: "ProductId", caption: "اسم المنتج" },
-                { dataField: "SizeId", caption: "المقاس" },
-                { dataField: "ColorId", caption: "اللون" },
+                { dataField: "ProductId", caption: "المنتج",
+                  lookup: { dataSource: { load: function () { return $.ajax({url: "/Products/LoadProducts",dataType: "json"});}},valueExpr: "ProductId",displayExpr: "ProductName"}                
+                },
+                { dataField: "SizeId", caption: "المقاس",
+                  lookup: { dataSource: { load: function () { return $.ajax({ url: "/Sizes/LoadSizes", dataType: "json" }); }}, valueExpr: "SizeId", displayExpr: "SizeName" }
+                },
+                { dataField: "ColorId", caption: "اللون",
+                  lookup: { dataSource: { load: function () { return $.ajax({ url: "/Colors/LoadColors", dataType: "json" }); }}, valueExpr: "ColorId", displayExpr: "ColorName" }
+                },
                 { dataField: "Quantity", caption: "الكمية" },
-                { dataField: "BranchId", caption: "الفرع" }
-            ],
+                { dataField: "BranchId", caption: "الفرع",
+                  lookup: { dataSource: { load: function () { return $.ajax({ url: "/Branches/LoadBranches", dataType: "json" }); }}, valueExpr: "BranchId", displayExpr: "BranchName" }
+                },
+            ],        
+            editing: {
+                allowDeleting: true,
+                texts: {
+                    confirmDeleteMessage: 'هل أنت متأكد من أنك تريد حذف هذا العنصر؟'
+                }
+            },
+            columnAutoWidth: true,
+            width: "100%",
+            rtlEnabled: true,
         });
     }
 
@@ -830,17 +893,38 @@
         $("#transferItemsGrid").dxDataGrid({
             dataSource: invoiceItems,
             columns: [
-                { dataField: "ProductId", caption: "اسم المنتج" },
-                { dataField: "SizeId", caption: "المقاس" },
-                { dataField: "ColorId", caption: "اللون" },
+                {
+                    dataField: "ProductId", caption: "المنتج",
+                    lookup: { dataSource: { load: function () { return $.ajax({ url: "/Products/LoadProducts", dataType: "json" }); } }, valueExpr: "ProductId", displayExpr: "ProductName" }
+                },
+                {
+                    dataField: "SizeId", caption: "المقاس",
+                    lookup: { dataSource: { load: function () { return $.ajax({ url: "/Sizes/LoadSizes", dataType: "json" }); } }, valueExpr: "SizeId", displayExpr: "SizeName" }
+                },
+                {
+                    dataField: "ColorId", caption: "اللون",
+                    lookup: { dataSource: { load: function () { return $.ajax({ url: "/Colors/LoadColors", dataType: "json" }); } }, valueExpr: "ColorId", displayExpr: "ColorName" }
+                },
                 { dataField: "Quantity", caption: "الكمية" },
-                { dataField: "FromBranchId", caption: "من فرع" },
-                { dataField: "ToBranchId", caption: "الي فرع" }
+                { dataField: "FromBranchId", caption: "من فرع" ,
+                  lookup: { dataSource: { load: function () { return $.ajax({ url: "/Branches/LoadBranches", dataType: "json" }); }}, valueExpr: "BranchId", displayExpr: "BranchName" }
+                },
+                { dataField: "ToBranchId", caption: "الي فرع" ,
+                  lookup: { dataSource: { load: function () { return $.ajax({ url: "/Branches/LoadBranches", dataType: "json" }); }}, valueExpr: "BranchId", displayExpr: "BranchName" }
+                }
             ],
+            editing: {
+                allowDeleting: true,
+                texts: {
+                    confirmDeleteMessage: 'هل أنت متأكد من أنك تريد حذف هذا العنصر؟'
+                }
+            },
+            columnAutoWidth: true,
+            width: "100%",
+            rtlEnabled: true,
         });
     }
 
-    // Function to validate item fields
     function validateItem(item) {
         return item.ProductId && item.SizeId && item.ColorId && item.BranchId && !isNaN(item.Quantity);
     }
@@ -855,9 +939,8 @@
     }
 
     $(function () {
-        // Initialize product details popup
         var productDetailsPopup = $("#productDetailsPopup").dxPopup({
-            title: "إدخال إلى المخزن",
+            title: "إدخال إلى المخزن / توالف",
             visible: false,
             width: calculatePopupWidth(),
             height: calculatePopupHeight(),
@@ -872,7 +955,7 @@
             if (windowWidth < 768) {
                 return "90%";
             } else {
-                return 600;
+                return 700;
             }
         }
 
@@ -896,26 +979,7 @@
         // Array to hold invoice items
         var invoiceItems = [];
 
-        // Initialize the grid inside the popup
-        $("#invoiceItemsGrid").dxDataGrid({
-            dataSource: invoiceItems,
-            columns: [
-                { dataField: "ProductId", caption: "اسم المنتج" },
-                { dataField: "SizeId", caption: "المقاس" },
-                { dataField: "ColorId", caption: "اللون" },
-                { dataField: "Quantity", caption: "الكمية" },
-                { dataField: "BranchId", caption: "الفرع" },
-                { dataField: "Notes", caption: "ملاحظات" }
-            ],
-            editing: {
-                allowDeleting: true,
-                texts: {
-                    confirmDeleteMessage: 'هل أنت متأكد من أنك تريد حذف هذا العنصر؟'
-                }
-            },
-            showBorders: true,
-            rtlEnabled: true
-        });
+        initializeItemsGrid();
 
         // Function to open the popup
         window.showProductDetailsPopup = function () {
@@ -952,6 +1016,7 @@
         window.closePopup = function () {
             $("#productDetailsPopup").dxPopup("instance").hide();
             invoiceItems = [];
+            clearFormFields();
             $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
 
@@ -1003,9 +1068,200 @@
             $("#invoiceItemsGrid").dxDataGrid("instance").option('dataSource', invoiceItems);
         };
     });
+    /////////////////////////////////////
+
+    $(function () {
+        const factoryPopup = $("#factoryPopup").dxPopup({
+            title: "تصنيع",
+            visible: false,
+            width: calculatePopupWidth(),
+            height: calculatePopupHeight(),
+            onShown: initSelectBoxes3
+        }).dxPopup("instance");
+
+        function calculatePopupWidth() {
+            return $(window).width() < 768 ? "90%" : 700;
+        }
+
+        function calculatePopupHeight() {
+            return $(window).height() < 768 ? "90%" : 500;
+        }
+
+        $(window).resize(function () {
+            factoryPopup.option({
+                width: calculatePopupWidth(),
+                height: calculatePopupHeight()
+            });
+        });
+
+        let factoryPopupItems = [];
+        let invoiceGridInitialized = false;
+
+        function initializeInvoiceGrid3() {
+            $("#invoiceItemsGrid3").dxDataGrid({
+                dataSource: factoryPopupItems,
+                columns: [
+                    {
+                        dataField: "ProductId", caption: "المنتج",
+                        lookup: { dataSource: { load: function () { return $.ajax({ url: "/Products/LoadProducts", dataType: "json" }); } }, valueExpr: "ProductId", displayExpr: "ProductName" }
+                    },
+                    {
+                        dataField: "SizeId", caption: "المقاس",
+                        lookup: { dataSource: { load: function () { return $.ajax({ url: "/Sizes/LoadSizes", dataType: "json" }); } }, valueExpr: "SizeId", displayExpr: "SizeName" }
+                    },
+                    {
+                        dataField: "ColorId", caption: "اللون",
+                        lookup: { dataSource: { load: function () { return $.ajax({ url: "/Colors/LoadColors", dataType: "json" }); } }, valueExpr: "ColorId", displayExpr: "ColorName" }
+                    },
+                    { dataField: "Quantity", caption: "الكمية" },
+                    {
+                        dataField: "BranchId", caption: "الفرع",
+                        lookup: { dataSource: { load: function () { return $.ajax({ url: "/Branches/LoadBranches", dataType: "json" }); } }, valueExpr: "BranchId", displayExpr: "BranchName" }
+                    },
+                ],
+                editing: {
+                    allowDeleting: true,
+                    texts: {
+                        confirmDeleteMessage: 'هل أنت متأكد من أنك تريد حذف هذا العنصر؟'
+                    }
+                },
+                showBorders: true,
+                rtlEnabled: true
+            });
+            invoiceGridInitialized = true;
+        }
+
+        function addItemToGrid3() {
+            const item3 = {
+                ProductId: $('#ProductId3').val(),
+                SizeId: $('#SizeId3').val(),
+                ColorId: $('#ColorId3').val(),
+                BranchId: $('#BranchId3').val(),
+                Quantity: $('#Quantity3').val(),
+                Notes: $('#Notes3').val()
+            };
+
+            const isValid = validateItem(item3);
+
+            if (isValid) {
+                if (parseInt(item3.Quantity) !== 0) {
+                    factoryPopupItems.push(item3);
+                    if (!invoiceGridInitialized) {
+                        initializeInvoiceGrid3();
+                    }
+                    $("#invoiceItemsGrid3").dxDataGrid("instance").option('dataSource', factoryPopupItems);
+                    clearFormFields3();
+                } else {
+                    DevExpress.ui.notify("الكمية يجب ان لا تكون = 0", "error", 3000);
+                }
+            } else {
+                DevExpress.ui.notify("برجاء ملاء جميع البيانات", "error", 3000);
+            }
+        }
+
+        async function saveInvoice3() {
+            $('#loadingIndicator').show();
+            if (factoryPopupItems.length === 0) {
+                $('#loadingIndicator').hide();
+                DevExpress.ui.notify("يرجى إضافة منتج واحد على الأقل قبل الحفظ.", "error", 3000);
+                return;
+            }
+
+            for (let item of factoryPopupItems) {
+                const formData = new FormData();
+                formData.append("values", JSON.stringify(item));
+
+                try {
+                    const response = await fetch('/PurchaseItems/AddNewFactoryItem', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+
+                    if (!result.success) {
+                        DevExpress.ui.notify(result.message, "error", 3000);
+                        $('#loadingIndicator').hide();
+                        return;
+                    }
+
+                    DevExpress.ui.notify(result.message, "success", 3000);
+                } catch (error) {
+                    DevExpress.ui.notify(error, "error", 3000);
+                    $('#loadingIndicator').hide();
+                    return;
+                }
+            }
+
+            factoryPopupItems.length = 0;
+            $("#invoiceItemsGrid3").dxDataGrid("instance").option('dataSource', factoryPopupItems);
+            $('#loadingIndicator').hide();
+        }
+
+        function initSelectBoxes3() {
+            populateDropdown('/Products/GetAllProductsInWarehouse', 'ProductId3', 'ProductId', 'ProductName');
+            populateDropdown('/Branches/LoadBranchesByUser', 'BranchId3', 'BranchId', 'BranchName');
+            initializeInvoiceGrid3();
+        }
+
+        window.closeFactoryPopup = function () {
+            factoryPopup.hide();
+            factoryPopupItems.length = 0;
+            $("#invoiceItemsGrid3").dxDataGrid("instance").option('dataSource', factoryPopupItems);
+        };
+
+        window.showfactoryPopup = function () {
+            factoryPopup.show();
+        };
+
+        window.addItemToGrid3 = addItemToGrid3;
+        window.saveInvoice3 = saveInvoice3;
+        window.closePopup3 = function () {
+            $("#factoryPopup").dxPopup("instance").hide();
+            factoryPopupItems = [];
+            clearFormFields3();
+            $("#invoiceItemsGrid3").dxDataGrid("instance").option('dataSource', factoryPopupItems);
+        };
+    });
+
+    function clearFormFields3() {
+        $('#ProductId3').val('').trigger('change');
+        $('#SizeId3').val('').trigger('change');
+        $('#ColorId3').val('').trigger('change');
+        $('#BranchId3').val('').trigger('change');
+        $('#Quantity3').val('');
+        $('#Notes3').val('');
+    }
+
+    $(document).ready(function () {
+        $('#ProductId3, #SizeId3, #ColorId3, #BranchId3').change(function () {
+            var productId = $('#ProductId3').val();
+            var sizeId = $('#SizeId3').val();
+            var colorId = $('#ColorId3').val();
+            var branchId = $('#BranchId3').val();
+
+            if (productId && sizeId && colorId && branchId) {
+                fetchAvailableQuantity(productId, sizeId, colorId, branchId, '#availableQtyDisplay3');
+            } else {
+                $('#availableQtyDisplay3').text(`الكمية المتاحة: 0`);
+            }
+        });
+
+        $('#ProductId3').change(function () {
+            productChanged3();
+        });
+    });
+
+    function productChanged3() {
+        var productId = $('#ProductId3').val();
+
+        populateDropdown(`/Products/GetAvailableSizes?ProductId=${productId}`, 'SizeId3', 'SizeId', 'SizeName', null);
+        populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'ColorId3', 'ColorId', 'ColorName', null);
+    }
 </script>
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
 <style>
     .custom-badge-danger {
         background-color: #dc3545; /* Bootstrap's danger color */

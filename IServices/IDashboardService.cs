@@ -4,6 +4,7 @@ namespace IOMSYS.IServices
 {
     public interface IDashboardService
     {
+        Task<FinancialData> GetFinancialDashboardAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<decimal?> GetTotalAmountInPurchaseInvoicesAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<decimal?> GetExpensesAmountInExpensesAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<decimal?> GetPaidUpInPurchaseInvoicesAsync(DateTime fromDate, DateTime toDate, int branchId);
@@ -14,5 +15,6 @@ namespace IOMSYS.IServices
         Task<decimal?> CalculateProfitAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<IEnumerable<DailySalesAmountModel>> GetDailySalesAmountAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<IEnumerable<BestSaleModel>> GetBestSaleAsync(DateTime fromDate, DateTime toDate, int branchId);
+        Task<FinancialData?> GetTotalItemsInPurchaseAsync(DateTime fromDate, DateTime toDate, int branchId);
     }
 }

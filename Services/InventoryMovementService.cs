@@ -52,8 +52,8 @@ namespace IOMSYS.Services
                 try
                 {
                     var movementId = await db.ExecuteScalarAsync<int>(
-                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate, SalesInvoiceId, PurchaseInvoiceId) 
-                        VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate, @SalesInvoiceId, @PurchaseInvoiceId);
+                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate, SalesInvoiceId, PurchaseInvoiceId, MakeInvoice) 
+                        VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate, @SalesInvoiceId, @PurchaseInvoiceId, @MakeInvoice);
                         SELECT CAST(SCOPE_IDENTITY() as int);",
                         movement).ConfigureAwait(false);
 
@@ -84,13 +84,13 @@ namespace IOMSYS.Services
                 return -1;
             }
         }
-        public async Task<bool> ApproveOrRejectInventoryMovementAsync(int movementId, bool isApproved, int PurchaseInvoiceId)
+        public async Task<bool> ApproveOrRejectInventoryMovementAsync(int movementId, bool isApproved, int PurchaseInvoiceId, bool MakeInvoice)
         {
-            var sql = @"UPDATE InventoryMovements SET IsApproved = @IsApproved, PurchaseInvoiceId = @PurchaseInvoiceId WHERE MovementId = @MovementId";
+            var sql = @"UPDATE InventoryMovements SET IsApproved = @IsApproved, PurchaseInvoiceId = @PurchaseInvoiceId, MakeInvoice = @MakeInvoice WHERE MovementId = @MovementId";
 
             using (var db = _dapperContext.CreateConnection())
             {
-                var result = await db.ExecuteAsync(sql, new { MovementId = movementId, IsApproved = isApproved, PurchaseInvoiceId }).ConfigureAwait(false);
+                var result = await db.ExecuteAsync(sql, new { MovementId = movementId, IsApproved = isApproved, PurchaseInvoiceId, MakeInvoice }).ConfigureAwait(false);
                 if (result > 0)
                 {
                     if (isApproved)

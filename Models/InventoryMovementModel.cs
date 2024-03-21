@@ -14,6 +14,7 @@
         public DateTime MovementDate { get; set; }
         public int SalesInvoiceId { get; set; }
         public int PurchaseInvoiceId { get; set; }
+        public bool MakeInvoice { get; set; }
         //for join 
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }

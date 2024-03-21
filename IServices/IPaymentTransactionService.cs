@@ -8,15 +8,18 @@ namespace IOMSYS.IServices
         Task<IEnumerable<PaymentTransactionModel>> LoadPaymentTransactionsByBranchAsync(int branchId);
         Task<IEnumerable<TransactionDetailModel>> LoadDetailsPaymentTransactionsByBranchAsync(int branchId);
         Task<PaymentTransactionModel> GetPaymentTransactionByIdAsync(int transactionId);
-        Task<PaymentTransactionModel> GetPaymentTransactionByInvoiceIdAsync(int InvoiceId);
+        Task<IEnumerable<PaymentTransactionModel>> GetPaymentTransactionsByInvoiceIdAsync(int InvoiceId);
         Task<decimal> GetBranchAccountBalanceAsync(int branchId);
         Task<decimal> GetBranchAccountBalanceByPaymentAsync(int BranchId, int PaymentMethodId);
         Task<int> InsertPaymentTransactionAsync(PaymentTransactionModel transaction);
         Task<int> UpdatePaymentTransactionAsync(PaymentTransactionModel transaction);
         Task<int> DeletePaymentTransactionAsync(int transactionId);
 
+        Task<int> InsertPaymentTransactionAsync(TransactionDetailModel transaction);
+        Task<int> UpdatePaymentTransactionAsync(TransactionDetailModel transaction);
+
         Task<decimal> CalculateAmountOwedByBranchAsync(int supplierId, int branchId);
-        Task<IEnumerable<int>> GetNotFullyPaidInvoiceIdsAsync(int branchId);
+        Task<IEnumerable<int>> GetNotFullyPaidInvoiceIdsAsync(int branchId, int SupplierId);
         Task<PurchaseInvoicesModel> GetPurchaseInvoiceByIdAsync(int purchaseInvoiceId);
         Task<int> UpdatePurchaseInvoiceAsync(int purchaseInvoiceId, decimal paidUp, decimal remainder, bool isFullPaidUp);
         Task<decimal> ProcessInvoicesAndUpdateBalances(int fromBranchId, int toBranchId, decimal amountToSpend);

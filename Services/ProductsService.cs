@@ -231,83 +231,16 @@ namespace IOMSYS.Services
         //تحركات المخزن
         public async Task<IEnumerable<ProductsModel>> WarehouseMovementsAsync(int BranchId)
         {
-            //var sql = @"
-            //WITH CombinedData AS (
-            //    SELECT
-            //        'مشتريات' AS RecordType,
-            //        PI.ProductId,
-            //        P.ProductName,
-            //        PI.SizeId,
-            //        S.SizeName,
-            //        PI.ColorId,
-            //        C.ColorName,
-            //        CAT.CategoryName,
-            //        PT.ProductTypeName,
-            //        PI.Quantity,
-            //        PI.BranchId,
-            //        PI.ModDate AS DateAdded
-            //    FROM PurchaseItems PI
-            //    INNER JOIN Products P ON PI.ProductId = P.ProductId
-            //    INNER JOIN Sizes S ON PI.SizeId = S.SizeId
-            //    INNER JOIN Colors C ON PI.ColorId = C.ColorId
-            //    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
-            //    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
-            //    WHERE PI.BranchId = @BranchId
-            //    AND NOT EXISTS (
-            //        SELECT 1
-            //        FROM InventoryMovements IM
-            //        WHERE IM.PurchaseInvoiceId IS NOT NULL
-            //        AND IM.ProductId = PI.ProductId
-            //        AND IM.SizeId = PI.SizeId
-            //        AND IM.ColorId = PI.ColorId
-            //        AND IM.ToBranchId = PI.BranchId
-            //    )
-
-            //    UNION ALL
-
-            //    SELECT
-            //        CASE 
-            //            WHEN IM.ToBranchId = @BranchId THEN 'منتجات منقوله للفرع'
-            //            WHEN IM.FromBranchId = @BranchId THEN 'منتجات منقوله من الفرع'
-            //            ELSE NULL
-            //        END AS RecordType,
-            //        IM.ProductId,
-            //        P.ProductName,
-            //        IM.SizeId,
-            //        S.SizeName,
-            //        IM.ColorId,
-            //        C.ColorName,
-            //        CAT.CategoryName,
-            //        PT.ProductTypeName,
-            //        CASE 
-            //            WHEN IM.ToBranchId = @BranchId THEN IM.Quantity
-            //            WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity
-            //            ELSE 0
-            //        END AS Quantity,
-            //        CASE 
-            //            WHEN IM.ToBranchId = @BranchId THEN IM.ToBranchId
-            //            WHEN IM.FromBranchId = @BranchId THEN IM.FromBranchId
-            //            ELSE NULL
-            //        END AS BranchId,
-            //        IM.MovementDate AS DateAdded
-            //    FROM InventoryMovements IM
-            //    INNER JOIN Products P ON IM.ProductId = P.ProductId
-            //    INNER JOIN Sizes S ON IM.SizeId = S.SizeId
-            //    INNER JOIN Colors C ON IM.ColorId = C.ColorId
-            //    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
-            //    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
-            //    WHERE (IM.ToBranchId = @BranchId OR IM.FromBranchId = @BranchId)
-            //    AND IM.IsApproved = 1
-            //)
-            //SELECT *
-            //FROM CombinedData
-            //ORDER BY DateAdded DESC;";
             var sql = @"
                 WITH CombinedData AS (
                     SELECT
                         CASE 
-                            WHEN PII.PurchaseItemId IS NULL THEN 'بداية المخزن'
-                            ELSE 'مشتريات'
+                            WHEN PI.Statues = 0 THEN 'مشتريات'                            
+                            WHEN PI.Statues = 1 THEN 'تصنيع'
+                            WHEN PI.Statues = 2 THEN 'توالف'
+                            WHEN PI.Statues = 3 THEN 'بداية المخزن'                            
+                            WHEN PI.Statues = 4 THEN 'منقول من فرع'
+                            ELSE ''
                         END AS RecordType,
                         PI.ProductId,
                         P.ProductName,

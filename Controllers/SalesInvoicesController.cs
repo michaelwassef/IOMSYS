@@ -118,18 +118,8 @@ namespace IOMSYS.Controllers
                     await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, model.BranchId, -item.Quantity);
                 }
 
-                var paymentTransaction = new PaymentTransactionModel
-                {
-                    BranchId = model.BranchId,
-                    PaymentMethodId = model.PaymentMethodId,
-                    Amount = model.PaidUp,
-                    TransactionType = "اضافة",
-                    TransactionDate = model.SaleDate,
-                    ModifiedUser = model.UserId,
-                    ModifiedDate = DateTime.Now,
-                    InvoiceId = invoiceId,
-                };
-                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+                if (model.PaidUp > 0) { await RecordPaymentTransaction(model, invoiceId); }
+
                 return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
             catch (Exception ex)
@@ -138,7 +128,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-        //not finish
         [HttpPut]
         public async Task<IActionResult> UpdateSaleInvoice([FromBody] SalesInvoicesModel SaleInvoice)
         {
@@ -157,18 +146,17 @@ namespace IOMSYS.Controllers
                 {
                     return BadRequest(new { ErrorMessage = "اجمالي الفاتورة لا يتوافق مع اجمالي الاصناف" });
                 }
+                var oldpaid = await _salesInvoicesService.GetSalesInvoiceByIdAsync(SaleInvoice.SalesInvoiceId);
 
                 decimal paidUp = SaleInvoice.PaidUp;
                 decimal totalAmount = SaleInvoice.TotalAmount;
                 decimal remainder = totalAmount - paidUp;
 
-                // Check if PaidUp is less than or equal to TotalAmount
                 if (paidUp > totalAmount)
                 {
                     return BadRequest(new { ErrorMessage = "المدفوع لا يمكن ان يكون اكبر من اجمالي الفاتورة" });
                 }
 
-                // Check if Remainder is less than or equal to TotalAmount and PaidUp + Remainder equals TotalAmount
                 if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != SaleInvoice.Remainder)
                 {
                     return BadRequest(new { ErrorMessage = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
@@ -181,29 +169,16 @@ namespace IOMSYS.Controllers
                 int updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(SaleInvoice);
                 if (updateResult <= 0)
                 {
-                    return BadRequest(new { ErrorMessage = "Could Not Update" });
+                    return BadRequest(new { ErrorMessage = "حدث خطأ اثناء التعديل" });
                 }
 
-                // Retrieve the payment transaction associated with this invoice
-                var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(SaleInvoice.SalesInvoiceId);
-                if (paymentTransaction != null)
-                {
-                    // Update transaction details as necessary
-                    paymentTransaction.Amount = SaleInvoice.PaidUp;
-                    paymentTransaction.BranchId = SaleInvoice.BranchId;
-                    paymentTransaction.PaymentMethodId = SaleInvoice.PaymentMethodId;
+                if (SaleInvoice.PaidUp > oldpaid.PaidUp) 
+                { 
+                    SaleInvoice.PaidUp = SaleInvoice.PaidUp - oldpaid.PaidUp;
+                    await RecordPaymentTransaction(SaleInvoice, SaleInvoice.SalesInvoiceId); 
+                }
 
-                    var updateTransactionResult = await _paymentTransactionService.UpdatePaymentTransactionAsync(paymentTransaction);
-                    if (updateTransactionResult <= 0)
-                    {
-                        return BadRequest(new { ErrorMessage = "Could not update the related payment transaction." });
-                    }
-                }
-                else
-                {
-                    return BadRequest(new { ErrorMessage = "No related payment transaction found for update." });
-                }
-                return Ok(new { SuccessMessage = "Updated Successfully" });
+                return Ok(new { SuccessMessage = "تم التعديل بنجاح" });
             }
             catch (Exception ex)
             {
@@ -240,17 +215,30 @@ namespace IOMSYS.Controllers
                 int deleteSaleInvoicesResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
                 if (deleteSaleInvoicesResult > 0)
                 {
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-                    if (paymentTransaction != null)
+                    var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+
+                    if (paymentTransactions != null && paymentTransactions.Any())
                     {
-                        // Delete the payment transaction
-                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
-                        if (deleteTransactionResult <= 0)
+                        bool deleteFailed = false;
+
+                        foreach (var paymentTransaction in paymentTransactions)
                         {
-                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                            var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+
+                            if (deleteTransactionResult <= 0)
+                            {
+                                deleteFailed = true;
+                                break;
+                            }
+                        }
+
+                        if (deleteFailed)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-                    return Ok(new { SuccessMessage = "Deleted Successfully" });
+
+                    return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
                 else
                 {
@@ -336,5 +324,21 @@ namespace IOMSYS.Controllers
             return View(invoice);
         }
 
+        private async Task RecordPaymentTransaction(SalesInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = model.PaidUp,
+                TransactionType = "اضافة",
+                TransactionDate = model.SaleDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Reports;
 using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -127,7 +128,11 @@ namespace IOMSYS.Controllers
                     return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
 
                 await ProcessPurchaseItems(model, invoiceId);
-                await RecordPaymentTransaction(model, invoiceId);
+
+                if(model.PaidUp > 0) {
+                    model.Notes = "دفعة من فاتورة المشتريات #" + model.PurchaseInvoiceId;
+                    await RecordPaymentTransaction(model, invoiceId); }
+                
                 if (model.SupplierId == 4)
                 {
                     await CreateAndLinkSalesInvoice(model, userId, invoiceId);
@@ -146,7 +151,7 @@ namespace IOMSYS.Controllers
             foreach (var item in model.PurchaseItems)
             {
                 item.BranchId = model.BranchId;
-                item.Statues = 1;
+                item.Statues = 0;
                 item.ModDate = DateTime.Now;
                 item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
 
@@ -162,12 +167,30 @@ namespace IOMSYS.Controllers
             {
                 BranchId = model.BranchId,
                 PaymentMethodId = model.PaymentMethodId,
-                Amount = model.PaidUp,
+                Amount = -model.PaidUp,
                 TransactionType = "خصم",
                 TransactionDate = model.PurchaseDate,
                 ModifiedUser = model.UserId,
                 ModifiedDate = DateTime.Now,
                 InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+        }
+
+        private async Task RecordPaymentTransaction(SalesInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = model.PaidUp,
+                TransactionType = "اضافة",
+                TransactionDate = model.SaleDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
             };
             await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
         }
@@ -211,7 +234,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpPut]
         public async Task<IActionResult> UpdatePurchaseInvoice(int id, [FromBody] JsonElement data)
         {
@@ -222,7 +244,7 @@ namespace IOMSYS.Controllers
             try
             {
                 var existingInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(id);
-
+                var oldpaid = existingInvoice.PaidUp;
                 if (data.TryGetProperty("values", out JsonElement valuesElement))
                 {
                     var values = valuesElement.ToString();
@@ -266,48 +288,29 @@ namespace IOMSYS.Controllers
                     saleInvoice.IsFullPaidUp = saleInvoice.PaidUp == saleInvoice.TotalAmount;
 
                     int updateSales = await _salesInvoicesService.UpdateSalesInvoiceAsync(saleInvoice);
-                    var paymentTransaction = new PaymentTransactionModel
-                    {
-                        BranchId = saleInvoice.BranchId,
-                        PaymentMethodId = saleInvoice.PaymentMethodId,
-                        Amount = saleInvoice.PaidUp,
-                        TransactionType = "اضافة",
-                        TransactionDate = saleInvoice.SaleDate,
-                        ModifiedUser = saleInvoice.UserId,
-                        ModifiedDate = DateTime.Now,
-                        InvoiceId = saleInvoice.SalesInvoiceId,
-                        Details = "دفعة من فاتورة #" + saleInvoice.SalesInvoiceId,
-                    };
-                    await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+
+                    if (saleInvoice.PaidUp > oldpaid) {
+                        saleInvoice.Notes = "دفعة من فاتورة المبيعات #" + saleInvoice.SalesInvoiceId;
+                        saleInvoice.PaidUp = saleInvoice.PaidUp - oldpaid;
+                        await RecordPaymentTransaction(saleInvoice, saleInvoice.SalesInvoiceId); 
+                    }                    
                 }
 
                 if (updateResult > 0)
                 {
                     var updatedInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(existingInvoice.PurchaseInvoiceId);
-
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(existingInvoice.PurchaseInvoiceId);
-                    if (paymentTransaction != null)
+                    if (updatedInvoice.PaidUp > oldpaid) 
                     {
-                        paymentTransaction.Amount = existingInvoice.PaidUp;
-                        paymentTransaction.BranchId = existingInvoice.BranchId;
-                        paymentTransaction.PaymentMethodId = existingInvoice.PaymentMethodId;
-
-                        var updateTransactionResult = await _paymentTransactionService.UpdatePaymentTransactionAsync(paymentTransaction);
-                        if (updateTransactionResult <= 0)
-                        {
-                            return BadRequest(new { ErrorMessage = "Could not update the related payment transaction." });
-                        }
-                    }
-                    else
-                    {
-                        return BadRequest(new { ErrorMessage = "No related payment transaction found for update." });
+                        updatedInvoice.Notes = "دفعة من فاتورة المشتريات #" + existingInvoice.PurchaseInvoiceId;
+                        updatedInvoice.PaidUp = updatedInvoice.PaidUp - oldpaid;
+                        await RecordPaymentTransaction(updatedInvoice, updatedInvoice.PurchaseInvoiceId); 
                     }
 
-                    return Ok(new { SuccessMessage = "Invoice and related payment transaction updated successfully.", UpdatedInvoice = updatedInvoice });
+                    return Ok(new { SuccessMessage = "تم تعديل الفاتورة بنجاح.", UpdatedInvoice = updatedInvoice });
                 }
                 else
                 {
-                    return BadRequest(new { ErrorMessage = "Could Not Update Invoice" });
+                    return BadRequest(new { ErrorMessage = "حدث خطأ اثناء التعديل" });
                 }
             }
             catch (Exception ex)
@@ -351,21 +354,33 @@ namespace IOMSYS.Controllers
                 int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
                 if (deletePurchaseInvoicesResult > 0)
                 {
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-                    if (paymentTransaction != null)
+                    var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+
+                    if (paymentTransactions != null && paymentTransactions.Any())
                     {
-                        // Delete the payment transaction
-                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
-                        if (deleteTransactionResult <= 0)
+                        bool deleteFailed = false;
+
+                        foreach (var paymentTransaction in paymentTransactions)
                         {
-                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                            var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+
+                            if (deleteTransactionResult <= 0)
+                            {
+                                deleteFailed = true;
+                                break;
+                            }
+                        }
+                        if (deleteFailed)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-                    return Ok(new { SuccessMessage = "Deleted Successfully" });
+
+                    return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
                 else
                 {
-                    return BadRequest(new { ErrorMessage = "Could Not Delete" });
+                    return BadRequest(new { ErrorMessage = "حدث خطأ اثناء الحذف" });
                 }
             }
             catch (Exception ex)

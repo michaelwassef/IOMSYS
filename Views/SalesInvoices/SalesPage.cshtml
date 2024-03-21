@@ -183,8 +183,10 @@
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
+            $('#loadingIndicator').hide();
         } catch (error) {
            DevExpress.ui.notify(error, "error", 3000);
+           $('#loadingIndicator').hide();
         }
     }
 

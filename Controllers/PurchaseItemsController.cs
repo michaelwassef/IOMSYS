@@ -76,7 +76,11 @@ namespace IOMSYS.Controllers
                     {
                         return Json(new { success = false, message = "ليس لديك صلاحية لاضافة التوالف" });
                     }
-
+                    newPurchaseItems.Statues = 2;
+                }
+                else
+                {
+                    newPurchaseItems.Statues = 3;
                 }
 
                 int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
@@ -88,6 +92,66 @@ namespace IOMSYS.Controllers
                         await _ProductsService.UpdateProductBuyandSellPriceAsync(newPurchaseItems.ProductId, newPurchaseItems.BuyPrice, newPurchaseItems.SellPrice);
                     }
 
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(
+                           newPurchaseItems.ProductId,
+                           newPurchaseItems.SizeId,
+                           newPurchaseItems.ColorId,
+                           newPurchaseItems.BranchId,
+                           newPurchaseItems.Quantity);
+
+                    return Json(new { success = true, message = "تم الادخال بنجاح وتم تحديث المخزون." });
+                }
+                else
+                    return Json(new { success = false, message = "حدث خطأ اثناء الادخال" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Could not add", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddNewFactoryItem([FromForm] IFormCollection formData)
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission2 = await _permissionsService.HasPermissionAsync(userId, "PurchaseItems", "AddNewFactoryItem");
+            if (!hasPermission2)
+            { return Json(new { success = false, message = "ليس لديك صلاحية للتصنيع" }); }
+            try
+            {
+                var values = formData["values"];
+                var newPurchaseItems = new PurchaseItemsModel();
+                JsonConvert.PopulateObject(values, newPurchaseItems);
+
+                newPurchaseItems.ModDate = DateTime.Now;
+
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                int? BranchId = await _branchesService.SelectBranchIdByManagerIdAsync(userId);
+
+                if (newPurchaseItems.BranchId != BranchId)
+                {
+                    return Json(new { success = false, message = "ليس لديك صلاحية للاضافة لهذا الفرع" });
+                }
+
+                if (newPurchaseItems.Quantity < 0)
+                {
+                   return Json(new { success = false, message = "لا يمكن ادخال ارقام سالبة" });
+                }
+
+
+                int ava = await _ProductsService.GetAvailableQuantity(newPurchaseItems.ProductId, newPurchaseItems.ColorId, newPurchaseItems.SizeId, newPurchaseItems.BranchId);
+                if(newPurchaseItems.Quantity > ava)
+                {
+                    return Json(new { success = false, message = "لا توجد كمية كافية" });
+                }
+                newPurchaseItems.Quantity = -newPurchaseItems.Quantity;
+                newPurchaseItems.Statues = 1;
+                int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
+
+                if (addPurchaseItemsResult > 0)
+                {
                     await _branchInventoryService.AdjustInventoryQuantityAsync(
                            newPurchaseItems.ProductId,
                            newPurchaseItems.SizeId,
@@ -228,29 +292,35 @@ namespace IOMSYS.Controllers
         {
             try
             {
-                // Step 1: Check if any items are associated with this invoice
                 var items = await _PurchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
 
-                // Step 2: If no items are associated, proceed to delete the invoice
                 int deleteResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
                 if (deleteResult > 0)
                 {
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-                    if (paymentTransaction != null)
+                    var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+
+                    if (paymentTransactions != null && paymentTransactions.Any())
                     {
-                        // Delete the payment transaction
-                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
-                        if (deleteTransactionResult <= 0)
+                        bool deleteFailed = false;
+
+                        foreach (var paymentTransaction in paymentTransactions)
                         {
-                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                            var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+
+                            if (deleteTransactionResult <= 0)
+                            {
+                                deleteFailed = true;
+                                break;
+                            }
+                        }
+                        if (deleteFailed)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-                    return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+                    return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
-                else
-                {
-                    return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
-                }
+                return BadRequest(new { ErrorMessage = "حدث خطأ اثناء الحذف." });
             }
             catch (Exception ex)
             {

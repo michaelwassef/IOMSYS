@@ -1,6 +1,7 @@
 ﻿using DevExpress.PivotGrid.PivotTable;
 using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -90,6 +91,22 @@ namespace IOMSYS.Controllers
                         return Json(new { success = false, message = "ليس لديك صلاحية لنقل من هذا الفرع" });
                     }
 
+                    int ava = await _productsService.GetAvailableQuantity(model.ProductId, model.ColorId, model.SizeId, model.FromBranchId);
+                    int remainingQty = ava;
+                    foreach (var existingItem in salesInvoiceModel.SalesItems)
+                    {
+                        if (existingItem.ProductId == model.ProductId &&
+                            existingItem.SizeId == model.SizeId &&
+                            existingItem.ColorId == model.ColorId)
+                        {
+                            remainingQty -= existingItem.Quantity;
+                        }
+                    }
+                    if (model.Quantity > remainingQty)
+                    {
+                        continue;
+                    }
+
                     frombranchx = model.FromBranchId;
                     tobranchx = model.ToBranchId;
 
@@ -133,13 +150,17 @@ namespace IOMSYS.Controllers
                     salesInvoiceModel.IsFullPaidUp = false;
                 }
 
-                var salesInvoiceResult = await AddNewSaleInvoice(salesInvoiceModel);
+                int salesInvoiceResult = 0;
+
+                if (batchModel.makeInvoice)
+                    salesInvoiceResult = await AddNewSaleInvoice(salesInvoiceModel);
 
                 foreach (var model in pendingMovements)
                 {
                     model.SalesInvoiceId = salesInvoiceResult;
                     model.MovementDate = DateTime.Now;
                     model.IsApproved = false;
+                    model.MakeInvoice = batchModel.makeInvoice;
                     await _inventoryMovementService.MoveInventoryAsync(model);
                 }
 
@@ -172,7 +193,7 @@ namespace IOMSYS.Controllers
                 }
                 foreach (var movementId in failedMovements)
                 {
-                    var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, false, 0);
+                    var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, false, 0, false);
                 }
                 return Ok(new { success = true, message = "Movements rejected." });
             }
@@ -199,10 +220,12 @@ namespace IOMSYS.Controllers
                     BranchId = movement.ToBranchId,
                     ColorId = movement.ColorId,
                     SizeId = movement.SizeId,
-                    Statues = 1,
+                    Statues = 4,
                     ModDate = DateTime.Now,
                 };
-                purchaseItems.Add(item);
+                if(movement.MakeInvoice)
+                    purchaseItems.Add(item);
+
                 successfulMovements.Add(movementId);
             }
 
@@ -227,49 +250,40 @@ namespace IOMSYS.Controllers
                 IsFullPaidUp = (amountToSpend - amountUtilized) == 0,
                 SalesInvoiceId = SalesInvoiceId,
             };
+            int PurchaseInvoiceId = 0;
+            if (purchaseItems.Any())
+            {
+                PurchaseInvoiceId = await AddNewPurchaseInvoice(purchaseInvoiceModel);
+            }
 
-            int PurchaseInvoiceId = await AddNewPurchaseInvoice(purchaseInvoiceModel);
             foreach (var movementId in successfulMovements)
             {
-                var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, true, PurchaseInvoiceId);
+                var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, true, PurchaseInvoiceId, false);
             }
 
             return Json(new { success = true, message = "تمت عملية النقل وعمل فاتورة المشتريات" });
         }
 
-
-
         public async Task<int> AddNewSaleInvoice(SalesInvoicesModel model)
         {
             try
             {
-                // Insert the invoice
                 int invoiceId = await _salesInvoicesService.InsertSalesInvoiceAsync(model);
-
+                var invoiceadded = await _salesInvoicesService.GetSalesInvoiceByIdAsync(invoiceId);
                 if (invoiceId <= 0)
                     return 0;
 
-                // Insert the items and link them to the invoice and update buyprice
                 foreach (var item in model.SalesItems)
                 {
                     item.SalesItemId = await _salesItemsService.InsertSalesItemAsync(item);
                     await _salesInvoiceItemsService.AddSalesItemToInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
                 }
 
-                var paymentTransaction = new PaymentTransactionModel
+                if (invoiceadded.PaidUp > 0)
                 {
-                    BranchId = model.BranchId,
-                    PaymentMethodId = model.PaymentMethodId,
-                    Amount = model.PaidUp,
-                    TransactionType = "اضافة",
-                    TransactionDate = model.SaleDate,
-                    ModifiedUser = model.UserId,
-                    ModifiedDate = DateTime.Now,
-                    InvoiceId = invoiceId,
-                    Details = "نقل منتجات بين فروع"
-                };
-
-                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+                    model.Notes = "دفعة من فاتورة المبيعات #"+ invoiceId;
+                    await RecordPaymentTransaction(invoiceadded, invoiceId);
+                }
                 return invoiceId;
             }
             catch
@@ -284,32 +298,25 @@ namespace IOMSYS.Controllers
                 model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
 
                 int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
+                var invoiceadded = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(invoiceId);
+
                 if (invoiceId <= 0)
                     return 0;
 
                 foreach (var item in model.PurchaseItems)
                 {
                     item.BranchId = model.BranchId;
-                    item.Statues = 1;
+                    item.Statues = 4;
                     item.ModDate = DateTime.Now;
                     item.PurchaseItemId = await _purchaseItemsService.InsertPurchaseItemAsync(item);
                     await _purchaseInvoiceItemsService.AddItemToPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                 }
 
-                var paymentTransaction = new PaymentTransactionModel
+                if (invoiceadded.PaidUp > 0)
                 {
-                    BranchId = model.BranchId,
-                    PaymentMethodId = model.PaymentMethodId,
-                    Amount = model.PaidUp,
-                    TransactionType = "خصم",
-                    TransactionDate = model.PurchaseDate,
-                    ModifiedUser = model.UserId,
-                    ModifiedDate = DateTime.Now,
-                    InvoiceId = invoiceId,
-                    Details = model.Notes,
-                };
-                await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
-
+                    model.Notes = "دفعة من فاتورة المشتريات #" + invoiceId;
+                    await RecordPaymentTransaction(invoiceadded, invoiceId);
+                }
                 return invoiceId;
             }
             catch
@@ -317,6 +324,39 @@ namespace IOMSYS.Controllers
                 return 0;
             }
         }
+        private async Task RecordPaymentTransaction(SalesInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = model.PaidUp,
+                TransactionType = "اضافة",
+                TransactionDate = model.SaleDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+        }
+        private async Task RecordPaymentTransaction(PurchaseInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = -model.PaidUp,
+                TransactionType = "خصم",
+                TransactionDate = model.PurchaseDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+        }
+
         public async Task<decimal> FetchSellPriceForProduct(int productId)
         {
             var product = await _productsService.SelectProductByIdAsync(productId);
@@ -358,28 +398,31 @@ namespace IOMSYS.Controllers
                 int deleteSaleInvoicesResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
                 if (deleteSaleInvoicesResult > 0)
                 {
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-                    if (paymentTransaction != null)
+                    var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+                    if (paymentTransactions != null && paymentTransactions.Any())
                     {
-                        // Delete the payment transaction
-                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
-                        if (deleteTransactionResult <= 0)
+                        bool deleteFailed = false;
+                        foreach (var paymentTransaction in paymentTransactions)
+                        {
+                            var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+                            if (deleteTransactionResult <= 0)
+                            {
+                                deleteFailed = true;
+                                break;
+                            }
+                        }
+                        if (deleteFailed)
                         {
                             return 0;
                         }
                     }
-                    return 1;
                 }
-                else
-                {
-                    return 0;
-                }
+                return 1;
             }
             catch
             {
                 return 0;
             }
         }
-
     }
 }

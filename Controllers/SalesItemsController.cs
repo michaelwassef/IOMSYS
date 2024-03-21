@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -155,15 +156,11 @@ namespace IOMSYS.Controllers
                     invoice.TotalAmount = totalAmount;
                     invoice.PaidUp = invoice.TotalAmount;
                     var updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(invoice);
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-                    if (paymentTransaction != null)
+                    if (totalAmount > invoice.PaidUp)
                     {
-                        paymentTransaction.Amount = invoice.PaidUp;
-                        var deleteTransactionResult = await _paymentTransactionService.UpdatePaymentTransactionAsync(paymentTransaction);
-                        if (deleteTransactionResult <= 0)
-                        {
-                            return false;
-                        }
+                        invoice.PaidUp = totalAmount - invoice.PaidUp;
+                        invoice.Notes = "مرتجع فاتورة رقم #" + invoice.SalesInvoiceId;
+                        await RecordPaymentTransaction(invoice, invoice.SalesInvoiceId);
                     }
                     return updateResult > 0;
                 }
@@ -197,32 +194,59 @@ namespace IOMSYS.Controllers
             }
         }
 
+        private async Task RecordPaymentTransaction(SalesInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = -model.PaidUp,
+                TransactionType = "خصم",
+                TransactionDate = model.SaleDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
+        }
+
         public async Task<IActionResult> DeleteInvoiceIfNoItems(int invoiceId)
         {
             try
             {
-                // Step 1: Check if any items are associated with this invoice
                 var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
 
-                // Step 2: If no items are associated, proceed to delete the invoice
                 int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
                 if (deleteResult > 0)
                 {
-                    var paymentTransaction = await _paymentTransactionService.GetPaymentTransactionByInvoiceIdAsync(invoiceId);
-                    if (paymentTransaction != null)
+                    var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+
+                    if (paymentTransactions != null && paymentTransactions.Any())
                     {
-                        // Delete the payment transaction
-                        var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
-                        if (deleteTransactionResult <= 0)
+                        bool deleteFailed = false;
+
+                        foreach (var paymentTransaction in paymentTransactions)
                         {
-                            return BadRequest(new { ErrorMessage = "Failed to delete the related payment transaction." });
+                            var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+
+                            if (deleteTransactionResult <= 0)
+                            {
+                                deleteFailed = true;
+                                break;
+                            }
+                        }
+                        if (deleteFailed)
+                        {
+                            return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-                    return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+
+                    return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
                 else
                 {
-                    return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
+                    return BadRequest(new { ErrorMessage = "حدث خطأ اثناء الحذف." });
                 }
             }
             catch (Exception ex)
@@ -235,10 +259,8 @@ namespace IOMSYS.Controllers
         {
             try
             {
-                // Step 1: Check if any items are associated with this invoice
                 var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
 
-                // Step 2: If no items are associated, proceed to delete the invoice
                 int deleteResult = await _salesInvoicesService.UpdateReturnSalesInvoiceAsync(invoiceId);
                 if (deleteResult > 0)
                 {

@@ -4,7 +4,7 @@
 }
 
 <div class="page-title">
-    <img src="/logo-black.png" alt="Logo" height="100" class="d-inline-block align-top">
+    <img src="/logo.png" alt="Logo" height="120" class="d-inline-block align-top">
     <h1 class="display-4" id="userNameDisplay">Welcome</h1>
 </div>
 
@@ -144,6 +144,35 @@
     </div>
 </div>
 </div>
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-cart-fill bg-primary"></i> راس المال بسعر الشراء
+                </h5>
+                <p class="card-text display-4" id="totalbuycost">0</p>
+                <div class="progress">
+                    <div class="progress-bar bg-primary" id="totalAmountInPurchaseProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-cart-fill bg-primary"></i> راس المال بسعر البيع
+                </h5>
+                <p class="card-text display-4" id="totaldellrevenue">0</p>
+                <div class="progress">
+                    <div class="progress-bar bg-success" id="paidUpInPurchaseProgress" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
     function renderBestSalesChart(data) {
@@ -252,24 +281,40 @@
             .catch(error => console.error('Error:', error));
     }
 
+    function fetchDashboardData(fromDate, toDate, branchId) {
+        $('#loadingIndicator').show();
+        const params = { fromDate, toDate, BranchId: branchId };
+        fetch('@Url.Action("GetFinancialDashboard", "Dashboard")' + '?' + new URLSearchParams(params))
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalAmountInPurchase').innerText = data.TotalAmountInPurchaseInvoices ?? 0;
+                document.getElementById('paidUpInPurchase').innerText = data.PaidUpInPurchaseInvoices ?? 0;
+                document.getElementById('remainderInPurchase').innerText = data.RemainderInPurchaseInvoices ?? 0;
+                document.getElementById('totalAmountInSales').innerText = data.TotalAmountInSalesInvoices ?? 0;
+                document.getElementById('paidUpInSales').innerText = data.PaidUpInSalesInvoices ?? 0;
+                document.getElementById('remainderInSales').innerText = data.RemainderInSalesInvoices ?? 0;
+                document.getElementById('ExpensesAmount').innerText = data.ExpensesAmount ?? 0;
+                document.getElementById('profit').innerText = data.Profit ?? 0;
+                document.getElementById('totalbuycost').innerText = data.TotalBuyCost ?? 0;
+                document.getElementById('totaldellrevenue').innerText = data.TotalSellRevenue ?? 0;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                $('#loadingIndicator').hide();
+            });
+    }
+
     function updateDashboard() {
         let fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
         let toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
         let branchId = $("#BranchId").val();
 
         const params = { fromDate, toDate, BranchId: branchId };
+        fetchDashboardData(fromDate, toDate, branchId);
         fetchDailySalesData(fromDate, toDate, branchId);
         fetchBestSalesData(fromDate, toDate, branchId);
-
-        fetchData('@Url.Action("GetTotalAmountInPurchaseInvoices", "Dashboard")', params, 'totalAmountInPurchase', '', 'totalAmountInPurchaseProgress');
-        fetchData('@Url.Action("GetPaidUpInPurchaseInvoices", "Dashboard")', params, 'paidUpInPurchase', '', 'paidUpInPurchaseProgress');
-        fetchData('@Url.Action("GetRemainderInPurchaseInvoices", "Dashboard")', params, 'remainderInPurchase', '', 'remainderInPurchaseProgress');
-        fetchData('@Url.Action("GetTotalAmountInSalesInvoices", "Dashboard")', params, 'totalAmountInSales', '', 'totalAmountInSalesProgress');
-        fetchData('@Url.Action("GetPaidUpInSalesInvoices", "Dashboard")', params, 'paidUpInSales', '', 'paidUpInSalesProgress');
-        fetchData('@Url.Action("GetRemainderInSalesInvoices", "Dashboard")', params, 'remainderInSales', '', 'remainderInSalesProgress');
-        fetchData('@Url.Action("GetExpensesAmount", "Dashboard")', params, 'ExpensesAmount', '', 'ExpensesAmountProgress');
-        fetchData('@Url.Action("CalculateProfit", "Dashboard")', params, 'profit', '', '');
-
     }
 
     $(function () {

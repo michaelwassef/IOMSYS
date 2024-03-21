@@ -68,20 +68,16 @@
 
 @(Html.DevExtreme().DataGrid<TransactionDetailModel>()
     .ID("gridContainer")
-    .DataSource(d => d
-        .Mvc()
-        .Controller("PaymentTransactions")
-        .Key("TransactionId")
-    ).Selection(s => s.Mode(SelectionMode.Multiple))
+.Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
      .ColumnAutoWidth(true)
     .Editing(e => e
         .Mode(GridEditMode.Popup)
-@*        .AllowAdding(true)
-        .AllowUpdating(true)
-        .AllowDeleting(true)*@
+       .AllowAdding(true)
+       .AllowUpdating(true)
+       .AllowDeleting(true)
         .Popup(p => p
                 .Title("بيانات المعاملة")
                 .ShowTitle(true)
@@ -104,11 +100,10 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.TransactionId).Caption("كود العملية");
+        columns.AddFor(m => m.TransactionId).Caption("كود العملية").AllowEditing(false);
         columns.AddFor(m => m.InvoiceType).Caption("اسم العملية");
-        columns.AddFor(m => m.InvoiceId).Caption("رقم الفاتورة");
-@*        columns.AddFor(m => m.InvoiceDetail).Caption("تفاصيل الفاتورة");
-*@        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
+        columns.AddFor(m => m.InvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
+        columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
           .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))
           .ValueExpr("BranchId")
           .DisplayExpr("BranchName")); ;
@@ -116,12 +111,12 @@
         .DataSource(d => d.Mvc().Controller("PaymentMethods").LoadAction("LoadPaymentMethods"))
         .ValueExpr("PaymentMethodId")
         .DisplayExpr("PaymentMethodName"));
-        columns.AddFor(m => m.TransactionType).Caption("نوع المعاملة");
-        columns.AddFor(m => m.InvoiceDate).Caption("تاريخ المعاملة");
+        columns.AddFor(m => m.TransactionType).Caption("نوع المعاملة").AllowEditing(false);
+        columns.AddFor(m => m.TransactionDate).Caption("تاريخ المعاملة");
         columns.AddFor(m => m.Amount).Caption("القيمة");
         columns.AddFor(m => m.Details).Caption("ملاحظات");
-        columns.AddFor(m => m.EntityName).Caption("خاص ب");
-        columns.AddFor(m => m.ModifiedDate).Caption("تاريخ الادخال");
+        columns.AddFor(m => m.EntityName).Caption("خاص ب").AllowEditing(false);
+        columns.AddFor(m => m.ModifiedDate).Caption("تاريخ الادخال").AllowEditing(false);
         columns.AddFor(m => m.ModifiedUser).Caption("مدخل البيانات").AllowEditing(false).Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
        .ValueExpr("UserId")
@@ -132,10 +127,10 @@
     .Summary(summary => summary
         .TotalItems(items =>
         {
-@*            items.Add()
+            items.Add()
                 .Column("القيمة")
                 .SummaryType(SummaryType.Sum)
-                .DisplayFormat("الاجمالي : {0}");*@
+                .DisplayFormat("الاجمالي : {0}");
         })
     )
 )
@@ -212,7 +207,7 @@
             if (windowWidth < 768) {
                 return "90%";
             } else {
-                return 600;
+                return 750;
             }
         }
 
@@ -233,19 +228,29 @@
         });
     });
 
-
     var transferItems = [];
     
     function initializeItemsGrid() {
         $("#transferGrid").dxDataGrid({
             dataSource: transferItems,
             columns: [
-                { dataField: "FromBranchId", caption: "من فرع" },
-                { dataField: "FromPaymentMethodId", caption: "من خزنة" },
-                { dataField: "ToBranchId", caption: "الي فرع" },
-                { dataField: "ToPaymentMethodId", caption: "الي خزنة" },
+                { dataField: "FromBranchId", caption: "من فرع" ,
+                    lookup: { dataSource: { load: function () { return $.ajax({ url: "/Branches/LoadBranches", dataType: "json" }); } }, valueExpr: "BranchId", displayExpr: "BranchName" }
+                },
+                { dataField: "FromPaymentMethodId", caption: "من خزنة" ,
+                    lookup: { dataSource: { load: function () { return $.ajax({ url: "/PaymentMethods/LoadPaymentMethods", dataType: "json" }); } }, valueExpr: "PaymentMethodId", displayExpr: "PaymentMethodName" }
+                },
+                { dataField: "ToBranchId", caption: "الي فرع",
+                  lookup: { dataSource: { load: function () { return $.ajax({ url: "/Branches/LoadBranches", dataType: "json" }); }}, valueExpr: "BranchId", displayExpr: "BranchName" }
+                },
+                { dataField: "ToPaymentMethodId", caption: "الي خزنة" ,
+                    lookup: { dataSource: { load: function () { return $.ajax({ url: "/PaymentMethods/LoadPaymentMethods", dataType: "json" }); } }, valueExpr: "PaymentMethodId", displayExpr: "PaymentMethodName" }
+                },
                 { dataField: "Amount", caption: "المبلغ المحول" }
             ],
+            columnAutoWidth: true,
+            width: "100%",
+            rtlEnabled: true,
         });
     }
 
@@ -409,47 +414,39 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', async function () {
-        try {
-            // Load branches data
-            const branchesResponse = await fetch('/Branches/LoadBranchesByUser');
-            if (!branchesResponse.ok) {
-                console.error('Failed to load branches data');
-                return;
+    $(function () {
+        (async function () {
+            try {
+                const branchesResponse = await fetch('/Branches/LoadBranchesByUser');
+                if (!branchesResponse.ok) {
+                    throw new Error('Failed to load branches data');
+                }
+                const branchesData = await branchesResponse.json();
+                populateDropdownData(branchesData);
+
+                if (branchesData.length > 0) {
+                    await fetchBranchAccountBalance(branchesData[0]['BranchId']);
+                    const defaultBranchId = branchesData[0]['BranchId'];
+                    const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${defaultBranchId}`;
+                    loadSalesInvoices(loadUrl);
+                }
+
+                $('#BranchId').change(async function () {
+                    const branchId = $(this).val();
+                    const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${branchId}`;
+                    loadSalesInvoices(loadUrl);
+                    await fetchBranchAccountBalance(branchId);
+                });
+            } catch (error) {
+                console.error('Error loading data:', error);
             }
-            const branchesData = await branchesResponse.json();
 
-            // Populate branches dropdown
-            populateDropdownData(branchesData);
-
-            if (branchesData.length > 0) {
-                await fetchBranchAccountBalance(branchesData[0]['BranchId']);
-            }
-
-            // Set the default branch to the first option
-            const defaultBranchId = branchesData.length > 0 ? branchesData[0]['BranchId'] : null;
-            if (defaultBranchId) {
-                const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${defaultBranchId}`;
-                loadSalesInvoices(loadUrl);
-            }
-
-            // Event listener for branch selection change
-            $('#BranchId').change(async function () {
-                const branchId = $(this).val();
-                const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${branchId}`;
-                loadSalesInvoices(loadUrl);
-                await fetchBranchAccountBalance(branchId);
+            $("#showAllBtn").click(function () {
+                const dataGrid = $("#gridContainer").dxDataGrid("instance");
+                dataGrid.clearFilter();
             });
-
-        } catch (error) {
-            console.error('Error loading data:', error);
-        }
-        // Button click event to show all data
-        $("#showAllBtn").click(function() {
-            const dataGrid = $("#gridContainer").dxDataGrid("instance");
-            dataGrid.clearFilter();
-        });
-        });
+        })();
+    });
 
     async function fetchBranchAccountBalance(branchId) {
         try {
@@ -474,23 +471,52 @@
         });
     }
 
+    async function updateGridDataSource(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to load data');
+            }
+            const data = await response.json();
+            $("#gridContainer").dxDataGrid("instance").option("dataSource", data);
+        } catch (error) {
+            console.error('Error updating grid data:', error);
+        }
+    }
+
     async function loadSalesInvoices(url) {
         try {
-            const salesInvoicesResponse = await fetch(url);
-            if (!salesInvoicesResponse.ok) {
-                console.error('Failed to load sales invoices data');
-                return;
-            }
-            const salesInvoicesData = await salesInvoicesResponse.json();
-
-            $("#gridContainer").dxDataGrid("instance").option("dataSource", {
-                load: function () {
-                    return salesInvoicesData;
-                },
-                key: "TransactionId"
+            const gridInstance = $("#gridContainer").dxDataGrid("instance");
+            gridInstance.option("dataSource", {
+                store: new DevExpress.data.CustomStore({
+                    key: "TransactionId",
+                    load: () => fetch(url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to load data');
+                            }
+                            return response.json();
+                        }),
+                    insert: values => $.ajax({
+                        url: '/PaymentTransactions/AddNewPaymentTransaction',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(values)
+                    }).then(() => gridInstance.refresh()),
+                    update: (key, values) => $.ajax({
+                        url: `/PaymentTransactions/UpdatePaymentTransaction?id=${key}`,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(values)
+                    }).then(() => gridInstance.refresh()),
+                    remove: key => $.ajax({
+                        url: `/PaymentTransactions/DeletePaymentTransaction?transactionId=${key}`,
+                        method: 'DELETE'
+                    }).then(() => gridInstance.refresh())
+                })
             });
         } catch (error) {
-            console.error('Error loading sales invoices:', error);
+            console.error('Error setting up sales invoices grid:', error);
         }
     }
 </script>

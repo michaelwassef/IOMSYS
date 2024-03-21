@@ -42,7 +42,7 @@ namespace IOMSYS.Services
                 P.BranchId,
                 P.PaymentMethodId,
                 P.TransactionType,
-                P.TransactionDate as InvoiceDate,
+                P.TransactionDate as TransactionDate,
                 P.Amount,
                 P.Details,
                 P.ModifiedDate,
@@ -96,19 +96,20 @@ namespace IOMSYS.Services
             }
         }
 
-        public async Task<PaymentTransactionModel> GetPaymentTransactionByInvoiceIdAsync(int InvoiceId)
+        public async Task<IEnumerable<PaymentTransactionModel>> GetPaymentTransactionsByInvoiceIdAsync(int InvoiceId)
         {
             var sql = @"SELECT * FROM PaymentTransactions WHERE InvoiceId = @InvoiceId";
             using (var db = _dapperContext.CreateConnection())
             {
-                return await db.QueryFirstOrDefaultAsync<PaymentTransactionModel>(sql, new { InvoiceId }).ConfigureAwait(false);
+                // Using QueryAsync to fetch multiple rows
+                return await db.QueryAsync<PaymentTransactionModel>(sql, new { InvoiceId }).ConfigureAwait(false);
             }
         }
 
         public async Task<decimal> GetBranchAccountBalanceAsync(int branchId)
         {
             var sql = @"
-                SELECT COALESCE(SUM(CASE WHEN TransactionType = 'اضافة' THEN Amount ELSE -Amount END), 0) AS Balance
+                SELECT COALESCE(SUM(Amount), 0) AS Balance
                 FROM PaymentTransactions 
                 WHERE BranchId = @BranchId";
 
@@ -129,7 +130,7 @@ namespace IOMSYS.Services
         public async Task<decimal> GetBranchAccountBalanceByPaymentAsync(int BranchId, int PaymentMethodId)
         {
             var sql = @"
-                SELECT COALESCE(SUM(CASE WHEN TransactionType = 'اضافة' THEN Amount ELSE -Amount END), 0) AS Balance
+                SELECT COALESCE(SUM(Amount), 0) AS Balance
                 FROM PaymentTransactions 
                 WHERE BranchId = @BranchId AND PaymentMethodId = @PaymentMethodId";
 
@@ -201,7 +202,43 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<int> InsertPaymentTransactionAsync(TransactionDetailModel transaction)
+        {
+            var sql = @"INSERT INTO PaymentTransactions (BranchId, PaymentMethodId, TransactionType, TransactionDate, Amount, Details, ModifiedDate, ModifiedUser, InvoiceId) 
+                        VALUES (@BranchId, @PaymentMethodId, @TransactionType, @TransactionDate, @Amount, @Details, @ModifiedDate, @ModifiedUser, @InvoiceId);
+                        SELECT CAST(SCOPE_IDENTITY() as int);";
+            try
+            {
+                using (var db = _dapperContext.CreateConnection())
+                {
+                    return await db.ExecuteScalarAsync<int>(sql, transaction).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                return -1;
+            }
+        }
 
+        public async Task<int> UpdatePaymentTransactionAsync(TransactionDetailModel transaction)
+        {
+            var sql = @"UPDATE PaymentTransactions 
+                        SET BranchId = @BranchId, PaymentMethodId = @PaymentMethodId, TransactionType = @TransactionType, 
+                            TransactionDate = @TransactionDate, Amount = @Amount, Details = @Details, 
+                            ModifiedDate = @ModifiedDate, ModifiedUser = @ModifiedUser , InvoiceId = @InvoiceId
+                        WHERE TransactionId = @TransactionId";
+            try
+            {
+                using (var db = _dapperContext.CreateConnection())
+                {
+                    return await db.ExecuteAsync(sql, transaction).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                return -1;
+            }
+        }
 
         public async Task<decimal> CalculateAmountOwedByBranchAsync(int SupplierId, int BranchId)
         {
@@ -215,16 +252,16 @@ namespace IOMSYS.Services
                 return totalOwed.FirstOrDefault();
             }
         }
-        public async Task<IEnumerable<int>> GetNotFullyPaidInvoiceIdsAsync(int branchId)
+        public async Task<IEnumerable<int>> GetNotFullyPaidInvoiceIdsAsync(int branchId,int SupplierId)
         {
             var sql = @"
                 SELECT PurchaseInvoiceId
                 FROM PurchaseInvoices
-                WHERE BranchId = @BranchId AND IsFullPaidUp = 0";
+                WHERE BranchId = @BranchId AND SupplierId = @SupplierId AND IsFullPaidUp = 0";
 
             using (var db = _dapperContext.CreateConnection())
             {
-                return await db.QueryAsync<int>(sql, new { BranchId = branchId }).ConfigureAwait(false);
+                return await db.QueryAsync<int>(sql, new { BranchId = branchId, SupplierId = SupplierId }).ConfigureAwait(false);
             }
         }
         public async Task<PurchaseInvoicesModel> GetPurchaseInvoiceByIdAsync(int purchaseInvoiceId)
@@ -253,12 +290,13 @@ namespace IOMSYS.Services
                 return await db.ExecuteAsync(sql, new { PurchaseInvoiceId, PaidUp, Remainder, IsFullPaidUp }).ConfigureAwait(false);
             }
         }
+
         public async Task<decimal> ProcessInvoicesAndUpdateBalances(int fromBranchId, int toBranchId, decimal amountToSpend)
         {
             var amountOwed = await CalculateAmountOwedByBranchAsync(fromBranchId, toBranchId);
             var spendingAmount = Math.Min(amountOwed, amountToSpend);
             var initialSpendingAmount = spendingAmount;
-            var invoiceIds = await GetNotFullyPaidInvoiceIdsAsync(toBranchId);
+            var invoiceIds = await GetNotFullyPaidInvoiceIdsAsync(toBranchId, fromBranchId);
 
             foreach (var invoiceId in invoiceIds)
             {
@@ -273,7 +311,12 @@ namespace IOMSYS.Services
                 bool isFullPaidUp = newRemainder == 0;
 
                 await UpdatePurchaseInvoiceAsync(invoiceId, newPaidUpAmount, newRemainder, isFullPaidUp);
-
+                var newinvoice = await GetPurchaseInvoiceByIdAsync(invoiceId);
+                if (newPaidUpAmount > 0)
+                {
+                    newinvoice.Notes = "دفعة من فاتورة المشتريات #" + newinvoice.SalesInvoiceId;
+                    await RecordPaymentTransaction(newinvoice, invoiceId);
+                }
                 spendingAmount -= amountToPay;
             }
             var amountUtilized = initialSpendingAmount - spendingAmount;
@@ -284,7 +327,7 @@ namespace IOMSYS.Services
             var amountOwed = await CalculateAmountOwedByBranchAsync(fromBranchId, toBranchId);
             var spendingAmount = Math.Min(amountOwed, amountToSpend);
             var initialSpendingAmount = spendingAmount;
-            var invoiceIds = await GetNotFullyPaidInvoiceIdsAsync(toBranchId);
+            var invoiceIds = await GetNotFullyPaidInvoiceIdsAsync(toBranchId, fromBranchId);
 
             foreach (var invoiceId in invoiceIds)
             {
@@ -302,7 +345,6 @@ namespace IOMSYS.Services
 
                 spendingAmount -= amountToPay;
 
-
                 var saleInvoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(invoice.SalesInvoiceId);
                 if (saleInvoice != null)
                 {
@@ -311,23 +353,80 @@ namespace IOMSYS.Services
                     saleInvoice.IsFullPaidUp = saleInvoice.PaidUp == saleInvoice.TotalAmount;
 
                     int updateSales = await _salesInvoicesService.UpdateSalesInvoiceAsync(saleInvoice);
-                    //var paymentTransaction = new PaymentTransactionModel
+                    //var newinvoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(saleInvoice.SalesInvoiceId);
+                    //if (newPaidUpAmount > 0)
                     //{
-                    //    BranchId = saleInvoice.BranchId,
-                    //    PaymentMethodId = saleInvoice.PaymentMethodId,
-                    //    Amount = saleInvoice.PaidUp,
-                    //    TransactionType = "اضافة",
-                    //    TransactionDate = saleInvoice.SaleDate,
-                    //    ModifiedUser = saleInvoice.UserId,
-                    //    ModifiedDate = DateTime.Now,
-                    //    InvoiceId = saleInvoice.SalesInvoiceId,
-                    //    Details = "دفعة من فاتورة #" + saleInvoice.SalesInvoiceId,
-                    //};
-                    //await InsertPaymentTransactionAsync(paymentTransaction);
+                    //    newinvoice.Notes = "دفعة من فاتورة المبيعات #" + saleInvoice.SalesInvoiceId;
+                    //    await RecordPaymentTransaction(newinvoice, saleInvoice.SalesInvoiceId);
+                    //}
                 }
             }
             var amountUtilized = initialSpendingAmount - spendingAmount;
             return amountUtilized;
+        }
+        public async Task<decimal> ProcessInvoicesAndUpdateBalancesS(int fromBranchId, int toBranchId, decimal amountToSpend)
+        {
+            var amountOwed = await CalculateAmountOwedByBranchAsyncS(fromBranchId, toBranchId);
+            var spendingAmount = Math.Min(amountOwed, amountToSpend);
+            var initialSpendingAmount = spendingAmount;
+            var invoiceIds = await GetNotFullyPaidInvoiceIdsAsyncS(toBranchId);
+
+            foreach (var invoiceId in invoiceIds)
+            {
+                if (spendingAmount <= 0)
+                    break;
+
+                var invoice = await GetSalesInvoiceByIdAsyncS(invoiceId);
+
+                var amountToPay = Math.Min(invoice.Remainder, spendingAmount);
+                var newPaidUpAmount = invoice.PaidUp + amountToPay;
+                var newRemainder = invoice.TotalAmount - newPaidUpAmount;
+                bool isFullPaidUp = newRemainder == 0;
+
+                await UpdateSalesInvoiceAsyncS(invoiceId, newPaidUpAmount, newRemainder, isFullPaidUp);
+                var newinvoice = await GetSalesInvoiceByIdAsyncS(invoiceId);
+                if (newPaidUpAmount > 0)
+                {
+                    newinvoice.Notes = "دفعة من فاتورة المبيعات #" + newinvoice.SalesInvoiceId;
+                    await RecordPaymentTransaction(newinvoice, invoiceId);
+                }
+                spendingAmount -= amountToPay;
+            }
+            var amountUtilized = initialSpendingAmount - spendingAmount;
+            return amountUtilized;
+        }
+
+        private async Task RecordPaymentTransaction(PurchaseInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = -model.PaidUp,
+                TransactionType = "خصم",
+                TransactionDate = model.PurchaseDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await InsertPaymentTransactionAsync(paymentTransaction);
+        }
+        private async Task RecordPaymentTransaction(SalesInvoicesModel model, int invoiceId)
+        {
+            var paymentTransaction = new PaymentTransactionModel
+            {
+                BranchId = model.BranchId,
+                PaymentMethodId = model.PaymentMethodId,
+                Amount = model.PaidUp,
+                TransactionType = "اضافة",
+                TransactionDate = model.SaleDate,
+                ModifiedUser = model.UserId,
+                ModifiedDate = DateTime.Now,
+                InvoiceId = invoiceId,
+                Details = model.Notes,
+            };
+            await InsertPaymentTransactionAsync(paymentTransaction);
         }
 
 
@@ -380,32 +479,6 @@ namespace IOMSYS.Services
             {
                 return await db.ExecuteAsync(sql, new { SalesInvoiceId, PaidUp, Remainder, IsFullPaidUp }).ConfigureAwait(false);
             }
-        }
-        public async Task<decimal> ProcessInvoicesAndUpdateBalancesS(int fromBranchId, int toBranchId, decimal amountToSpend)
-        {
-            var amountOwed = await CalculateAmountOwedByBranchAsyncS(fromBranchId, toBranchId);
-            var spendingAmount = Math.Min(amountOwed, amountToSpend);
-            var initialSpendingAmount = spendingAmount;
-            var invoiceIds = await GetNotFullyPaidInvoiceIdsAsyncS(toBranchId);
-
-            foreach (var invoiceId in invoiceIds)
-            {
-                if (spendingAmount <= 0)
-                    break;
-
-                var invoice = await GetSalesInvoiceByIdAsyncS(invoiceId);
-
-                var amountToPay = Math.Min(invoice.Remainder, spendingAmount);
-                var newPaidUpAmount = invoice.PaidUp + amountToPay;
-                var newRemainder = invoice.TotalAmount - newPaidUpAmount;
-                bool isFullPaidUp = newRemainder == 0;
-
-                await UpdateSalesInvoiceAsyncS(invoiceId, newPaidUpAmount, newRemainder, isFullPaidUp);
-
-                spendingAmount -= amountToPay;
-            }
-            var amountUtilized = initialSpendingAmount - spendingAmount;
-            return amountUtilized;
         }
     }
 }
