@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -119,7 +118,7 @@ namespace IOMSYS.Controllers
                 {
                     BranchId = salesInvoice.BranchId,
                     PaymentMethodId = salesInvoice.PaymentMethodId,
-                    Amount = salesInvoiceIdModel.SellPrice * salesInvoiceIdModel.Quantity,
+                    Amount = -returnedAmount,
                     TransactionType = "خصم",
                     TransactionDate = DateTime.Now,
                     ModifiedUser = userId,
@@ -128,13 +127,8 @@ namespace IOMSYS.Controllers
                     InvoiceId = salesInvoice.SalesInvoiceId,
                 };
                 await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
-
-                // Update sales invoice's PaidUp property
-                salesInvoice.PaidUp = salesInvoice.TotalAmount - returnedAmount;
-                await _salesInvoicesService.UpdateSalesInvoiceAsync(salesInvoice);
-
+                await RecalculateInvoiceTotal(salesInvoiceId, returnedAmount);
                 await DeleteReturnInvoiceIfNoItems(salesInvoiceId);
-                await RecalculateInvoiceTotal(salesInvoiceId);
                 return Ok(new { SuccessMessage = "تم الاسترجاع بنجاح" });
             }
             catch (Exception ex)
@@ -172,7 +166,7 @@ namespace IOMSYS.Controllers
             }
         }
 
-        private async Task<bool> RecalculateInvoiceTotal(int invoiceId)
+        private async Task<bool> RecalculateInvoiceTotal(int invoiceId, decimal returnedAmount)
         {
             try
             {
@@ -183,6 +177,8 @@ namespace IOMSYS.Controllers
                 if (invoice != null)
                 {
                     invoice.TotalAmount = totalAmount;
+                    invoice.PaidUp = invoice.PaidUp - returnedAmount;
+                    invoice.Remainder = invoice.TotalAmount - invoice.Remainder;
                     var updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(invoice);
                     return updateResult > 0;
                 }
@@ -260,21 +256,26 @@ namespace IOMSYS.Controllers
             try
             {
                 var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
-
-                int deleteResult = await _salesInvoicesService.UpdateReturnSalesInvoiceAsync(invoiceId);
-                if (deleteResult > 0)
+                int deleteResult = 0;
+                if (!items.Any())
                 {
-                    return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+                    deleteResult = await _salesInvoicesService.UpdateReturnSalesInvoiceAsync(invoiceId);
+                    if (deleteResult > 0)
+                    {
+                        return Ok(new { SuccessMessage = "Invoice deleted successfully." });
+                    }
+                    else
+                    {
+                        return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
+                    }
                 }
-                else
-                {
-                    return BadRequest(new { ErrorMessage = "Could not delete the invoice." });
-                }
+                return Ok(new { SuccessMessage = "Nothing Delete." });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

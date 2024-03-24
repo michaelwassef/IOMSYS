@@ -48,3 +48,45 @@ body {
         margin-bottom: 3px; /* Reduce spacing for a more compact layout */
     }
 }
+
+/* Enhances the overall page background for better contrast */
+body {
+    background-color: #f4f7f6;
+}
+
+/* Card styling for a modern look */
+.profit-card {
+    background-color: #28a745; /* Keeps your green theme */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform .3s ease, box-shadow .3s ease;
+}
+
+    .profit-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.2);
+    }
+
+    .profit-card .card-title {
+        font-size: 1.25rem; /* Adjusts title size for better readability */
+        margin-bottom: 0.75rem;
+    }
+
+    .profit-card .card-text {
+        font-size: 2.5rem; /* Larger text for key data points */
+        font-weight: bold;
+    }
+
+.icon {
+    margin-right: 10px;
+    font-size: 1.5rem; /* Larger icon for visual appeal */
+}
+
+/* Responsive tweaks */
+@media (max-width: 991px) {
+    .profit-card .card-text {
+        font-size: 2rem; /* Adjusts text size on smaller screens */
+    }
+}

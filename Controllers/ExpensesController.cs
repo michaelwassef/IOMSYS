@@ -79,7 +79,7 @@ namespace IOMSYS.Controllers
                     {
                         BranchId = newExpense.BranchId,
                         PaymentMethodId = newExpense.PaymentMethodId,
-                        Amount = newExpense.ExpensesAmount,
+                        Amount = -newExpense.ExpensesAmount,
                         TransactionDate = newExpense.PurchaseDate,
                         ModifiedDate = DateTime.Now,
                         ModifiedUser = newExpense.UserId,

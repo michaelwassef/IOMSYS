@@ -2,6 +2,7 @@
     ViewData["Title"] = "Home Page";
     Layout = "_DevExtremeLayout";
 }
+<link rel="stylesheet" href="~/css/site.css">
 
 <div class="page-title">
     <img src="/logo.png" alt="Logo" height="120" class="d-inline-block align-top">
@@ -27,11 +28,19 @@
 </div>
 
 <div class="row">
-    <div class="col-md-12 mb-4">
-        <div class="card shadow bg-success text-white">
+    <div class="col-lg-6 mb-4">
+        <div class="card profit-card shadow">
             <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-graph-up"></i> اجمالي صافي الربح</h5>
-                <p class="card-text display-4" id="profit">0</p>
+                <h5 class="card-title"><i class="bi bi-graph-up icon"></i> اجمالي الربح المتوقع</h5>
+                <p class="card-text" id="expectedNet">0</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card profit-card shadow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-graph-up icon"></i> اجمالي صافي الربح</h5>
+                <p class="card-text" id="profit">0</p>
             </div>
         </div>
     </div>
@@ -297,6 +306,7 @@
                 document.getElementById('profit').innerText = data.Profit ?? 0;
                 document.getElementById('totalbuycost').innerText = data.TotalBuyCost ?? 0;
                 document.getElementById('totaldellrevenue').innerText = data.TotalSellRevenue ?? 0;
+                document.getElementById('expectedNet').innerText = data.ExpectedNet ?? 0;
             })
             .catch(error => {
                 console.error('Error:', error);

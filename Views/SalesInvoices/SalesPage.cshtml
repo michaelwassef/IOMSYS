@@ -15,7 +15,8 @@
     </div>
 </div>
 <div class="row justify-content-center">
-<button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">عرض مرتجعات الفروع</button>
+    <button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">عرض مرتجعات الفروع</button>
+    <button type="button" onclick="returnProdutsPage2()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">كشف فواتير العملاء</button>
 </div>
 
 @(Html.DevExtreme().DataGrid<SalesInvoicesModel>()
@@ -55,6 +56,8 @@
             columns.AddFor(m => m.ColorName).Caption("اللون");
 
             columns.AddFor(m => m.Quantity).Caption("الكمية");
+
+            columns.AddFor(m => m.UnitName).Caption("الوحدة");
 
             columns.AddFor(m => m.SellPrice).Caption("سعر البيع للواحد");
 
@@ -103,6 +106,10 @@
 )
 
 <script>
+        function returnProdutsPage2() {
+        window.location.href = '@Url.Action("CustomersAccountPage", "Customers")';
+    }
+
     function returnProdutsPage() {
         window.location.href = '@Url.Action("ReturnSalesPage", "SalesInvoices")';
     }
@@ -572,7 +579,20 @@
                         location: 'after',
                         name: 'pdfButton'
                     };
+
                     toolbarItems.push(addButton, pdfButton);
+                    //toolbarItems.push({
+                    //    widget: 'dxButton',
+                    //    options: {
+                    //        icon: 'fas fa-file-pdf',
+                    //        text: 'طباعة PDF',
+                    //        onClick: function () {
+                    //            exportToPDF();
+                    //        }
+                    //    },
+                    //    location: 'after',
+                    //    name: 'pdfButton'
+                    //});
                 }
             });
         });

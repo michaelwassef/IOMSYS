@@ -1,16 +1,15 @@
-﻿
-@{
-    ViewData["Title"] = "SuppliersAccountPage";
+﻿@{
+    ViewData["Title"] = "CustomersAccountPage";
     Layout = "_DevExtremeLayout";
 }
 
 <div class="page-title">
-    <h1>كشف فواتير الموردين</h1>
+    <h1>كشف فواتير العملاء</h1>
 </div>
 
 <div class="dashboard-container">
     <div class="dashboard-item supplier-select">
-        <label for="BranchId" class="dashboard-label">اسم المورد</label>
+        <label for="BranchId" class="dashboard-label">اسم العميل</label>
         <select id="BranchId" class="dashboard-select"></select>
     </div>
     <div class="dashboard-item dashboard-summary total-invoices">
@@ -26,17 +25,17 @@
         <div class="summary-value" id="totalRemainderSum">0</div>
     </div>
     <div class="dashboard-container">
-        <button id="openPaidUpPopup" class="btn btn-primary">دفع للمورد</button>
+        <button id="openPaidUpPopup" class="btn btn-primary">تحصيل من عميل</button>
     </div>
 </div>
 
 <div id="paidUpPopup" class="popup-container" style="display: none;">
     <div class="popup-content">
         <span class="close-popup">&times;</span>
-        <h2>دفع للمورد</h2>
+        <h2>تحصيل من عميل</h2>
         <form id="paidUpForm">
             <div class="form-group">
-                <label for="supplierSelect">اسم المورد:</label>
+                <label for="supplierSelect">اسم العميل:</label>
                 <select id="supplierSelect" class="form-control"></select>
             </div>
             <div class="form-group">
@@ -51,24 +50,21 @@
                 <label for="amountInput">المبلغ:</label>
                 <input type="number" id="amountInput" class="form-control" step="0.01" />
             </div>
-            <div class="form-group my-2">
-                <button type="submit" class="btn btn-success mx-1">دفع</button>
-                <button type="button" class="close-popup btn btn-danger ">اغلاق</button>
-            </div>
+            <button type="submit" class="btn btn-success">تحصيل</button>
+            <button type="button" class="close-popup btn btn-danger">اغلاق</button>
         </form>
     </div>
 </div>
 
-
 <div id="gridContainer"></div>
 
 <script>
-    $('#openPaidUpPopup').click(function() {
+    $('#openPaidUpPopup').click(function () {
         populateDropdowns();
         $('#paidUpPopup').show();
     });
 
-    $('.close-popup').click(function() {
+    $('.close-popup').click(function () {
         $('#paidUpPopup').hide();
     });
 
@@ -92,9 +88,9 @@
         $('#loadingIndicator').show();
 
         $.ajax({
-            url: '@Url.Action("SupplierPaidUp", "InventoryMovement")',
+            url: '@Url.Action("CustomerPaidUp", "InventoryMovement")',
             type: 'POST',
-            data: { SupplierId: supplierId, BranchId: branchId, PaymentMethodId: paymentMethodId, Amount: amount },
+            data: { CustomerId: supplierId, BranchId: branchId, PaymentMethodId: paymentMethodId, Amount: amount },
             success: function (response) {
                 DevExpress.ui.notify(response.message, "success", 5000);
                 $('#paidUpPopup').hide();
@@ -113,8 +109,8 @@
     });
 
     function populateDropdowns() {
-        populateDropdown('/Branches/LoadBranches', 'branchSelectPopup', 'BranchId', 'BranchName');
-        populateDropdown('/Suppliers/LoadSuppliers', 'supplierSelect', 'SupplierId', 'SupplierName');
+        populateDropdown('/Branches/LoadBranchesByUser', 'branchSelectPopup', 'BranchId', 'BranchName');
+        populateDropdown('/Customers/LoadCustomers', 'supplierSelect', 'CustomerId', 'CustomerName');
         populateDropdown('/PaymentMethods/LoadPaymentMethods', 'PaymentMethodSelectPopup', 'PaymentMethodId', 'PaymentMethodName');
     }
 
@@ -161,15 +157,8 @@
         }
     }
 
-    function refresh() {
-        populateDropdown('/Suppliers/LoadSuppliers', 'BranchId', 'SupplierId', 'SupplierName');
-        $("#gridContainer").dxDataGrid("instance").refresh();
-        updateSupplierSums($('#BranchId').val());
-    }
-
-
-    function updateSupplierSums(supplierId) {
-        $.getJSON('/Suppliers/LoadSupplierSums', { SupplierId: supplierId }, function (data) {
+    function updateSupplierSums(customersId) {
+        $.getJSON('/Customers/LoadCustomerSums', { CustomerId: customersId }, function (data) {
             var totalInvoicesSum = data.TotalAmountSum !== null ? data.TotalAmountSum.toFixed(2) : '0.00';
             var totalPaidUpSum = data.PaidUpSum !== null ? data.PaidUpSum.toFixed(2) : '0.00';
             var totalRemainderSum = data.RemainderSum !== null ? data.RemainderSum.toFixed(2) : '0.00';
@@ -187,58 +176,20 @@
     });
 
     $(function () {
-        populateDropdown('/Suppliers/LoadSuppliers', 'BranchId', 'SupplierId', 'SupplierName');
+        populateDropdown('/Customers/LoadCustomers', 'BranchId', 'CustomerId', 'CustomerName');
 
         $("#gridContainer").dxDataGrid({
             dataSource: new DevExpress.data.CustomStore({
-                key: "PurchaseInvoiceId",
+                key: "SalesInvoiceId",
                 load: function (loadOptions) {
                     var d = $.Deferred();
-                    var params = { SupplierId: $('#BranchId').val() };
+                    var params = { CustomerId: $('#BranchId').val() };
 
-                    $.getJSON('/Suppliers/LoadSuppliersAccount', params)
+                    $.getJSON('/Customers/LoadCustomersAccount', params)
                         .done(function (result) { d.resolve(result); })
                         .fail(function () { d.reject("Data Loading Error"); });
 
                     return d.promise();
-                },
-                onRowUpdating: function (e) {
-                    var oldData = e.oldData;
-                    var newData = e.newData;
-
-                    if (newData.PaidUp !== undefined) {
-                        newData.Remainder = oldData.TotalAmount - newData.PaidUp;
-                    }
-
-                    e.newData = Object.assign({}, oldData, newData);
-                },
-                update: function (key, values) {
-                    var url = '/PurchaseInvoices/UpdatePurchaseInvoice/' + encodeURIComponent(key);
-
-                    var dataToSend = JSON.stringify({ values: values });
-
-                    return $.ajax({
-                        url: url,
-                        method: 'PUT',
-                        contentType: 'application/json',
-                        data: dataToSend
-                    })
-                        .done(function (response) {
-                            DevExpress.ui.notify({ message: "Invoice updated successfully" }, "success", 3000);
-                        })
-                        .fail(function (jqXHR) {
-                            var message = "Could not update invoice";
-                            if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
-                                message = jqXHR.responseJSON.ErrorMessage;
-                            }
-                            DevExpress.ui.notify({ message: message }, "error", 3000);
-                        });
-                },
-                remove: function (key) {
-                    return $.ajax({
-                        url: '/PurchaseInvoices/DeletePurchaseInvoice?invoiceId=' + encodeURIComponent(key),
-                        method: 'DELETE'
-                    });
                 }
             }),
             onToolbarPreparing: onToolbarPreparing,
@@ -246,17 +197,6 @@
             export: { enabled: true, allowExportSelectedData: true },
             onExporting: exporting,
             columnAutoWidth: true,
-            editing: {
-                mode: "popup",
-                allowUpdating: true,
-                allowDeleting: true,
-                popup: {
-                    title: "فاتورة مشتريات",
-                    showTitle: true,
-                    width: 800,
-                    height: 700
-                }
-            },
             rtlEnabled: true,
             paging: { pageSize: 10 },
             pager: {
@@ -268,27 +208,18 @@
             rowAlternationEnabled: true,
             width: "100%",
             showBorders: true,
-            onRowUpdating: function (e) {
-                var oldData = e.oldData;
-                var newData = e.newData;
-
-                var newPaidUp = newData.PaidUp !== undefined ? newData.PaidUp : oldData.PaidUp;
-                var totalAmount = oldData.TotalAmount !== undefined ? oldData.TotalAmount : 0;
-
-                var newRemainder = totalAmount - newPaidUp;
-                newData.Remainder = newRemainder;
-                e.newData = Object.assign({}, oldData, newData);
-            },
             columns: [
                 {
-                    dataField: "PurchaseInvoiceId",
-                    caption: "رقم الفاتورة",
-                    allowEditing: false
+                    dataField: "SalesInvoiceId",
+                    caption: "رقم الفاتورة"
                 },
                 {
                     dataField: "TotalAmount",
-                    caption: "اجمالي الفاتورة",
-                    allowEditing: false
+                    caption: "اجمالي الفاتورة بعد الخصم"
+                },
+                {
+                    dataField: "TotalDiscount",
+                    caption: "اجمالي الخصم"
                 },
                 {
                     dataField: "PaidUp",
@@ -296,27 +227,24 @@
                 },
                 {
                     dataField: "Remainder",
-                    caption: "الباقي من المبلغ",
-                    allowEditing: false,
-                    calculateCellValue: function (rowData) {
-                        return rowData.TotalAmount - rowData.PaidUp;
-                    }
+                    caption: "الباقي من المبلغ"
                 },
                 {
-                    dataField: "SupplierId",
-                    caption: "اسم المورد",
+                    dataField: "CustomerId",
+                    caption: "اسم العميل",
+                    allowEditing: false,
                     lookup: {
                         dataSource: DevExpress.data.AspNet.createStore({
-                            key: "SupplierId",
-                            loadUrl: "/Suppliers/LoadSuppliers"
+                            key: "CustomerId",
+                            loadUrl: "/Customers/LoadCustomers"
                         }),
-                        valueExpr: "SupplierId",
-                        displayExpr: "SupplierName"
+                        valueExpr: "CustomerId",
+                        displayExpr: "CustomerName"
                     }
                 },
                 {
                     dataField: "BranchId",
-                    caption: "اسم الفرع",
+                    caption: "الفرع",
                     lookup: {
                         dataSource: DevExpress.data.AspNet.createStore({
                             key: "BranchId",
@@ -327,8 +255,17 @@
                     }
                 },
                 {
+                    dataField: "Notes",
+                    caption: "ملاحظات"
+                },
+                {
+                    dataField: "SaleDate",
+                    caption: "تاريخ الفاتوره",
+                    dataType: "date"
+                },
+                {
                     dataField: "PaymentMethodId",
-                    caption: "طريقة الدفع",
+                    caption: "الخزنة",
                     lookup: {
                         dataSource: DevExpress.data.AspNet.createStore({
                             key: "PaymentMethodId",
@@ -339,22 +276,8 @@
                     }
                 },
                 {
-                    dataField: "Notes",
-                    caption: "ملاحظات"
-                },
-                {
-                    dataField: "PurchaseDate",
-                    caption: "تاريخ الفاتورة",
-                    dataType: "date"
-                },
-                {
-                    dataField: "PaidUpDate",
-                    caption: "تاريخ التحصيل",
-                    dataType: "date"
-                },
-                {
                     dataField: "UserId",
-                    caption: "مدخل الفاتورة",
+                    caption: "مدخل الفاتوره",
                     allowEditing: false,
                     lookup: {
                         dataSource: DevExpress.data.AspNet.createStore({
@@ -369,7 +292,7 @@
             summary: {
                 totalItems: [
                     {
-                        column: "PurchaseInvoiceId",
+                        column: "SalesInvoiceId",
                         summaryType: "count",
                         displayFormat: "عدد الفواتير : {0}"
                     },
@@ -406,11 +329,13 @@
                                 { dataField: "SizeName", caption: "المقاس" },
                                 { dataField: "ColorName", caption: "اللون" },
                                 { dataField: "Quantity", caption: "الكمية" },
-                                { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
+                                { dataField: "UnitName", caption: "الوحدة" },
+                                { dataField: "SellPrice", caption: "سعر البيع للواحد" },
+                                { dataField: "ItemDiscount", caption: "مبلغ الخصم للواحد" }
                             ],
                             dataSource: new DevExpress.data.CustomStore({
                                 load: function (loadOptions) {
-                                    return $.getJSON('/PurchaseItems/LoadPurchaseItemsByInvoiceId', {
+                                    return $.getJSON('/SalesItems/LoadSaleItemsByInvoiceId', {
                                         purchaseInvoiceId: options.key
                                     });
                                 }
@@ -425,15 +350,21 @@
         });
     });
 
+    function refresh() {
+        populateDropdown('/Customers/LoadCustomers', 'BranchId', 'CustomerId', 'CustomerName');
+        $("#gridContainer").dxDataGrid("instance").refresh();
+        updateSupplierSums($('#BranchId').val());
+    }
+
     function onToolbarPreparing(e) {
         var toolbarItems = e.toolbarOptions.items;
         toolbarItems.push({
             widget: 'dxButton',
             options: {
                 icon: 'fas fa-plus',
-                text: 'اضافة فاتوره مشتريات جديده',
+                text: 'اضافة فاتوره مبيعات جديده',
                 onClick: function () {
-                    window.location.href = '@Url.Action("PurchaseInvoicesPage", "PurchaseInvoices")';
+                    window.location.href = '@Url.Action("SalesInvoicesPage", "SalesInvoices")';
                 }
             },
             location: 'after'

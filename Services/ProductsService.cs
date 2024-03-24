@@ -26,11 +26,14 @@ namespace IOMSYS.Services
                             T.ProductTypeName, 
                             P.SellPrice, 
                             P.BuyPrice, 
+                            P.UnitId,
                             P.MaxDiscount, 
                             P.DiscountsOn, 
                             P.Notes, 
                             P.MinQuantity,
-                            COALESCE(SUM(BI.AvailableQty), 0) AS TotalQuantity
+                            COALESCE(SUM(BI.AvailableQty), 0) AS TotalQuantity,
+                            P.WholesalePrice,
+                            P.FabricQuantity
                         FROM 
                             Products P
                         INNER JOIN 
@@ -48,11 +51,13 @@ namespace IOMSYS.Services
                             T.ProductTypeName, 
                             P.SellPrice, 
                             P.BuyPrice, 
+                            P.UnitId,
                             P.MaxDiscount, 
                             P.DiscountsOn, 
                             P.Notes, 
-                            P.MinQuantity;
-                        ";
+                            P.MinQuantity,
+                            P.WholesalePrice,
+                            P.FabricQuantity;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -62,10 +67,12 @@ namespace IOMSYS.Services
 
         public async Task<ProductsModel?> SelectProductByIdAsync(int productId)
         {
-            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId, P.MinQuantity
+            var sql = @"SELECT P.ProductId, P.ProductName, C.CategoryName, P.ProductPhoto, T.ProductTypeName, P.SellPrice, P.BuyPrice, P.MaxDiscount, 
+                        P.DiscountsOn, P.Notes, P.CategoryId, P.ProductTypeId, P.MinQuantity, P.UnitId, U.UnitName, P.WholesalePrice, P.FabricQuantity
                 FROM Products P
                 INNER JOIN Categories C ON C.CategoryId = P.CategoryId
                 INNER JOIN ProductTypes T ON T.ProductTypeId = P.ProductTypeId
+                INNER JOIN Units U ON U.UnitId = P.UnitId
             WHERE ProductId = @ProductId";
 
             using (var db = _dapperContext.CreateConnection())
@@ -76,14 +83,18 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertProductAsync(ProductsModel product)
         {
-            var sql = @"INSERT INTO Products (ProductId, ProductName, CategoryId, ProductPhoto, ProductTypeId, SellPrice, BuyPrice, MaxDiscount, DiscountsOn, Notes, MinQuantity) 
-                VALUES (@ProductId, @ProductName, @CategoryId, @ProductPhoto, @ProductTypeId, @SellPrice, @BuyPrice, @MaxDiscount, @DiscountsOn, @Notes, @MinQuantity);";
+            var getIdSql = @"SELECT ISNULL(MAX(ProductId), 0) + 1 FROM Products;";
+            var insertSql = @"INSERT INTO Products (ProductId, ProductName, CategoryId, ProductPhoto, ProductTypeId, SellPrice, BuyPrice, MaxDiscount, DiscountsOn, Notes, MinQuantity, UnitId, WholesalePrice, FabricQuantity) 
+                      VALUES (@ProductId, @ProductName, @CategoryId, @ProductPhoto, @ProductTypeId, @SellPrice, @BuyPrice, @MaxDiscount, @DiscountsOn, @Notes, @MinQuantity, @UnitId, @WholesalePrice, @FabricQuantity);";
+
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    await db.ExecuteAsync(sql, new { product.ProductId, product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes, product.MinQuantity }).ConfigureAwait(false);
-                    return product.ProductId;
+                    var newProductId = await db.ExecuteScalarAsync<int>(getIdSql).ConfigureAwait(false);
+                    product.ProductId = newProductId;
+                    await db.ExecuteAsync(insertSql, product).ConfigureAwait(false);
+                    return newProductId;
                 }
             }
             catch
@@ -92,14 +103,17 @@ namespace IOMSYS.Services
             }
         }
 
+
         public async Task<int> UpdateProductAsync(ProductsModel product)
         {
-            var sql = @"UPDATE Products SET ProductName = @ProductName, CategoryId = @CategoryId, ProductPhoto = @ProductPhoto, ProductTypeId = @ProductTypeId, SellPrice = @SellPrice, BuyPrice = @BuyPrice, MaxDiscount = @MaxDiscount, DiscountsOn = @DiscountsOn, Notes = @Notes, MinQuantity = @MinQuantity WHERE ProductId = @ProductId";
+            var sql = @"UPDATE Products SET ProductName = @ProductName, CategoryId = @CategoryId, ProductPhoto = @ProductPhoto, ProductTypeId = @ProductTypeId, 
+                        SellPrice = @SellPrice, BuyPrice = @BuyPrice, MaxDiscount = @MaxDiscount, DiscountsOn = @DiscountsOn, Notes = @Notes, MinQuantity = @MinQuantity, 
+                        UnitId = @UnitId, WholesalePrice = @WholesalePrice, FabricQuantity = @FabricQuantity WHERE ProductId = @ProductId";
             try
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteAsync(sql, new { product.ProductName, product.CategoryId, product.ProductPhoto, product.ProductTypeId, product.SellPrice, product.BuyPrice, product.MaxDiscount, product.DiscountsOn, product.Notes, product.MinQuantity, product.ProductId }).ConfigureAwait(false);
+                    return await db.ExecuteAsync(sql, product ).ConfigureAwait(false);
                 }
             }
             catch
@@ -149,7 +163,8 @@ namespace IOMSYS.Services
                     P.ProductName, 
                     C.CategoryName, 
                     T.ProductTypeName,
-                    SUM(BI.AvailableQty) AS TotalQuantity
+                    SUM(BI.AvailableQty) AS TotalQuantity,
+                    P.UnitId
                 FROM 
                     Products P
                 INNER JOIN 
@@ -162,7 +177,8 @@ namespace IOMSYS.Services
                     P.ProductId, 
                     P.ProductName, 
                     C.CategoryName, 
-                    T.ProductTypeName
+                    T.ProductTypeName,
+                    P.UnitId
                 HAVING 
                     SUM(BI.AvailableQty) > 0;";
 
@@ -189,6 +205,7 @@ namespace IOMSYS.Services
                   ,COALESCE(si.TotalSoldQuantity, 0) AS TotalSoldQuantity
                   ,COALESCE(si.TotalSellPrice, 0) AS TotalSellPrice 
                   ,COALESCE(SUM(BI.AvailableQty), 0) AS TotalQuantity
+                  ,P.UnitId
             FROM BranchInventory BI
             INNER JOIN
                      Products p ON BI.ProductId = p.ProductId
@@ -220,6 +237,7 @@ namespace IOMSYS.Services
                   ,AvailableQty 
                   ,TotalSoldQuantity
                   ,TotalSellPrice
+                  ,P.UnitId
             HAVING BI.BranchId = @BranchId AND COALESCE(SUM(BI.AvailableQty), 0)> 0";
 
             using (var db = _dapperContext.CreateConnection())
@@ -229,92 +247,129 @@ namespace IOMSYS.Services
         }
 
         //تحركات المخزن
-        public async Task<IEnumerable<ProductsModel>> WarehouseMovementsAsync(int BranchId)
+        public async Task<IEnumerable<ProductsModel>> WarehouseMovementsAsync(int BranchId, DateTime fromdate, DateTime todate)
         {
-            var sql = @"
-                WITH CombinedData AS (
-                    SELECT
-                        CASE 
-                            WHEN PI.Statues = 0 THEN 'مشتريات'                            
-                            WHEN PI.Statues = 1 THEN 'تصنيع'
-                            WHEN PI.Statues = 2 THEN 'توالف'
-                            WHEN PI.Statues = 3 THEN 'بداية المخزن'                            
-                            WHEN PI.Statues = 4 THEN 'منقول من فرع'
-                            ELSE ''
-                        END AS RecordType,
-                        PI.ProductId,
-                        P.ProductName,
-                        PI.SizeId,
-                        S.SizeName,
-                        PI.ColorId,
-                        C.ColorName,
-                        CAT.CategoryName,
-                        PT.ProductTypeName,
-                        PI.Quantity,
-                        PI.BranchId,
-                        PI.ModDate AS DateAdded,
-                        pi.Notes AS Notes
-                    FROM PurchaseItems PI
-                    LEFT JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
-                    INNER JOIN Products P ON PI.ProductId = P.ProductId
-                    INNER JOIN Sizes S ON PI.SizeId = S.SizeId
-                    INNER JOIN Colors C ON PI.ColorId = C.ColorId
-                    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
-                    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
-                    WHERE PI.BranchId = @BranchId
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM InventoryMovements IM
-                        WHERE IM.PurchaseInvoiceId IS NOT NULL
-                        AND IM.ProductId = PI.ProductId
-                        AND IM.SizeId = PI.SizeId
-                        AND IM.ColorId = PI.ColorId
-                        AND IM.ToBranchId = PI.BranchId
+            var sql = @"WITH CombinedData AS (
+                          SELECT
+                                    P.ProductId,
+                                    CASE 
+                                        WHEN PI.Statues = 0 THEN 'مشتريات'                            
+                                        WHEN PI.Statues = 1 THEN 'تصنيع'
+                                        WHEN PI.Statues = 2 THEN 'توالف'
+                                        WHEN PI.Statues = 3 THEN 'انتاج المصنع'                            
+                                        WHEN PI.Statues = 4 THEN 'منقول من فرع'
+                                        WHEN PI.Statues = 5 THEN 'منتجات منقوله بفاتورة'
+                                        ELSE 'غير محدد'
+                                    END AS RecordType,
+                                    P.ProductName,
+                                    S.SizeName,
+                                    C.ColorName,
+                                    CAT.CategoryName,
+                                    PT.ProductTypeName,
+                                    PI.Quantity,
+                                    ui.UnitName,
+                                    b.BranchName,
+                                    PI.ModDate AS DateAdded,
+                                    PI.Notes AS Notes,
+                                    u.UserName
+                                FROM PurchaseItems PI
+                                LEFT JOIN PurchaseInvoiceItems PII ON PI.PurchaseItemId = PII.PurchaseItemId
+                                INNER JOIN Products P ON PI.ProductId = P.ProductId
+                                INNER JOIN Sizes S ON PI.SizeId = S.SizeId
+                                INNER JOIN Colors C ON PI.ColorId = C.ColorId
+                                INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                                INNER JOIN Units ui ON P.UnitId = ui.UnitId
+                                INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                                INNER JOIN Branches b ON PI.BranchId = b.BranchId
+                                INNER JOIN Users u ON PI.ModUser = u.UserId
+                                WHERE PI.BranchId = @BranchId
+
+                                UNION ALL
+
+                             SELECT
+                                  SI.ProductId,
+                                  CASE 
+                                      WHEN SI.IsReturn = 1 THEN 'مرتجعات'
+                                      ELSE 'مبيعات'
+                                  END AS RecordType,
+                                  P.ProductName,
+                                  S.SizeName,
+                                  C.ColorName,
+                                  CAT.CategoryName,
+                                  PT.ProductTypeName,
+                                  CASE
+                                      WHEN SI.IsReturn = 1 THEN SI.Quantity
+                                      ELSE -SI.Quantity
+                                  END AS Quantity,
+                                  ui.UnitName,
+                                  b.BranchName,
+                                  SI.ModDate AS DateAdded,
+                                  NULL AS Notes,
+                                  u.UserName
+                              FROM SalesItems SI
+                              LEFT JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
+                              LEFT JOIN SalesInvoices SIv ON SII.SalesInvoiceId = SIv.SalesInvoiceId
+                              LEFT JOIN InventoryMovements IM ON SIv.SalesInvoiceId = IM.SalesInvoiceId
+                              INNER JOIN Products P ON SI.ProductId = P.ProductId
+                              INNER JOIN Sizes S ON SI.SizeId = S.SizeId
+                              INNER JOIN Colors C ON SI.ColorId = C.ColorId
+                              INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                              INNER JOIN Units ui ON P.UnitId = ui.UnitId
+                              INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                              INNER JOIN Branches b ON SI.BranchId = b.BranchId
+                              INNER JOIN Users u ON SI.ModUser = u.UserId
+                              WHERE SI.BranchId = @BranchId  AND IM.MovementId IS NULL
+
+                                UNION ALL
+
+                                SELECT
+                                    P.ProductId,
+                                    CASE 
+                                        WHEN IM.ToBranchId = @BranchId AND IM.FromBranchId IS NOT NULL AND IM.MakeInvoice = 1 THEN 'منتجات منقوله للفرع بفاتورة'
+                                        WHEN IM.ToBranchId = @BranchId AND IM.FromBranchId IS NOT NULL AND IM.MakeInvoice = 0 THEN 'منتجات منقوله للفرع بدون فاتورة'
+                                        WHEN IM.FromBranchId = @BranchId AND IM.MakeInvoice = 1 THEN 'منتجات منقوله من الفرع بفاتورة'
+                                        WHEN IM.FromBranchId = @BranchId THEN 'منتجات منقوله من الفرع بدون فاتورة'
+                                        WHEN IM.SalesInvoiceId IS NOT NULL THEN 'مبيعات'
+                                        WHEN IM.PurchaseInvoiceId IS NOT NULL THEN 'مشتريات'
+                                        WHEN IM.MakeInvoice = 1 THEN 'تصنيع'
+                                        ELSE 'غير محدد'
+                                    END AS RecordType,
+                                    P.ProductName,
+                                    S.SizeName,
+                                    C.ColorName,
+                                    CAT.CategoryName,
+                                    PT.ProductTypeName,
+                                    CASE 
+                                        WHEN IM.ToBranchId = @BranchId THEN IM.Quantity
+                                        WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity
+                                        ELSE 0
+                                    END AS Quantity,
+                                    ui.UnitName,
+                                    CASE 
+                                        WHEN IM.ToBranchId = @BranchId THEN (SELECT BranchName FROM Branches WHERE BranchId = IM.ToBranchId)
+                                        WHEN IM.FromBranchId = @BranchId THEN (SELECT BranchName FROM Branches WHERE BranchId = IM.FromBranchId)
+                                        ELSE 'Unknown'
+                                    END AS BranchName,
+                                    IM.MovementDate AS DateAdded,
+                                    IM.Notes AS Notes,
+                                    u.UserName
+                                FROM InventoryMovements IM
+                                INNER JOIN Products P ON IM.ProductId = P.ProductId
+                                INNER JOIN Sizes S ON IM.SizeId = S.SizeId
+                                INNER JOIN Colors C ON IM.ColorId = C.ColorId
+                                INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                                INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                                INNER JOIN Units ui ON P.UnitId = ui.UnitId
+                                INNER JOIN Users u ON IM.ModUser = u.UserId
+                                WHERE IM.IsApproved = 1
+                                AND ((IM.ToBranchId = @BranchId AND IM.MakeInvoice = 0) OR IM.FromBranchId = @BranchId)
                     )
-
-                    UNION ALL
-
-                    SELECT
-                        CASE 
-                            WHEN IM.ToBranchId = @BranchId THEN 'منتجات منقوله للفرع'
-                            WHEN IM.FromBranchId = @BranchId THEN 'منتجات منقوله من الفرع'
-                            ELSE NULL
-                        END AS RecordType,
-                        IM.ProductId,
-                        P.ProductName,
-                        IM.SizeId,
-                        S.SizeName,
-                        IM.ColorId,
-                        C.ColorName,
-                        CAT.CategoryName,
-                        PT.ProductTypeName,
-                        CASE 
-                            WHEN IM.ToBranchId = @BranchId THEN IM.Quantity
-                            WHEN IM.FromBranchId = @BranchId THEN -IM.Quantity
-                            ELSE 0
-                        END AS Quantity,
-                        CASE 
-                            WHEN IM.ToBranchId = @BranchId THEN IM.ToBranchId
-                            WHEN IM.FromBranchId = @BranchId THEN IM.FromBranchId
-                            ELSE NULL
-                        END AS BranchId,
-                        IM.MovementDate AS DateAdded,
-                        IM.Notes AS Notes
-                    FROM InventoryMovements IM
-                    INNER JOIN Products P ON IM.ProductId = P.ProductId
-                    INNER JOIN Sizes S ON IM.SizeId = S.SizeId
-                    INNER JOIN Colors C ON IM.ColorId = C.ColorId
-                    INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
-                    INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
-                    WHERE (IM.ToBranchId = @BranchId OR IM.FromBranchId = @BranchId)
-                    AND IM.IsApproved = 1
-                )
-                SELECT *
-                FROM CombinedData
-                ORDER BY DateAdded DESC;";
+                    SELECT *
+                    FROM CombinedData WHERE DateAdded >= @fromdate AND DateAdded <= @todate
+                    ORDER BY DateAdded DESC;";
             using (var db = _dapperContext.CreateConnection())
             {
-                return await db.QueryAsync<ProductsModel>(sql, new { BranchId }).ConfigureAwait(false);
+                return await db.QueryAsync<ProductsModel>(sql, new { BranchId, fromdate, todate }).ConfigureAwait(false);
             }
         }
 
@@ -331,6 +386,7 @@ namespace IOMSYS.Services
                           T.ProductTypeName, 
                           P.SellPrice, 
                           P.BuyPrice, 
+                          P.UnitId,
                           P.MaxDiscount, 
                           P.DiscountsOn, 
                           P.Notes, 
@@ -353,6 +409,7 @@ namespace IOMSYS.Services
                           T.ProductTypeName, 
                           P.SellPrice, 
                           P.BuyPrice, 
+                          P.UnitId,
                           P.MaxDiscount, 
                           P.DiscountsOn, 
                           P.Notes, 
@@ -400,7 +457,7 @@ namespace IOMSYS.Services
         }
 
         //الكمية المتاحة
-        public async Task<int> GetAvailableQuantity(int productId, int colorId, int sizeId, int branchId)
+        public async Task<decimal> GetAvailableQuantity(int productId, int colorId, int sizeId, int branchId)
         {
             var sql = @"
                     SELECT AvailableQty AS AvailableQuantity FROM BranchInventory bi 
@@ -408,10 +465,28 @@ namespace IOMSYS.Services
 
             using (var connection = _dapperContext.CreateConnection())
             {
-                var availableQuantity = await connection.QuerySingleOrDefaultAsync<int>(sql, new { ProductId = productId, ColorId = colorId, SizeId = sizeId, BranchId = branchId });
+                var availableQuantity = await connection.QuerySingleOrDefaultAsync<decimal>(sql, new { ProductId = productId, ColorId = colorId, SizeId = sizeId, BranchId = branchId });
                 return availableQuantity;
             }
         }
+
+        public async Task<string> GetWhereAvailableQuantityAsync(int productId, int colorId, int sizeId)
+        {
+            var sql = @"
+                        SELECT B.BranchName, bi.AvailableQty AS AvailableQuantity 
+                        FROM BranchInventory bi 
+                        INNER JOIN Branches B ON bi.BranchId = B.BranchId
+                        WHERE bi.ProductId = @ProductId AND bi.SizeId = @SizeId AND bi.ColorId = @ColorId AND bi.AvailableQty > 0;";
+
+            using (var connection = _dapperContext.CreateConnection())
+            {
+                var results = await connection.QueryAsync(sql, new { ProductId = productId, ColorId = colorId, SizeId = sizeId });
+                var availabilityInfo = results.Select(result => $"متوفر بفرع {result.BranchName}: {result.AvailableQuantity} ").ToList();
+                var availabilityText = string.Join(Environment.NewLine, availabilityInfo);
+                return availabilityText;
+            }
+        }
+
 
     }
 }

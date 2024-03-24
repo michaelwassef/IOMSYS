@@ -109,6 +109,19 @@ namespace IOMSYS.Controllers
                 model.UserId = userId;
                 model.PurchaseItems = JsonConvert.DeserializeObject<List<PurchaseItemsModel>>(items);
 
+                foreach (var item in model.PurchaseItems)
+                {
+                    var unit = await _ProductsService.SelectProductByIdAsync(item.ProductId);
+                    if (unit.UnitId == 1) 
+                    { 
+                        if (item.Quantity != Math.Floor(item.Quantity))
+                        {
+                            return Json(new { success = false, message = $"لا يمكن ادخال {item.ProductName} بهذه الكمية : {item.Quantity}" });
+                        }
+                    }
+                    item.ModUser = userId;
+                }
+
                 decimal itemsTotal = model.PurchaseItems.Sum(item => item.Quantity * item.BuyPrice);
                 if (itemsTotal != model.TotalAmount)
                     return Json(new { success = false, message = "المجموع الفرعي للأصناف لا يتطابق مع إجمالي المبلغ المعلن في الفاتورة." });
@@ -126,7 +139,7 @@ namespace IOMSYS.Controllers
                 int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
                 if (invoiceId <= 0)
                     return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
-
+                
                 await ProcessPurchaseItems(model, invoiceId);
 
                 if(model.PaidUp > 0) {

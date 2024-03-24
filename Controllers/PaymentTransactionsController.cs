@@ -44,9 +44,9 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadDeitalsPaymentTransactionsByBranch(int branchId)
+        public async Task<IActionResult> LoadDetailsPaymentTransactionsByBranch(int branchId, DateTime fromdate, DateTime todate)
         {
-            var paymentTransactions = await _paymentTransactionService.LoadDetailsPaymentTransactionsByBranchAsync(branchId);
+            var paymentTransactions = await _paymentTransactionService.LoadDetailsPaymentTransactionsByBranchAsync(branchId, fromdate, todate);
             return Json(paymentTransactions);
         }
 
@@ -81,11 +81,17 @@ namespace IOMSYS.Controllers
                         return Json(new { success = false, message = "ليس لديك صلاحية للتحويل من هذا الفرع" });
                     }
 
+                    var paymentTransactions = await _paymentTransactionService.GetBranchAccountBalanceByPaymentAsync(model.FromBranchId, model.FromPaymentMethodId);
+                    var frombranchname = await _branchesService.SelectBranchByIdAsync(model.FromBranchId);
+                    var tobranchname = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
+                    if (model.Amount > paymentTransactions)
+                    {
+                        return Json(new { success = false, message = $"لا يوجد رصيد لتحويل من {frombranchname.BranchName} الي {tobranchname.BranchName} مبلغ {model.Amount}" });
+                    }
+
                     if (!ModelState.IsValid)
                         return BadRequest(ModelState);
 
-                    var frombranchname = await _branchesService.SelectBranchByIdAsync(model.FromBranchId);
-                    var tobranchname = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
                     var frompaymentTransaction = new PaymentTransactionModel
                     {
                         BranchId = model.FromBranchId,
@@ -114,10 +120,6 @@ namespace IOMSYS.Controllers
 
                     var frombranshCus = await _branchesService.SelectBranchByIdAsync(model.FromBranchId);
                     var tobranshCus = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
-                    if(frombranshCus.BranchId == 7)
-                    {
-
-                    }
                     decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesBRANSHES(tobranshCus.SupplierId, model.FromBranchId, model.Amount);
                 }
                 return Json(new { success = true, message = "تم نقل المبالغ بنجاح." });

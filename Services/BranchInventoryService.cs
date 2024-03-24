@@ -78,7 +78,7 @@ namespace IOMSYS.Services
             }
         }
 
-        public async Task<int> AdjustInventoryQuantityAsync(int productId, int sizeId, int colorId, int branchId, int quantityAdjustment)
+        public async Task<int> AdjustInventoryQuantityAsync(int productId, int sizeId, int colorId, int branchId, decimal quantityAdjustment)
         {
             var inventory = await GetInventoryByProductAndBranchAsync(productId, sizeId, colorId, branchId);
             if (inventory != null)

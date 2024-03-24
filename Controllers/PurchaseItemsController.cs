@@ -69,6 +69,15 @@ namespace IOMSYS.Controllers
                     return Json(new { success = false, message = "ليس لديك صلاحية للاضافة لهذا الفرع" });
                 }
 
+                var unit = await _ProductsService.SelectProductByIdAsync(newPurchaseItems.ProductId);
+                if (unit.UnitId == 1)
+                {
+                    if (newPurchaseItems.Quantity != Math.Floor(newPurchaseItems.Quantity))
+                    {
+                        return Json(new { success = false, message = $"لا يمكن ادخال {unit.ProductName} بهذه الكمية : {newPurchaseItems.Quantity}" });
+                    }
+                }
+
                 if (newPurchaseItems.Quantity < 0)
                 {
                     var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseItems", "AddDamagedProducts");
@@ -77,12 +86,17 @@ namespace IOMSYS.Controllers
                         return Json(new { success = false, message = "ليس لديك صلاحية لاضافة التوالف" });
                     }
                     newPurchaseItems.Statues = 2;
+                    var checkava = await _ProductsService.GetAvailableQuantity(newPurchaseItems.ProductId, newPurchaseItems.ColorId, newPurchaseItems.SizeId, newPurchaseItems.BranchId);
+                    if(checkava < -newPurchaseItems.Quantity)
+                    {
+                        return Json(new { success = false, message = "لا توجد الكمية المطلوبة لعمل تالف" });
+                    }
                 }
                 else
                 {
                     newPurchaseItems.Statues = 3;
                 }
-
+                newPurchaseItems.ModUser = userId;
                 int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
 
                 if (addPurchaseItemsResult > 0)
@@ -137,17 +151,27 @@ namespace IOMSYS.Controllers
 
                 if (newPurchaseItems.Quantity < 0)
                 {
-                   return Json(new { success = false, message = "لا يمكن ادخال ارقام سالبة" });
+                    return Json(new { success = false, message = "لا يمكن ادخال ارقام سالبة" });
                 }
 
 
-                int ava = await _ProductsService.GetAvailableQuantity(newPurchaseItems.ProductId, newPurchaseItems.ColorId, newPurchaseItems.SizeId, newPurchaseItems.BranchId);
-                if(newPurchaseItems.Quantity > ava)
+                var unit = await _ProductsService.SelectProductByIdAsync(newPurchaseItems.ProductId);
+                if (unit.UnitId == 1)
+                {
+                    if (newPurchaseItems.Quantity != Math.Floor(newPurchaseItems.Quantity))
+                    {
+                        return Json(new { success = false, message = $"لا يمكن ادخال {unit.ProductName} بهذه الكمية : {newPurchaseItems.Quantity}" });
+                    }
+                }
+
+                decimal ava = await _ProductsService.GetAvailableQuantity(newPurchaseItems.ProductId, newPurchaseItems.ColorId, newPurchaseItems.SizeId, newPurchaseItems.BranchId);
+                if (newPurchaseItems.Quantity > ava)
                 {
                     return Json(new { success = false, message = "لا توجد كمية كافية" });
                 }
                 newPurchaseItems.Quantity = -newPurchaseItems.Quantity;
                 newPurchaseItems.Statues = 1;
+                newPurchaseItems.ModUser = userId;
                 int addPurchaseItemsResult = await _PurchaseItemsService.InsertPurchaseItemAsync(newPurchaseItems);
 
                 if (addPurchaseItemsResult > 0)
@@ -170,9 +194,11 @@ namespace IOMSYS.Controllers
             }
         }
 
+        //not finish
         [HttpPut]
         public async Task<IActionResult> UpdatePurchaseItem([FromForm] IFormCollection formData)
         {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
@@ -191,8 +217,8 @@ namespace IOMSYS.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                int quantityDifference = newPurchaseItem.Quantity - existingPurchaseItem.Quantity;
-
+                decimal quantityDifference = newPurchaseItem.Quantity - existingPurchaseItem.Quantity;
+                newPurchaseItem.ModUser = userId;
                 int updatePurchaseItemsResult = await _PurchaseItemsService.UpdatePurchaseItemAsync(newPurchaseItem);
 
                 if (updatePurchaseItemsResult > 0)

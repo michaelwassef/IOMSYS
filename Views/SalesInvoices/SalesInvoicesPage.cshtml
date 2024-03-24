@@ -16,10 +16,16 @@
             <div class="form-group col-md-3 mb-3">
                 <label for="customerId">اسم العميل</label>
                 <select id="CustomerId" class="form-control" required></select>
+                <div class="text-primary mt-2" id="totalRemainderSum">0</div>
             </div>
             <div class="form-group col-md-3 mb-3">
                 <label for="branchId">اسم الفرع</label>
                 <select id="BranchId" class="form-control"></select>
+            </div>
+            <div class="form-group col-md-3 mb-3">
+                <button type="button" id="showAvailabilityBtn" class="btn btn-info mb-2 mt-3">
+                    <i class="fas fa-chart-bar"></i> الكمية المتاحة في الفروع
+                </button>
             </div>
         </div>
     </div>
@@ -68,12 +74,18 @@
         </div>
         <div class="form-group col-md-4 mb-3">
             <label for="Quantity">الكمية</label>
-            <input type="number" id="Quantity" class="form-control" placeholder="الكمية" required min="0" />
+            <input type="text" id="Quantity" class="form-control" placeholder="الكمية" required pattern="\d+(\.\d+)?" />
             <div id="availableQtyDisplay" class="text-primary mt-2"></div>
         </div>
         <div class="form-group col-md-4 mb-3">
             <label for="SellPrice">سعر البيع للواحد</label>
             <input type="number" id="SellPrice" class="form-control" placeholder="سعر البيع للواحد" readonly min="0" />
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="WholesalePriceCheck" onchange="fetchSellPrice(document.getElementById('ProductId').value)">
+                <label class="form-check-label" for="WholesalePriceCheck">
+                    بيع بسعر الجملة
+                </label>
+            </div>
         </div>
         <div class="form-group col-md-4 mb-3">
             <label for="discount">الخصم للقطعة الواحده</label>
@@ -144,12 +156,78 @@
                     <i class="fas fa-save"></i> حفظ الفاتورة
                 </button>
             </div>
-
         </div>
     </div>
 </form>
 
+<div class="modal fade" id="availabilityModal" tabindex="-1" aria-labelledby="availabilityModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="availabilityModalLabel">الكمية المتاحة في الفروع</h5>
+            </div>
+            <div class="modal-body" id="modalBodyContent">
+                <div id="newAvailableQtyDisplay" class="text-primary mt-2"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="close" data-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
   <script>
+    function updateSupplierSums(customersId) {
+        $.getJSON('/Customers/LoadCustomerSums', { CustomerId: customersId }, function (data) {
+            //var totalInvoicesSum = data.TotalAmountSum !== null ? data.TotalAmountSum.toFixed(2) : '0.00';
+            //var totalPaidUpSum = data.PaidUpSum !== null ? data.PaidUpSum.toFixed(2) : '0.00';
+            var totalRemainderSum = data.RemainderSum !== null ? data.RemainderSum.toFixed(2) : '0.00';
+
+            //$('#totalInvoicesSum').text(totalInvoicesSum);
+            //$('#totalPaidUpSum').text(totalPaidUpSum);
+            $('#totalRemainderSum').text("متبقي علي العميل: " + totalRemainderSum);
+        });
+    }
+
+    $('#CustomerId').change(function () {
+        updateSupplierSums($(this).val());
+    });
+
+    async function fetchAndDisplayAvailability(productId, colorId, sizeId, branchId) {
+        try {
+            const response = await fetch(`/Products/GetWhereAvailableQuantity?productId=${productId}&colorId=${colorId}&sizeId=${sizeId}&branchId=${branchId}`);
+            if (response.ok) {
+                let availabilityText = await response.text();
+                availabilityText = availabilityText.replace(/\n/g, '<br>');
+                $('#newAvailableQtyDisplay').html(availabilityText);
+            } else {
+                const errorData = await response.json();
+                $('#newAvailableQtyDisplay').text(errorData.ErrorMessage || "An error occurred.");
+            }
+        } catch (error) {
+            console.error('Fetching availability failed:', error);
+
+            $('#newAvailableQtyDisplay').text("An error occurred.");
+        }
+    }
+
+    $('#showAvailabilityBtn').click(function(event) {
+        event.preventDefault();
+        const productId = $('#ProductId').val();
+        const colorId = $('#ColorId').val();
+        const sizeId = $('#SizeId').val();
+        const branchId = $('#BranchId').val();
+        if (productId && colorId && sizeId) {
+            fetchAndDisplayAvailability(productId, colorId, sizeId, branchId);
+        }
+        $('#availabilityModal').modal('show');
+    });
+
+    $('#close').click(function(event) {
+        event.preventDefault();
+        $('#availabilityModal').modal('hide');
+    });
+
     let selectedOfferDetails = null;
 
     async function populateOffers() {
@@ -299,8 +377,8 @@
 
             var customerName = $('#CustomerName').val();
             var phoneNumber = $('#PhoneNumber').val();
-            if (phoneNumber.length < 11) {
-                DevExpress.ui.notify('رقم الهاتف علي الاقل 11 رقم', "error", 5000);
+            if (phoneNumber.length > 11) {
+                DevExpress.ui.notify('رقم الهاتف يجب ان يكون 11 رقم', "error", 5000);
                 return;
             }
             else {
@@ -398,7 +476,6 @@
                     let options = customers.map(customer => `<option value="${customer.CustomerId}">${customer.CustomerName} - ${customer.PhoneNumber}</option>`);
                     customerSelect.html(options.join(''));
 
-                    // Search for the newly added customer by name or phone number
                     if (customerName && phoneNumber) {
                         const newCustomerOption = customers.find(customer => customer.CustomerName === customerName && customer.PhoneNumber === phoneNumber);
                         if (newCustomerOption) {
@@ -407,6 +484,7 @@
                             console.error('Newly added customer not found in the list');
                         }
                     }
+                    updateSupplierSums($('#CustomerId').val());
 
                     customerSelect.select2({
                         placeholder: "اختر عميل",
@@ -476,40 +554,62 @@
             let availableQty = await response.json();
             const key = `${productId}-${sizeId}-${colorId}-${branchId}`;
             const tempQty = temporaryInventory[key] || 0;
-            availableQty -= tempQty; // Subtract the temp quantity from the available quantity
+            availableQty -= tempQty;
             $('#Quantity').attr('max', availableQty);
             $('#availableQtyDisplay').text(`الكمية المتاحة: ${availableQty}`);
         } else {
-            console.error('Failed to fetch available quantity');
             $('#availableQtyDisplay').text(`Failed to fetch available quantity`);
         }
     } catch (error) {
-        console.error('Error fetching available quantity:', error);
         $('#availableQtyDisplay').text(`Error fetching available quantity`);
     }
 }
 
+    async function hasPermission() {
+        try {
+            const permissionResponse = await fetch(`/Products/WholesalePrice`);
+            if (permissionResponse.ok) {
+                return true;
+            } else {
+                DevExpress.ui.notify(`ليس لديك صلاحية البيع بسعر الجملة`, "error", 5000);
+                return false;
+            }
+        } catch (error) {
+            DevExpress.ui.notify(error.toString(), "error", 5000);
+            return false;
+        }
+    }
+
     async function fetchSellPrice(productId) {
-    try {
-        const response = await fetch(`/Products/LoadProductById?ProductId=${productId}`);
-        if (response.ok) {
-            const data = await response.json();
-                document.getElementById('SellPrice').value = data.SellPrice;
-                // Update MaxDiscount display
+       $('#loadingIndicator').show();
+        let hasWholesalePricePermission = false;
+        if (document.getElementById('WholesalePriceCheck').checked) {
+            hasWholesalePricePermission = await hasPermission();
+        }
+        const isWholesaleChecked = document.getElementById('WholesalePriceCheck').checked && hasWholesalePricePermission;
+
+        try {
+            const response = await fetch(`/Products/LoadProductById?ProductId=${productId}`);
+            if (response.ok) {
+                const data = await response.json();
+                const price = isWholesaleChecked ? data.WholesalePrice : data.SellPrice;
+                document.getElementById('SellPrice').value = price;
                 document.getElementById('maxDiscountDisplay').innerText = `الحد الأقصى للخصم: ${data.MaxDiscount}`;
-                // Store MaxDiscount in a hidden input or use a global variable for validation
                 document.getElementById('maxDiscount').value = data.MaxDiscount;
-        } else {
+                $('#loadingIndicator').hide();
+            } else {
                 document.getElementById('SellPrice').value = '';
                 document.getElementById('maxDiscountDisplay').innerText = '';
                 document.getElementById('maxDiscount').value = '';
+                $('#loadingIndicator').hide();
             }
-    } catch (error) {
-        console.error('Error fetching SellPrice for:', productId, error);
-        document.getElementById('SellPrice').value = '';
-        document.getElementById('maxDiscountDisplay').innerText = '';
-        document.getElementById('maxDiscount').value = '';
-    }
+        } catch (error) {
+            console.error('Error fetching prices for:', productId, error);
+            document.getElementById('SellPrice').value = '';
+            document.getElementById('maxDiscountDisplay').innerText = '';
+            document.getElementById('maxDiscount').value = '';
+            $('#loadingIndicator').hide();
+        }
     }
 
     $('#ProductId').on('change', async function () {
@@ -527,6 +627,7 @@
         }
         var sizeId = $('#SizeId').val();
         var colorId = $('#ColorId').val();
+        await fetchAndDisplayAvailability(productId, colorId, sizeId, branchId);
 
         if(productId && branchId && sizeId && colorId) {
             fetchAvailableQuantity(productId, sizeId, colorId, branchId);
@@ -602,8 +703,8 @@
         var productId = $('#ProductId').val();
         var sizeId = $('#SizeId').val();
         var colorId = $('#ColorId').val();
-        var quantity = parseInt($('#Quantity').val());
-        var maxQuantity = parseInt($('#Quantity').attr('max') || '0');
+        var quantity = parseFloat($('#Quantity').val());
+        var maxQuantity = parseFloat($('#Quantity').attr('max') || '0');
 
         if (quantity > maxQuantity) {
             DevExpress.ui.notify(`الكمية المدخلة تتجاوز الكمية المتاحة. الكمية المتاحة: ${maxQuantity}`, "error", 5000);
@@ -938,4 +1039,37 @@
         height: auto;
         padding: 3px;
     }
+
+    #newAvailableQtyDisplay {
+        background-color: #f8f9fa;
+        border: 1px solid #dae0e5;
+        border-radius: .25rem;
+        padding: .375rem .75rem;
+    }
+
+    #showAvailabilityBtn {
+        background: linear-gradient(135deg, #007bff, #6610f2);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        outline: none;
+        cursor: pointer;
+    }
+
+    #showAvailabilityBtn:hover, #showAvailabilityBtn:focus {
+        background: linear-gradient(135deg, #0069d9, #6f42c1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
+    }
+
+    #showAvailabilityBtn:active {
+        background: linear-gradient(135deg, #005cbf, #5a3e9c);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
 </style>

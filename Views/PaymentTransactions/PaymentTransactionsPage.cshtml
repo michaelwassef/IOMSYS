@@ -8,67 +8,93 @@
     <h1>ادارة الخزنة</h1>
 </div>
 
-<div class="row">
-    <div class="form-group col-md-2 mb-3">
-        <label for="branchId">اسم الفرع</label>
-        <select id="BranchId" class="form-control"></select>
-    </div>
-    <div class="form-group col-md-2 mb-3">
-        <div class="branch-treasury" id="branchTreasury">خزنة الفرع: <span id="treasuryValue">0</span></div>
+<div class="container my-4">
+    <div class="row align-items-end">
+        <!-- Branch Treasury Info -->
+        <div class="col-md-3">
+            <div class="branch-treasury-info shadow-sm p-3  bg-white rounded d-flex align-items-center">
+                <i class="fas fa-university mr-2"></i>
+                <span>خزنة الفرع: <strong id="treasuryValue">0</strong></span>
+            </div>
+        </div>
+
+        <!-- Branch Selection -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="BranchId" class="font-weight-bold">اسم الفرع:</label>
+                <select id="BranchId" class="form-control custom-select"></select>
+            </div>
+        </div>
+
+        <!-- From Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="fromDate" class="font-weight-bold">من تاريخ:</label>
+                <div id="fromDate" class="custom-date-box"></div>
+            </div>
+        </div>
+
+        <!-- To Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="toDate" class="font-weight-bold">الي تاريخ:</label>
+                <div id="toDate" class="custom-date-box"></div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row justify-content-center">
-   <button id="filterTodayBtn" class="btn col-md-3 btn-primary btn-block my-1 mx-1">عرض بيانات اليوم</button>
-   <button id="showAllBtn" class="btn col-md-3 btn-primary btn-block my-1 mx-1">عرض جميع البيانات</button>
    <button onclick="movePayment()" class="btn col-md-3 btn-primary btn-block my-1 mx-1">تحويل النقديه</button>
 </div>
 
 
 <div id="movePaymentPopup" style="display:none;">
-    <div>
+    <div class="p-4">
         <form id="movePaymentForm">
-            <div class="form-group">
+            <div class="form-group mb-4">
                 <label for="FromBranchId">من فرع:</label>
-                <select id="fromBranch" class="form-control"></select>
+                <select id="fromBranch" class="form-control mt-2"></select>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-4">
                 <label for="FromPaymentMethodId">اختر خزنة:</label>
-                <select id="fromPaymentMethodId" class="form-control"></select>
+                <select id="fromPaymentMethodId" class="form-control mt-2"></select>
                 <div id="availableAmountDisplay" class="text-primary mt-2"></div>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-4">
                 <label for="ToBranchId">إلى فرع:</label>
-                <select id="toBranch" class="form-control"></select>
+                <select id="toBranch" class="form-control mt-2"></select>
             </div>
-            <div class="form-group">
+            <div class="form-group mb-4">
                 <label for="ToPaymentMethodId">اختر الخزنة:</label>
-                <select id="toPaymentMethodId" class="form-control"></select>
-@*                <div id="availableAmountDisplay2" class="text-primary mt-2"></div>
-*@            </div>
-            <div class="form-group">
+                <select id="toPaymentMethodId" class="form-control mt-2"></select>
+            </div>
+            <div class="form-group mb-4">
                 <label for="Amount">المبلغ المحول:</label>
-                <input type="number" id="amount" class="form-control" min="1" required>
+                <input type="number" id="amount" class="form-control mt-2" min="1" required>
             </div>
-            <div class="form-group mb-3">
+            <div class="form-group mb-4">
                 <label for="Notes">ملاحظات</label>
-                <input type="text" id="notes" class="form-control" />
+                <input type="text" id="notes" class="form-control mt-2" />
             </div>
-            <button class="btn btn-primary mx-1" id="addTransferItemButton">إضافة</button>
+            <div class="form-group mb-4">
+                <button class="btn btn-primary mt-2" id="addTransferItemButton">إضافة</button>
+            </div>
             <div>
-                <div id="transferGrid" class="my-3"></div>
+                <div id="transferGrid" class="mt-3"></div>
             </div>
-            <div class="my-3">
-                <button type="button" class="btn btn-secondary mx-3" onclick="closePopup()">إغلاق</button>
-                <button type="button" class="btn btn-success" onclick="moveInventory()">تأكيد التحويل</button>
+            <div class="d-flex justify-content-center mt-3 row">
+                <button type="button" class="btn btn-success mx-2 col-md-4" onclick="moveInventory()">تأكيد التحويل</button>
+                <button type="button" class="btn btn-secondary mx-2 col-md-4" onclick="closePopup()">إغلاق</button>
             </div>
         </form>
     </div>
 </div>
 
+
 @(Html.DevExtreme().DataGrid<TransactionDetailModel>()
     .ID("gridContainer")
-.Selection(s => s.Mode(SelectionMode.Multiple))
+    .Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
      .AllowColumnResizing(true)
@@ -95,7 +121,6 @@
         .HighlightCaseSensitive(true)
     )
     .GroupPanel(g => g.Visible(false))
-    .RowAlternationEnabled(true)
     .Width("100%")
     .ShowBorders(true)
     .Columns(columns =>
@@ -112,11 +137,11 @@
         .ValueExpr("PaymentMethodId")
         .DisplayExpr("PaymentMethodName"));
         columns.AddFor(m => m.TransactionType).Caption("نوع المعاملة").AllowEditing(false);
-        columns.AddFor(m => m.TransactionDate).Caption("تاريخ المعاملة");
+        columns.AddFor(m => m.TransactionDate).Caption("تاريخ المعاملة").Format("yyyy-MM-dd H:mm a");
         columns.AddFor(m => m.Amount).Caption("القيمة");
         columns.AddFor(m => m.Details).Caption("ملاحظات");
         columns.AddFor(m => m.EntityName).Caption("خاص ب").AllowEditing(false);
-        columns.AddFor(m => m.ModifiedDate).Caption("تاريخ الادخال").AllowEditing(false);
+        columns.AddFor(m => m.ModifiedDate).Caption("تاريخ الادخال").AllowEditing(false).Format("yyyy-MM-dd H:mm a");
         columns.AddFor(m => m.ModifiedUser).Caption("مدخل البيانات").AllowEditing(false).Lookup(lookup => lookup
        .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUsers"))
        .ValueExpr("UserId")
@@ -132,10 +157,22 @@
                 .SummaryType(SummaryType.Sum)
                 .DisplayFormat("الاجمالي : {0}");
         })
-    )
+    ).OnRowPrepared("onRowPrepared")
+
 )
 
 <script>
+    function onRowPrepared(e) {
+        if (e.rowType === 'data') {
+            var amount = e.data.Amount;
+            if (amount < 0) {
+                e.rowElement.addClass('negative-quantity');
+            } else if (amount > 0) {
+                e.rowElement.addClass('positive-quantity');
+            }
+        }
+    }
+
     function movePayment() {
         $("#movePaymentPopup").dxPopup("show");
         populateDropdown('/Branches/LoadBranchesByUser', 'fromBranch', 'BranchId', 'BranchName');
@@ -187,18 +224,31 @@
     }
 
     window.closePopup = function () {
+        refreshGridDataBasedOnDateChange();
         $("#movePaymentPopup").dxPopup("hide");
         transferItems = [];
-        $('#availableAmountDisplay').val('');
-        $('#availableAmountDisplay2').val('');
     };
 
     $(function () {
         var moveInventoryPopup = $("#movePaymentPopup").dxPopup({
             title: "تحويل نقدية",
             visible: false,
+            rtlEnabled: true,
             width: calculatePopupWidth(),
             height: calculatePopupHeight(),
+            toolbarItems: [{
+                widget: 'dxButton',
+                toolbar: 'top',
+                location: 'after',
+                options: {
+                    icon: 'close',
+                    onClick: function () {
+                        refreshGridDataBasedOnDateChange();
+                        moveInventoryPopup.hide();
+                        $('#availableAmountDisplay').text(`المبلغ المتاح: 0`);
+                    }
+                }
+            }]
         }).dxPopup("instance");
 
         function calculatePopupWidth() {
@@ -216,7 +266,7 @@
             if (windowHeight < 768) {
                 return "90%";
             } else {
-                return 500;
+                return 750;
             }
         }
 
@@ -251,6 +301,9 @@
             columnAutoWidth: true,
             width: "100%",
             rtlEnabled: true,
+            columnFixing: {
+                enabled: true
+            },
         });
     }
 
@@ -338,6 +391,7 @@
         $('#toPaymentMethodId').val('').trigger('change');
         $('#amount').val('');
         $('#notes').val('');
+        $('#availableAmountDisplay').text(`المبلغ المتاح: 0`);
     }
 
     async function moveInventory() {
@@ -387,78 +441,64 @@
     }
 
     ///////////////////////////////////////////////////
-    function toIsoDateString(date) {
-        return date.toISOString().split('T')[0];
-    }
-
-    document.getElementById('filterTodayBtn').addEventListener('click', function () {
-        var gridInstance = $("#gridContainer").dxDataGrid("instance");
-        var today = new Date();
-        var todayStart = new Date(today.setHours(0, 0, 0, 0));
-        var todayEnd = new Date(today.setHours(23, 59, 59, 999));
-        gridInstance.filter(["InvoiceDate", ">=", todayStart], "and", ["InvoiceDate", "<=", todayEnd]);
+    $(function () {
+        initializeDateBoxes();
+        loadBranches();
+        setupBranchSelectionChangeHandler();
     });
 
-    function exporting(e) {
-        var workbook = new ExcelJS.Workbook();
-        var worksheet = workbook.addWorksheet('Branches');
+    function initializeDateBoxes() {
+        const today = new Date();
 
-        DevExpress.excelExporter.exportDataGrid({
-            component: e.component,
-            worksheet: worksheet,
-            autoFilterEnabled: true
-        }).then(function () {
-            workbook.xlsx.writeBuffer().then(function (buffer) {
-                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Branches.xlsx');
-            });
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        $("#fromDate").dxDateBox({
+            type: "date",
+            value: today,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                refreshGridDataBasedOnDateChange();
+            }
+        });
+
+        $("#toDate").dxDateBox({
+            type: "date",
+            value: tomorrow,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                refreshGridDataBasedOnDateChange();
+            }
         });
     }
 
-    $(function () {
-        (async function () {
-            try {
-                const branchesResponse = await fetch('/Branches/LoadBranchesByUser');
-                if (!branchesResponse.ok) {
-                    throw new Error('Failed to load branches data');
+    function loadBranches() {
+        fetch('/Branches/LoadBranchesByUser')
+            .then(response => response.json())
+            .then(data => {
+                populateDropdownData(data);
+                if (data.length > 0) {
+                    fetchBranchAccountBalance(data[0]['BranchId']);
+                    refreshGridDataBasedOnDateChange();
                 }
-                const branchesData = await branchesResponse.json();
-                populateDropdownData(branchesData);
+            })
+            .catch(error => console.error('Unable to load branches.', error));
+    }
 
-                if (branchesData.length > 0) {
-                    await fetchBranchAccountBalance(branchesData[0]['BranchId']);
-                    const defaultBranchId = branchesData[0]['BranchId'];
-                    const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${defaultBranchId}`;
-                    loadSalesInvoices(loadUrl);
-                }
+    function setupBranchSelectionChangeHandler() {
+        $('#BranchId').change(refreshGridDataBasedOnDateChange);
+    }
 
-                $('#BranchId').change(async function () {
-                    const branchId = $(this).val();
-                    const loadUrl = `/PaymentTransactions/LoadDeitalsPaymentTransactionsByBranch?branchId=${branchId}`;
-                    loadSalesInvoices(loadUrl);
-                    await fetchBranchAccountBalance(branchId);
-                });
-            } catch (error) {
-                console.error('Error loading data:', error);
-            }
-
-            $("#showAllBtn").click(function () {
-                const dataGrid = $("#gridContainer").dxDataGrid("instance");
-                dataGrid.clearFilter();
-            });
-        })();
-    });
-
-    async function fetchBranchAccountBalance(branchId) {
-        try {
-            const response = await fetch(`/PaymentTransactions/GetBranchAccountBalance?BranchId=${branchId}`);
-            if (!response.ok) {
-                console.error('Failed to load payment transactions data');
-                return;
-            }
-            const accountBalance = await response.json();
-            document.getElementById('branchTreasury').innerText = `خزنة الفرع: ${accountBalance} ج.م`;
-        } catch (error) {
-            console.error('Error fetching branch account balance:', error);
+    function refreshGridDataBasedOnDateChange() {
+        const branchId = $('#BranchId').val();
+        const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        if (branchId) {
+            const loadUrl = `/PaymentTransactions/LoadDetailsPaymentTransactionsByBranch?branchId=${branchId}&fromdate=${fromDate}&todate=${toDate}`;
+            loadSalesInvoices(loadUrl);
+            fetchBranchAccountBalance(branchId);
         }
     }
 
@@ -471,76 +511,110 @@
         });
     }
 
-    async function updateGridDataSource(url) {
+    async function fetchBranchAccountBalance(branchId) {
         try {
-            const response = await fetch(url);
+            const response = await fetch(`/PaymentTransactions/GetBranchAccountBalance?BranchId=${branchId}`);
             if (!response.ok) {
-                throw new Error('Failed to load data');
+                console.error('Failed to load payment transactions data');
+                return;
             }
-            const data = await response.json();
-            $("#gridContainer").dxDataGrid("instance").option("dataSource", data);
+            const accountBalance = await response.json();
+            const treasuryElement = document.getElementById('treasuryValue');
+
+            if (treasuryElement) {
+                treasuryElement.innerText = `${accountBalance} ج.م`;
+            } else {
+                console.error('Branch treasury element not found!');
+            }
         } catch (error) {
-            console.error('Error updating grid data:', error);
+            console.error('Error fetching branch account balance:', error);
         }
     }
 
-    async function loadSalesInvoices(url) {
-        try {
-            const gridInstance = $("#gridContainer").dxDataGrid("instance");
-            gridInstance.option("dataSource", {
-                store: new DevExpress.data.CustomStore({
-                    key: "TransactionId",
-                    load: () => fetch(url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to load data');
-                            }
-                            return response.json();
-                        }),
-                    insert: values => $.ajax({
-                        url: '/PaymentTransactions/AddNewPaymentTransaction',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(values)
-                    }).then(() => gridInstance.refresh()),
-                    update: (key, values) => $.ajax({
-                        url: `/PaymentTransactions/UpdatePaymentTransaction?id=${key}`,
-                        method: 'PUT',
-                        contentType: 'application/json',
-                        data: JSON.stringify(values)
-                    }).then(() => gridInstance.refresh()),
-                    remove: key => $.ajax({
-                        url: `/PaymentTransactions/DeletePaymentTransaction?transactionId=${key}`,
-                        method: 'DELETE'
-                    }).then(() => gridInstance.refresh())
-                })
+    function loadSalesInvoices(url) {
+        const gridInstance = $("#gridContainer").dxDataGrid("instance");
+        gridInstance.option("dataSource", new DevExpress.data.CustomStore({
+            key: "TransactionId",
+            load: () => fetch(url).then(response => response.json()),
+            insert: values => insertPaymentTransaction(values),
+            update: (key, values) => updatePaymentTransaction(key, values),
+            remove: key => deletePaymentTransaction(key)
+        }));
+    }
+
+    function insertPaymentTransaction(values) {
+        return $.ajax({
+            url: '/PaymentTransactions/AddNewPaymentTransaction',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(values)
+        });
+    }
+
+    function updatePaymentTransaction(key, values) {
+        return $.ajax({
+            url: `/PaymentTransactions/UpdatePaymentTransaction?id=${key}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(values)
+        });
+    }
+
+    function deletePaymentTransaction(key) {
+        return $.ajax({
+            url: `/PaymentTransactions/DeletePaymentTransaction?transactionId=${key}`,
+            method: 'DELETE'
+        });
+    }
+
+    function exporting(e) {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Transactions');
+
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(() => {
+            workbook.xlsx.writeBuffer().then(buffer => {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Transactions.xlsx');
             });
-        } catch (error) {
-            console.error('Error setting up sales invoices grid:', error);
-        }
+        });
     }
 </script>
 
 <style>
-    .branch-treasury {
-        background-color: #f0f0f0;
-        border: 1px solid #d3d3d3;
-        padding: 18px;
-        margin-top: 18px;
-        font-size: 18px;
-        border-radius: 8px;
-        width: auto;
-        max-width: 100%;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    #movePaymentPopup .form-group label {
+        font-weight: bold; /* Makes labels bold */
     }
 
-        .branch-treasury #treasuryValue {
-            font-weight: bold;
-            color: #007bff;
-        }
+    #movePaymentPopup .form-control {
+        border-radius: 0.25rem; /* Rounded corners for form inputs */
+    }
 
+    #movePaymentPopup .btn {
+        border-radius: 0.25rem; /* Consistent rounded corners for buttons */
+    }
+
+    .branch-treasury-info {
+        background-color: #ffffff;
+        border-left: 5px solid #4CAF50;
+        color: #495057;
+    }
+
+    .branch-treasury-info strong {
+        color: #4CAF50;
+    }
 
     .select2-container--open {
         z-index: 9999999 !important;
+    }
+
+    .negative-quantity {
+        background-color: #FFCCCC;
+    }
+
+    .positive-quantity {
+        background-color: #CCFFCC;
     }
 </style>

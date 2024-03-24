@@ -61,7 +61,8 @@ namespace IOMSYS.Services
                     pi.Notes,
                     pi.BranchId,
                     pi.Statues,
-                    pi.ModDate
+                    pi.ModDate,
+                    PI.ModUser
                 FROM 
                     PurchaseItems pi
                     LEFT JOIN Products p ON pi.ProductId = p.ProductId
@@ -80,12 +81,13 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT pi.PurchaseItemId, pi.ProductId, pi.SizeId, pi.ColorId, pi.Quantity, pi.BuyPrice, 
-                       p.ProductName, s.SizeName, c.ColorName, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate
+                       p.ProductName, s.SizeName, c.ColorName, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate, U.UnitId, U.UnitName
                 FROM PurchaseInvoiceItems pii
                 INNER JOIN PurchaseItems pi ON pii.PurchaseItemId = pi.PurchaseItemId
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
                 LEFT JOIN Colors c ON pi.ColorId = c.ColorId
+                LEFT JOIN Units U ON p.UnitId = U.UnitId
                 WHERE pii.PurchaseInvoiceId = @PurchaseInvoiceId;
             ";
 
@@ -98,8 +100,8 @@ namespace IOMSYS.Services
 
         public async Task<int> InsertPurchaseItemAsync(PurchaseItemsModel purchaseItem)
         {
-            var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice, Notes, BranchId, Statues, ModDate) 
-                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @BuyPrice, @Notes, @BranchId, @Statues, @ModDate);
+            var sql = @"INSERT INTO PurchaseItems (ProductId, SizeId, ColorId, Quantity, BuyPrice, Notes, BranchId, Statues, ModDate, ModUser) 
+                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @BuyPrice, @Notes, @BranchId, @Statues, @ModDate, @ModUser);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -112,7 +114,7 @@ namespace IOMSYS.Services
         {
             var sql = @"UPDATE PurchaseItems 
                 SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, BuyPrice = @BuyPrice ,
-               Notes = @Notes , BranchId = @BranchId, Statues = @Statues , ModDate = @ModDate
+               Notes = @Notes , BranchId = @BranchId, Statues = @Statues , ModDate = @ModDate, ModUser= @ModUser
                 WHERE PurchaseItemId = @PurchaseItemId";
 
             using (var db = _dapperContext.CreateConnection())

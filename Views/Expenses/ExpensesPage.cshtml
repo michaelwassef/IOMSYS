@@ -49,11 +49,11 @@
                     }
                 }),
                 columns: [
-                    { dataField: "ExpensesName", caption: "البند", width: 150, validationRules: [{ type: "required" }] },
-                    { dataField: "ExpensesAmount", caption: "المبلغ", width: 100, dataType: "number", validationRules: [{ type: "required" }] },
-                    { dataField: "Notes", caption: "ملاحظات", width: 200 },
+                    { dataField: "ExpensesName", caption: "البند", validationRules: [{ type: "required" }] },
+                    { dataField: "ExpensesAmount", caption: "المبلغ", dataType: "number", validationRules: [{ type: "required" }] },
+                    { dataField: "Notes", caption: "ملاحظات" },
                     {
-                        dataField: "PaymentMethodId", caption: "طريقة الدفع", width: 150,
+                        dataField: "PaymentMethodId", caption: "طريقة الدفع",
                         lookup: {
                             dataSource: DevExpress.data.AspNet.createStore({
                                 key: "PaymentMethodId",
@@ -65,7 +65,7 @@
                         validationRules: [{ type: "required" }]
                     },
                     {
-                        dataField: "BranchId", caption: "اسم الفرع", width: 150,
+                        dataField: "BranchId", caption: "اسم الفرع",
                         lookup: {
                             dataSource: DevExpress.data.AspNet.createStore({
                                 key: "BranchId",
@@ -76,9 +76,9 @@
                         },
                         validationRules: [{ type: "required" }]
                     },
-                    { dataField: "PurchaseDate", caption: "تاريخ المعاملة", width: 150, dataType: "date", allowEditing: false },
+                    { dataField: "PurchaseDate", caption: "تاريخ المعاملة", dataType: "date", allowEditing: false },
                     {
-                        dataField: "UserId", caption: "مدخل المعاملة", width: 150, allowEditing: false,
+                        dataField: "UserId", caption: "مدخل المعاملة", allowEditing: false,
                         lookup: {
                             dataSource: DevExpress.data.AspNet.createStore({
                                 key: "UserId",
@@ -89,6 +89,11 @@
                         }
                     }
                 ],
+                headerFilter: {
+                    visible: true
+                    ,allowSearch: true
+                },
+                HeaderFilter: true,
                 rtlEnabled: true,
                 paging: { pageSize: 10 },
                 pager: {
@@ -103,6 +108,7 @@
                 columnFixing: {
                     enabled: true
                 },
+                columnAutoWidth: true,
                 editing: {
                     allowAdding: true,
                     allowUpdating: true,
@@ -126,6 +132,20 @@
                             loadUrl: "/Branches/LoadBranchesByUser"
                         });
                     }
+                },
+                summary: {
+                    totalItems: [
+                        {
+                            column: "ExpensesName",
+                            summaryType: "count",
+                            displayFormat: "عدد المصروفات : {0}"
+                        },
+                        {
+                            column: "ExpensesAmount",
+                            summaryType: "sum",
+                            displayFormat: "اجمالي المبالغ المصروفة : {0}"
+                        }
+                    ]
                 },
                 export: {
                     enabled: true,

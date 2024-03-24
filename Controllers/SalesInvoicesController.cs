@@ -69,12 +69,17 @@ namespace IOMSYS.Controllers
                 model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
                 model.SalesItems = JsonConvert.DeserializeObject<List<SalesItemsModel>>(items);
 
-                //if (!ModelState.IsValid)
-                //    return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
-
                 foreach (var item in model.SalesItems)
                 {
                     var availableQuantity = await _productsService.GetAvailableQuantity(item.ProductId, item.ColorId, item.SizeId, model.BranchId);
+                    var unit = await _productsService.SelectProductByIdAsync(item.ProductId);
+                    if (unit.UnitId == 1)
+                    {
+                        if (item.Quantity != Math.Floor(item.Quantity))
+                        {
+                            return Json(new { success = false, message = $"لا يمكن ادخال {unit.ProductName} بهذه الكمية : {item.Quantity}" });
+                        }
+                    }
                     if (item.Quantity > availableQuantity)
                     {
                         return Json(new { success = false, message = $"لا يوجد مخزون كافي للمنتج {item.ProductId} بالمقاس {item.SizeId} واللون {item.ColorId} في الفرع {model.BranchId}." });
@@ -84,7 +89,7 @@ namespace IOMSYS.Controllers
                 decimal itemsTotal = model.SalesItems.Sum(item => item.Quantity * item.SellPrice);
 
                 decimal paidUp = model.PaidUp;
-                decimal totalAmount = model.TotalAmount ;
+                decimal totalAmount = model.TotalAmount;
                 decimal remainder = totalAmount - paidUp;
 
                 // Check if PaidUp is less than or equal to TotalAmount
@@ -113,6 +118,8 @@ namespace IOMSYS.Controllers
                 {
                     item.IsReturn = false;
                     item.BranchId = model.BranchId;
+                    item.ModDate = DateTime.Now;
+                    item.ModUser = userId;
                     item.SalesItemId = await _salesItemsService.InsertSalesItemAsync(item);
                     await _salesInvoiceItemsService.AddSalesItemToInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
                     await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, model.BranchId, -item.Quantity);
@@ -172,10 +179,10 @@ namespace IOMSYS.Controllers
                     return BadRequest(new { ErrorMessage = "حدث خطأ اثناء التعديل" });
                 }
 
-                if (SaleInvoice.PaidUp > oldpaid.PaidUp) 
-                { 
+                if (SaleInvoice.PaidUp > oldpaid.PaidUp)
+                {
                     SaleInvoice.PaidUp = SaleInvoice.PaidUp - oldpaid.PaidUp;
-                    await RecordPaymentTransaction(SaleInvoice, SaleInvoice.SalesInvoiceId); 
+                    await RecordPaymentTransaction(SaleInvoice, SaleInvoice.SalesInvoiceId);
                 }
 
                 return Ok(new { SuccessMessage = "تم التعديل بنجاح" });

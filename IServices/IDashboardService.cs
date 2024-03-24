@@ -16,5 +16,6 @@ namespace IOMSYS.IServices
         Task<IEnumerable<DailySalesAmountModel>> GetDailySalesAmountAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<IEnumerable<BestSaleModel>> GetBestSaleAsync(DateTime fromDate, DateTime toDate, int branchId);
         Task<FinancialData?> GetTotalItemsInPurchaseAsync(DateTime fromDate, DateTime toDate, int branchId);
+        Task<decimal?> CalculateExpectedNetprofitAsync(DateTime fromDate, DateTime toDate, int branchId);
     }
 }

@@ -10,6 +10,7 @@
         public decimal? RemainderInSalesInvoices { get; set; }
         public decimal? ExpensesAmount { get; set; }
         public decimal? Profit { get; set; }
+        public decimal? ExpectedNet { get; set; }
 
         public decimal? TotalBuyCost { get; set;}
         public decimal? TotalSellRevenue { get; set;}

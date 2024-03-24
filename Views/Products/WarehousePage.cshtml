@@ -67,14 +67,14 @@
         </div>
         <div class="form-group mb-3">
             <label for="Quantity">الكمية</label>
-            <input type="number" id="Quantity" class="form-control" required />
+            <input type="text" id="Quantity" class="form-control" required pattern="\d+(\.\d+)?" />
         </div>
         <div class="form-group mb-3">
             <label for="Notes">ملاحظات</label>
             <input type="text" id="Notes" class="form-control" required />
         </div>
-        <div class="form-group mb-3">
-            <button type="button" class="btn btn-primary mx-3" onclick="addItemToGrid()">إضافة</button>
+        <div class="d-flex justify-content-center mt-3 row">
+            <button type="button" class="btn btn-primary mx-2 col-md-6" onclick="addItemToGrid()">إضافة</button>
         </div>
         <div>
             <div id="invoiceItemsGrid" class="my-3"></div>
@@ -83,9 +83,9 @@
 
     <div class="mb-3" id="alertPlaceholder"></div>
 
-    <div class="my-3">
-        <button type="button" class="btn btn-secondary mx-3" onclick="closePopup()">إغلاق</button>
-        <button type="button" class="btn btn-success" onclick="saveInvoice()">حفظ</button>
+    <div class="d-flex justify-content-center mt-3 row">
+        <button type="button" class="btn btn-success mx-2 col-md-4" onclick="saveInvoice()">حــفــظ</button>
+        <button type="button" class="btn btn-secondary mx-2 col-md-4" onclick="closePopup()">إغلاق</button>
     </div>
 </div>
 
@@ -93,16 +93,16 @@
     <div>
         <form id="moveInventoryForm">
             <div class="form-group">
-                <label for="ProductId">المنتج:</label>
-                <select id="productId" class="form-control" onchange="productChanged()"></select>
+                <label for="ProductId2">المنتج:</label>
+                <select id="productId2" class="form-control" onchange="productChanged()"></select>
             </div>
             <div class="form-group">
-                <label for="SizeId">المقاس:</label>
-                <select id="sizeId" class="form-control"></select>
+                <label for="SizeId2">المقاس:</label>
+                <select id="sizeId2" class="form-control"></select>
             </div>
             <div class="form-group">
-                <label for="ColorId">اللون:</label>
-                <select id="colorId" class="form-control"></select>
+                <label for="ColorId2">اللون:</label>
+                <select id="colorId2" class="form-control"></select>
             </div>
             <div class="form-group">
                 <label for="FromBranchId">من فرع:</label>
@@ -116,27 +116,27 @@
             </div>
             <div class="form-group">
                 <label for="Quantity">الكمية:</label>
-                <input type="number" id="quantity" class="form-control" min="1" required>
+                <input type="text" id="quantity" class="form-control" required pattern="\d+(\.\d+)?"/>
             </div>
             <div class="form-group mb-3">
                 <label for="Notes">ملاحظات</label>
                 <input type="text" id="notes" class="form-control" required />
             </div>
-            <button class="btn btn-primary mx-1" id="addTransferItemButton">إضافة منتج للنقل</button>
+            <div class="d-flex justify-content-center mt-3 row">
+                <button class="btn btn-primary mx-2 col-md-6" id="addTransferItemButton">إضافة منتج للنقل</button>
+            </div>
             <div>
                 <div id="transferItemsGrid" class="my-3"></div>
             </div>
-            <div class="my-4 d-flex flex-column align-items-start">
-                <div class="d-flex justify-content-center w-100">
-                    <div class="form-group form-check mx-2">
-                        <input type="checkbox" class="form-check-input" id="makeInvoice">
-                        <label class="form-check-label" for="makeInvoice" style="user-select: none; cursor: pointer;">إنشاء فاتورة</label>
-                    </div>
-                    <button type="button" class="btn btn-success mx-2" onclick="moveInventory()">تأكيد النقل</button>
-                    <button type="button" class="btn btn-secondary mx-2" onclick="closePopup2()">إغلاق</button>
-                </div>
-            </div>
 
+            <div class="d-flex justify-content-center mt-3 row">
+                <div class="form-group form-check mx-2 col-md-2 mt-2">
+                    <input type="checkbox" class="form-check-input" id="makeInvoice">
+                    <label class="form-check-label" for="makeInvoice" style="user-select: none; cursor: pointer;">إنشاء فاتورة</label>
+                </div>
+                <button type="button" class="btn btn-success mx-2 col-md-3" onclick="moveInventory()">تأكيد النقل</button>
+                <button type="button" class="btn btn-secondary mx-2 col-md-3" onclick="closePopup2()">إغلاق</button>
+            </div>
         </form>
     </div>
 </div>
@@ -162,14 +162,14 @@
         </div>
         <div class="form-group mb-3">
             <label for="Quantity3">الكمية</label>
-            <input type="number" id="Quantity3" class="form-control" required />
+            <input type="text" id="Quantity3" class="form-control" required pattern="\d+(\.\d+)?"/>
         </div>
         <div class="form-group mb-3">
             <label for="Notes3">ملاحظات</label>
             <input type="text" id="Notes3" class="form-control" required />
         </div>
-        <div class="form-group mb-3">
-            <button type="button" class="btn btn-primary mx-3" onclick="addItemToGrid3()">إضافة</button>
+        <div class="d-flex justify-content-center mt-3 row">
+            <button type="button" class="btn btn-primary mx-2 col-md-4" onclick="addItemToGrid3()">إضافة</button>
         </div>
         <div>
             <div id="invoiceItemsGrid3" class="my-3"></div>
@@ -178,9 +178,9 @@
 
     <div class="mb-3" id="alertPlaceholder"></div>
 
-    <div class="my-3">
-        <button type="button" class="btn btn-secondary mx-3" onclick="closePopup3()">إغلاق</button>
-        <button type="button" class="btn btn-success" onclick="saveInvoice3()">حفظ</button>
+    <div class="d-flex justify-content-center mt-3 row">
+        <button type="button" class="btn btn-success mx-2 col-md-4" onclick="saveInvoice3()">حــفــظ</button>
+        <button type="button" class="btn btn-secondary mx-2 col-md-4" onclick="closePopup3()">إغلاق</button>
     </div>
 </div>
 
@@ -575,28 +575,23 @@
      };
 
     $(document).ready(function () {
-        $('#productId, #sizeId, #colorId').change(function () {
-            var productId = $('#productId').val();
-            var sizeId = $('#sizeId').val();
-            var colorId = $('#colorId').val();
+        $('#productId2, #sizeId2, #colorId2').change(function () {
+            var productId = $('#productId2').val();
+            var sizeId = $('#sizeId2').val();
+            var colorId = $('#colorId2').val();
             var fromBranchId = $('#fromBranch').val();
             var toBranchId = $('#toBranch').val();
 
             if (productId && sizeId && colorId && fromBranchId) {
                 fetchAvailableQuantity(productId, sizeId, colorId, fromBranchId, '#availableQtyDisplay');
-            } else {
-                $('#availableQtyDisplay').text(`الكمية المتاحة: 0`);
             }
-
             if (productId && sizeId && colorId && toBranchId) {
                 fetchAvailableQuantity(productId, sizeId, colorId, toBranchId, '#availableQtyDisplay2');
-            } else {
-                $('#availableQtyDisplay2').text(`الكمية المتاحة: 0`);
             }
         });
 
         $('#fromBranch, #toBranch').change(function () {
-            $('#productId').change();
+            $('#productId2').change();
         });
     });
 
@@ -627,14 +622,12 @@
                     selectElement.append(option);
                 });
 
-                // If previous value still exists, reselect it
                 if (prevSelectedValue && selectElement.find(`option[value="${prevSelectedValue}"]`).length > 0) {
                     selectElement.val(prevSelectedValue).trigger('change');
                 } else {
-                    selectElement.val(null).trigger('change'); // Reset or set to a placeholder if no previous value
+                    selectElement.val(null).trigger('change');
                 }
 
-                // Reinitialize select2 if used
                 selectElement.select2({
                     placeholder: "برجاء الاختيار",
                     allowClear: true,
@@ -653,13 +646,13 @@
         initializeItemsGrid2();
         populateDropdown('/Branches/LoadBranchesByUser', 'fromBranch', 'BranchId', 'BranchName');
         populateDropdown('/Branches/LoadBranches', 'toBranch', 'BranchId', 'BranchName');
-        populateDropdown('/Products/GetAllProductsInWarehouse', 'productId', 'ProductId', 'ProductName');
+        populateDropdown('/Products/GetAllProductsInWarehouse', 'productId2', 'ProductId', 'ProductName');
 
         setTimeout(() => {
-            var productId = $('#productId').val();
+            var productId = $('#productId2').val();
             productChanged()
-            var sizeId = $('#sizeId').val();
-            var colorId = $('#colorId').val();
+            var sizeId = $('#sizeId2').val();
+            var colorId = $('#colorId2').val();
             var fromBranchId = $('#fromBranch').val();
             var toBranchId = $('#toBranch').val();
             if (productId && sizeId && colorId && fromBranchId) {
@@ -672,12 +665,12 @@
     }
 
     function productChanged() {
-        var productId = $('#productId').val();
-        var prevSizeId = $('#sizeId').val();
-        var prevColorId = $('#colorId').val();
+        var productId = $('#productId2').val();
+        var prevSizeId = $('#sizeId2').val();
+        var prevColorId = $('#colorId2').val();
 
-        populateDropdown(`/Products/GetAvailableSizes?ProductId=${productId}`, 'sizeId', 'SizeId', 'SizeName', prevSizeId);
-        populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'colorId', 'ColorId', 'ColorName', prevColorId);
+        populateDropdown(`/Products/GetAvailableSizes?ProductId=${productId}`, 'sizeId2', 'SizeId', 'SizeName', prevSizeId);
+        populateDropdown(`/Products/GetAvailableColors?ProductId=${productId}`, 'colorId2', 'ColorId', 'ColorName', prevColorId);
     }
 
     var transferItems = [];
@@ -686,12 +679,12 @@
         event.preventDefault();
 
         var item = {
-            ProductId: $('#productId').val(),
-            SizeId: $('#sizeId').val(),
-            ColorId: $('#colorId').val(),
+            ProductId: $('#productId2').val(),
+            SizeId: $('#sizeId2').val(),
+            ColorId: $('#colorId2').val(),
             FromBranchId: $('#fromBranch').val(),
             ToBranchId: $('#toBranch').val(),
-            Quantity: parseInt($('#quantity').val(), 10),
+            Quantity: parseFloat($('#quantity').val()),
         };
 
         // Check if the destination is not the same as the source
@@ -796,10 +789,10 @@
 
     $(document).ready(function () {
         initializeItemsGrid();
-        $('#ProductId, #SizeId, #ColorId, #fromBranch').change(function () {
-            var productId = $('#ProductId').val();
-            var sizeId = $('#SizeId').val();
-            var colorId = $('#ColorId').val();
+        $('#ProductId, #SizeId2, #ColorId2, #fromBranch').change(function () {
+            var productId = $('#ProductId2').val();
+            var sizeId = $('#SizeId2').val();
+            var colorId = $('#ColorId2').val();
             var branchId = $('#fromBranch').val();
 
             if (productId && sizeId && colorId && branchId) {
@@ -812,19 +805,31 @@
 
     $(function () {
         var moveInventoryPopup = $("#moveInventoryPopup").dxPopup({
-            title: "نقل المخزون",
+            title: "نقل كميات للفروع",
             visible: false,
+            rtlEnabled: true,
             width: calculatePopupWidth(),
             height: calculatePopupHeight(),
+            toolbarItems: [{
+                widget: 'dxButton',
+                toolbar: 'top',
+                location: 'after',
+                options: {
+                    icon: 'close',
+                    onClick: function () {
+                        moveInventoryPopup.hide();
+                    }
+                }
+            }]
         }).dxPopup("instance");
-
+       
         function calculatePopupWidth() {
             var windowWidth = $(window).width();
 
             if (windowWidth < 768) {
                 return "90%";
             } else {
-                return 730;
+                return 920;
             }
         }
 
@@ -833,7 +838,7 @@
             if (windowHeight < 768) {
                 return "90%";
             } else {
-                return 500;
+                return 600;
             }
         }
 
@@ -886,6 +891,9 @@
             columnAutoWidth: true,
             width: "100%",
             rtlEnabled: true,
+            columnFixing: {
+                enabled: true
+            },
         });
     }
 
@@ -922,6 +930,9 @@
             columnAutoWidth: true,
             width: "100%",
             rtlEnabled: true,
+            columnFixing: {
+                enabled: true
+            },
         });
     }
 
@@ -940,14 +951,27 @@
 
     $(function () {
         var productDetailsPopup = $("#productDetailsPopup").dxPopup({
-            title: "إدخال إلى المخزن / توالف",
+            title: "إدخال إلى المخزن / توالف(بدون فواتير)",
             visible: false,
+            rtlEnabled: true,
             width: calculatePopupWidth(),
             height: calculatePopupHeight(),
             onShown: function () {
                 initSelectBoxes();
-            }
+            },
+            toolbarItems: [{
+                widget: 'dxButton',
+                toolbar: 'top',
+                location: 'after',
+                options: {
+                    icon: 'close',
+                    onClick: function () {
+                        productDetailsPopup.hide();
+                    }
+                }
+            }]
         }).dxPopup("instance");
+
 
         function calculatePopupWidth() {
             var windowWidth = $(window).width();
@@ -955,7 +979,7 @@
             if (windowWidth < 768) {
                 return "90%";
             } else {
-                return 700;
+                return 750;
             }
         }
 
@@ -964,7 +988,7 @@
             if (windowHeight < 768) {
                 return "90%";
             } else {
-                return 500;
+                return 600;
             }
         }
 
@@ -1028,6 +1052,12 @@
             populateDropdown('/Branches/LoadBranchesByUser', 'BranchId', 'BranchId', 'BranchName');
         }
 
+        // Populate dropdowns
+        async function initSelectBoxes2() {
+            populateDropdown('/Products/LoadProducts', 'ProductId', 'ProductId', 'ProductName');
+            populateDropdown('/Branches/LoadBranchesByUser', 'BranchId', 'BranchId', 'BranchName');
+        }
+
         window.saveInvoice = async function () {
             $('#loadingIndicator').show();
             if (invoiceItems.length === 0) {
@@ -1074,17 +1104,29 @@
         const factoryPopup = $("#factoryPopup").dxPopup({
             title: "تصنيع",
             visible: false,
+            rtlEnabled: true,
             width: calculatePopupWidth(),
             height: calculatePopupHeight(),
-            onShown: initSelectBoxes3
+            onShown: initSelectBoxes3,
+            toolbarItems: [{
+                widget: 'dxButton',
+                toolbar: 'top',
+                location: 'after',
+                options: {
+                    icon: 'close',
+                    onClick: function () {
+                        factoryPopup.hide();
+                    }
+                }
+            }]
         }).dxPopup("instance");
 
         function calculatePopupWidth() {
-            return $(window).width() < 768 ? "90%" : 700;
+            return $(window).width() < 768 ? "90%" : 750;
         }
 
         function calculatePopupHeight() {
-            return $(window).height() < 768 ? "90%" : 500;
+            return $(window).height() < 768 ? "90%" : 600;
         }
 
         $(window).resize(function () {
@@ -1125,10 +1167,16 @@
                         confirmDeleteMessage: 'هل أنت متأكد من أنك تريد حذف هذا العنصر؟'
                     }
                 },
+                columnAutoWidth: true,
+                width: "100%",
                 showBorders: true,
-                rtlEnabled: true
+                rtlEnabled: true,
+                columnFixing: {
+                    enabled: true
+                },
             });
             invoiceGridInitialized = true;
+
         }
 
         function addItemToGrid3() {

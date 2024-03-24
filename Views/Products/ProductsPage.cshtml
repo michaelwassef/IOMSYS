@@ -26,17 +26,19 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.ProductId).Caption("كود المنتج");
-        columns.AddFor(m => m.ProductName).Caption("اسم المنتج");
+        columns.AddFor(m => m.ProductId).Caption("كود").AllowEditing(false);
+        columns.AddFor(m => m.ProductName).Caption("المنتج");
         columns.AddFor(m => m.BuyPrice).Caption("سعر شراء المنتج");
+        columns.AddFor(m => m.WholesalePrice).Caption("سعر بيع الجملة");
         columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
         columns.AddFor(m => m.TotalQuantity).Caption("الكمية المتوفرة").AllowEditing(false);
         columns.AddFor(m => m.MinQuantity).Caption("أقل عدد");
         columns.AddFor(m => m.MaxDiscount).Caption("اقصي قيمة خصم");
         columns.AddFor(m => m.Notes).Caption("ملاحظات");
+        columns.AddFor(m => m.UnitId).Caption("الوحدة").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Units").LoadAction("LoadUnits")).ValueExpr("UnitId").DisplayExpr("UnitName"));
         columns.AddFor(m => m.CategoryId).Caption("التصنيف").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories")).ValueExpr("CategoryId").DisplayExpr("CategoryName"));
         columns.AddFor(m => m.ProductTypeId).Caption("النوع").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes")).ValueExpr("ProductTypeId").DisplayExpr("ProductTypeName"));
-
+        columns.AddFor(m => m.FabricQuantity).Caption("كمية القماش المستهلكة");
 
        @* columns.AddFor(m => m.ProductPhoto).Caption("صورة المنتج").EditCellTemplate(@<text>
             @(Html.DevExtreme().FileUploader().ID("fileUploader").SelectButtonText("اختر صورة المنتج").Accept("image/*"))

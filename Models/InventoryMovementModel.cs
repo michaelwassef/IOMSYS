@@ -6,7 +6,7 @@
         public int ProductId { get; set; }
         public int SizeId { get; set; }
         public int ColorId { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
         public int FromBranchId { get; set; }
         public int ToBranchId { get; set; }
         public bool IsApproved { get; set; }
@@ -15,6 +15,7 @@
         public int SalesInvoiceId { get; set; }
         public int PurchaseInvoiceId { get; set; }
         public bool MakeInvoice { get; set; }
+        public int? ModUser { get; set; }
         //for join 
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }

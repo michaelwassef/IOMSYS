@@ -9,6 +9,6 @@ namespace IOMSYS.IServices
         Task<BranchInventoryModel?> GetInventoryByBranchAsync(int branchId);
         Task<int> UpdateInventoryQuantityAsync(BranchInventoryModel inventory);
         Task<int> AddOrUpdateInventoryAsync(BranchInventoryModel inventory);
-        Task<int> AdjustInventoryQuantityAsync(int productId, int sizeId, int colorId, int branchId, int quantityAdjustment);
+        Task<int> AdjustInventoryQuantityAsync(int productId, int sizeId, int colorId, int branchId, decimal quantityAdjustment);
     }
 }

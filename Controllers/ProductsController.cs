@@ -68,9 +68,6 @@ namespace IOMSYS.Controllers
                     return BadRequest(new { ErrorMessage = "لا يمكن ان يكون الخصم اكبر من سعر الشراء" });
                 }
 
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
                 int addProductResult = await _ProductsService.InsertProductAsync(newProduct);
 
                 if (addProductResult > 0)
@@ -102,7 +99,7 @@ namespace IOMSYS.Controllers
                 {
                     return BadRequest(new { ErrorMessage = "لا يمكن ان يكون سعر البيع اصغر من الشراء" });
                 }
-                if (Product.MaxDiscount >= Product.SellPrice)
+                if (Product.MaxDiscount > Product.SellPrice)
                 {
                     return BadRequest(new { ErrorMessage = "لا يمكن ان يكون الخصم اكبر من سعر الشراء" });
                 }
@@ -179,9 +176,9 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllWarehouseMovementsByBranch(int branchId)
+        public async Task<IActionResult> GetAllWarehouseMovementsByBranch(int branchId, DateTime fromdate, DateTime todate)
         {
-            var Products = await _ProductsService.WarehouseMovementsAsync(branchId);
+            var Products = await _ProductsService.WarehouseMovementsAsync(branchId, fromdate, todate);
             return Json(Products);
         }
 
@@ -219,6 +216,34 @@ namespace IOMSYS.Controllers
         {
             var sizesAndColors = await _ProductsService.GetAvailableQuantity(productId, colorId, sizeId, BranchId);
             return Ok(sizesAndColors);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetWhereAvailableQuantity(int productId, int colorId, int sizeId, int branchId)
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Products", "GetWhereAvailableQuantity");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
+
+            var sizesAndColors = await _ProductsService.GetAvailableQuantity(productId, colorId, sizeId, branchId);
+
+            var availabilityText = "يوجد بالفرع لديك كميات من المنتج المختار";
+
+            if (sizesAndColors == 0)
+            {
+                availabilityText = await _ProductsService.GetWhereAvailableQuantityAsync(productId, colorId, sizeId);
+            }
+
+            return Ok(availabilityText);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> WholesalePrice()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Products", "WholesalePrice");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
+            return Ok();
         }
 
         [HttpGet]

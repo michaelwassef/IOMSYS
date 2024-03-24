@@ -1,5 +1,4 @@
 ﻿using Dapper;
-using DevExpress.ClipboardSource.SpreadsheetML;
 using IOMSYS.Dapper;
 using IOMSYS.IServices;
 using IOMSYS.Models;
@@ -16,7 +15,7 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesItemsModel>> GetAllSalesItemsAsync()
         {
             var sql = @"
-                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId,si.SellPrice, si.ItemDiscount, si.DiscountId
+                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId,si.SellPrice, si.ItemDiscount, si.DiscountId, p.UnitId, si.ModDate, si.ModUser
                 FROM SalesItems si
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
@@ -31,11 +30,12 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesItemsModel>> GetAllReturnSalesItemsAsync(int BranchId)
         {
             var sql = @"
-                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId, si.ReturnDate
+                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId, si.ReturnDate, p.UnitId, U.UnitName, si.ModDate, si.ModUser
                 FROM SalesItems si
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
                 LEFT JOIN Colors c ON si.ColorId = c.ColorId
+                LEFT JOIN Units U ON p.UnitId = u.UnitId
                 where si.IsReturn=1 AND BranchId = @BranchId";
 
             using (var db = _dapperContext.CreateConnection())
@@ -46,11 +46,12 @@ namespace IOMSYS.Services
         public async Task<SalesItemsModel> GetSalesItemByIdAsync(int salesItemId)
         {
             var sql = @"
-                SELECT sii.SalesInvoiceId, si.SalesItemId, p.ProductId, p.ProductName, s.SizeId ,s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.BranchId,si.SellPrice, si.ItemDiscount, si.DiscountId
+                SELECT sii.SalesInvoiceId, si.SalesItemId, p.ProductId, p.ProductName, s.SizeId ,s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.BranchId,si.SellPrice, si.ItemDiscount, si.DiscountId, U.UnitName, si.ModDate, si.ModUser
                 FROM SalesItems si
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
                 LEFT JOIN Colors c ON si.ColorId = c.ColorId
+                LEFT JOIN Units U ON p.UnitId = U.UnitId
                 INNER JOIN SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
                 WHERE si.SalesItemId = @SalesItemId AND si.IsReturn=0";
 
@@ -62,12 +63,13 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesItemsModel>> GetSaleItemsByInvoiceIdAsync(int SalesInvoiceId)
         {
             var sql = @"
-                SELECT sii.SalesInvoiceId,si.SalesItemId, p.ProductId, p.ProductName, s.SizeId, s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId
+                SELECT sii.SalesInvoiceId,si.SalesItemId, p.ProductId, p.ProductName, s.SizeId, s.SizeName, c.ColorId, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId, U.UnitName, si.ModDate, si.ModUser
                 FROM SalesInvoiceItems sii
                 INNER JOIN SalesItems si ON sii.SalesItemId = si.SalesItemId
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
                 LEFT JOIN Colors c ON si.ColorId = c.ColorId
+                LEFT JOIN Units U ON p.UnitId = U.UnitId
                 WHERE sii.SalesInvoiceId = @salesInvoiceId AND si.IsReturn=0";
 
             using (var db = _dapperContext.CreateConnection())
@@ -79,8 +81,8 @@ namespace IOMSYS.Services
         public async Task<int> InsertSalesItemAsync(SalesItemsModel salesItem)
         {
             var sql = @"
-                INSERT INTO SalesItems (ProductId, SizeId, ColorId, Quantity, SellPrice, ItemDiscount, DiscountId, BranchId, IsReturn) 
-                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @SellPrice, @ItemDiscount, @DiscountId, @BranchId, @IsReturn);
+                INSERT INTO SalesItems (ProductId, SizeId, ColorId, Quantity, SellPrice, ItemDiscount, DiscountId, BranchId, IsReturn, ModDate, ModUser) 
+                VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @SellPrice, @ItemDiscount, @DiscountId, @BranchId, @IsReturn, @ModDate, @ModUser);
                 SELECT CAST(SCOPE_IDENTITY() as int);";
 
             using (var db = _dapperContext.CreateConnection())
@@ -93,7 +95,7 @@ namespace IOMSYS.Services
             var sql = @"
                 UPDATE SalesItems 
                 SET ProductId = @ProductId, SizeId = @SizeId, ColorId = @ColorId, Quantity = @Quantity, SellPrice = @SellPrice ,
-                ItemDiscount = @ItemDiscount, DiscountId = @DiscountId, BranchId = @BranchId, IsReturn = @IsReturn
+                ItemDiscount = @ItemDiscount, DiscountId = @DiscountId, BranchId = @BranchId, IsReturn = @IsReturn, ModDate = @ModDate, ModUser = @ModUser
                 WHERE SalesItemId = @SalesItemId";
 
             using (var db = _dapperContext.CreateConnection())
@@ -108,7 +110,7 @@ namespace IOMSYS.Services
 
             using (var db = _dapperContext.CreateConnection())
             {
-                return await db.ExecuteAsync(sql,new { salesItemId, ReturnDate=DateTime.Now }).ConfigureAwait(false);
+                return await db.ExecuteAsync(sql, new { salesItemId, ReturnDate = DateTime.Now }).ConfigureAwait(false);
             }
         }
         public async Task<int> DeleteSalesItemAsync(int salesItemId)

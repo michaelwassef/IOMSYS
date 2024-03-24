@@ -12,21 +12,63 @@
         <label for="BranchId">اسم الفرع</label>
         <select id="BranchId" class="form-control"></select>
     </div>
+    <div class="form-group col-md-3 mb-3">
+        <label for="fromDate">من تاريخ</label>
+        <div id="fromDate"></div>
+    </div>
+    <div class="form-group col-md-3 mb-3">
+        <label for="toDate">الي تاريخ</label>
+        <div id="toDate"></div>
+    </div>
 </div>
 
 <div id="gridContainer"></div>
 
 <script>
     $(function () {
-        // Initial load of branches
-        loadBranches();
+        initializeDateBoxes();
+        loadBranchesAndGridData();
 
         $('#BranchId').change(function () {
             const branchId = $(this).val();
             loadGridData(branchId);
         });
 
-        function loadBranches() {
+        function initializeDateBoxes() {
+            const today = new Date();
+
+            const endOfToday = new Date(today);
+            endOfToday.setHours(23, 59, 59, 999);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);         
+
+            $("#fromDate").dxDateBox({
+                type: "date",
+                value: today,
+                displayFormat: "yyyy-MM-dd",
+                onValueChanged: function () {
+                    refreshGridDataBasedOnDateChange();
+                }
+            });
+
+            $("#toDate").dxDateBox({
+                type: "date",
+                value: tomorrow,
+                displayFormat: "yyyy-MM-dd",
+                onValueChanged: function () {
+                    refreshGridDataBasedOnDateChange();
+                }
+            });
+        }
+
+        function refreshGridDataBasedOnDateChange() {
+            const branchId = $('#BranchId').val();
+            if (branchId) {
+                loadGridData(branchId);
+            }
+        }
+
+        function loadBranchesAndGridData() {
             fetch('/Branches/LoadBranchesByUser')
                 .then(response => response.json())
                 .then(data => {
@@ -36,32 +78,27 @@
                         select.add(option);
                     });
                     if (data.length > 0) {
-                        loadGridData(data[0].BranchId); // Load grid for the first branch initially
+                        loadGridData(data[0].BranchId);
                     }
                 })
                 .catch(error => console.error('Unable to load branches.', error));
         }
 
         function loadGridData(branchId) {
+            const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+            const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+
             $("#gridContainer").dxDataGrid({
                 dataSource: new DevExpress.data.CustomStore({
                     key: "ID",
-                    load: () => {
-                        return fetch(`/Products/GetAllWarehouseMovementsByBranch?branchId=${branchId}`)
-                            .then(response => response.json())
-                            .catch(() => { throw 'Data loading error'; });
-                    },
-                    remove: (key) => {
-                        return fetch(`/Products/DeleteInventoryItem?id=${key}`, { method: 'DELETE' })
-                            .then(response => {
-                                if (!response.ok) throw 'Delete operation failed';
-                            });
-                    }
+                    load: () => fetchData(branchId, fromDate, toDate),
+                    remove: (key) => removeItem(key)
                 }),
                 selection: { mode: "multiple" },
                 export: { enabled: true, allowExportSelectedData: true },
                 onExporting: exporting,
                 columnAutoWidth: true,
+                width: "100%",
                 allowColumnResizing: true,
                 rtlEnabled: true,
                 paging: { pageSize: 10 },
@@ -71,7 +108,10 @@
                 },
                 searchPanel: { visible: true, highlightCaseSensitive: true },
                 groupPanel: { visible: false },
-                rowAlternationEnabled: true,
+                headerFilter: {
+                    visible: true
+                    , allowSearch: true
+                },
                 showBorders: true,
                 columns: [
                     { dataField: "ProductId", caption: "كود المنتج" },
@@ -80,14 +120,41 @@
                     { dataField: "ColorName", caption: "اللون" },
                     { dataField: "CategoryName", caption: "التصنيف" },
                     { dataField: "ProductTypeName", caption: "نوع المنتج" },
-                    { dataField: "Quantity", caption: "الكمية المدخلة" },
+                    { dataField: "RecordType", caption: "العملية" },
+                    { dataField: "Quantity", caption: "الكمية المدخلة"},
+                    { dataField: "UnitName", caption: "الوحدة" },
                     { dataField: "Notes", caption: "ملاحظات" },
-                    { dataField: "DateAdded", caption: "تاريخ الادخال", dataType: "date" },
-                    { dataField: "RecordType", caption: "نوع المدخل" }
-                ]
+                    { dataField: "DateAdded", caption: "تاريخ الادخال", dataType: "datetime", format: "yyyy-MM-dd h:mm a"},
+                    { dataField: "UserName", caption: "المدخل" }
+                ],
+                onRowPrepared: onRowPrepared
             });
         }
 
+        function onRowPrepared(e) {
+            if (e.rowType === 'data') {
+                var quantity = e.data.Quantity;
+                if (quantity < 0) {
+                    e.rowElement.addClass('negative-quantity');
+                } else if (quantity > 0) {
+                    e.rowElement.addClass('positive-quantity');
+                }
+            }
+        }
+
+        function fetchData(branchId, fromDate, toDate) {
+            return fetch(`/Products/GetAllWarehouseMovementsByBranch?branchId=${branchId}&fromDate=${fromDate}&toDate=${toDate}`)
+                .then(response => response.json())
+                .catch(() => { throw 'Data loading error'; });
+        }
+
+        function removeItem(key) {
+            return fetch(`/Products/DeleteInventoryItem?id=${key}`, { method: 'DELETE' })
+                .then(response => {
+                    if (!response.ok) throw 'Delete operation failed';
+                });
+        }
+       
         function exporting(e) {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Products');
@@ -104,3 +171,11 @@
         }
     });
 </script>
+<style>
+    .negative-quantity {
+        background-color: #FFCCCC;
+    }
+    .positive-quantity {
+        background-color: #CCFFCC;
+    }
+</style>

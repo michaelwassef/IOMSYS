@@ -32,6 +32,43 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<SalesInvoicesModel>> SelectCustomerInvoicesByIdAsync(int customerId)
+        {
+            var sql = @"
+                SELECT si.SalesInvoiceId, si.CustomerId, c.CustomerName, si.TotalAmount, si.PaidUp, si.Remainder, si.BranchId,
+                      b.BranchName, pm.PaymentMethodName, u.UserName,si.PaymentMethodId, si.UserId
+                      , si.SaleDate, si.TotalDiscount, si.IsReturn, si.ReturnDate, si.PaidUpDate, si.IsFullPaidUp, si.Notes
+                FROM SalesInvoices si
+                LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
+                LEFT JOIN Branches b ON si.BranchId = b.BranchId
+                LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
+                LEFT JOIN Users u ON si.UserId = u.UserId
+                WHERE si.CustomerId = @CustomerId ORDER BY si.SalesInvoiceId DESC";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<SalesInvoicesModel>(sql, new { CustomerId = customerId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<dynamic> SelectCustomerSumsByIdAsync(int customerId)
+        {
+            var sql = @"
+            SELECT 
+                COALESCE(SUM(si.TotalAmount), 0) AS TotalAmountSum, 
+                COALESCE(SUM(si.PaidUp), 0) AS PaidUpSum, 
+                COALESCE(SUM(si.Remainder), 0) AS RemainderSum
+            FROM SalesInvoices si
+            WHERE si.CustomerId = @CustomerId;
+            ";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                var result = await db.QuerySingleOrDefaultAsync(sql, new { CustomerId = customerId }).ConfigureAwait(false);
+                return result;
+            }
+        }
+
         public async Task<int> InsertCustomerAsync(CustomersModel customer)
         {
             var sql = @"INSERT INTO Customers (CustomerName, PhoneNumber, Address) 

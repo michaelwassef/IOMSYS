@@ -7,7 +7,7 @@
         public int ProductId { get; set; }
         public int SizeId { get; set; }
         public int ColorId { get; set; }
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
         public decimal BuyPrice { get; set; }
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }
@@ -17,5 +17,8 @@
         public int BranchId { get; set; }
         public int Statues { get; set; }
         public DateTime ModDate { get; set; } 
+        public int? UnitId { get; set; }
+        public string? UnitName { get; set; }
+        public int? ModUser { get; set; }
     }
 }

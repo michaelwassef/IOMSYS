@@ -1,27 +1,23 @@
 ﻿
 @{
-    ViewData["Title"] = "العملاء";
+    ViewData["Title"] = "UnitsPage";
     Layout = "_DevExtremeLayout";
 }
 
 <div class="page-title">
-    <h1>العملاء</h1>
+    <h1>الـوحـدات</h1>
 </div>
 
-<div class="row justify-content-center">
-    <button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">كشف فواتير العملاء</button>
-</div>
-
-@(Html.DevExtreme().DataGrid<CustomersModel>()
+@(Html.DevExtreme().DataGrid<UnitsModel>()
     .ID("gridContainer")
     .DataSource(d => d
         .Mvc()
-        .Controller("Customers")
-        .LoadAction("LoadCustomers")
-        .InsertAction("AddNewCustomer")
-        .UpdateAction("UpdateCustomer")
-        .DeleteAction("DeleteCustomer")
-        .Key("CustomerId")
+        .Controller("Units")
+        .LoadAction("LoadUnits")
+        .InsertAction("AddNewUnit")
+        .UpdateAction("UpdateUnit")
+        .DeleteAction("DeleteUnit")
+        .Key("UnitId")
     ).Selection(s => s.Mode(SelectionMode.Multiple))
      .Export(e => e.Enabled(true).AllowExportSelectedData(true))
      .OnExporting("exporting")
@@ -33,10 +29,8 @@
         .AllowUpdating(true)
         .AllowDeleting(true)
         .Popup(p => p
-                .Title("بيانات العميل")
-                .ShowTitle(true)
                 .Width(700)
-                .Height(370))
+                .Height(200))
     )
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))
@@ -54,9 +48,7 @@
     .ShowBorders(true)
     .Columns(columns =>
     {
-        columns.AddFor(m => m.CustomerName).Caption("اسم العميل");
-        columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف العميل");
-        columns.AddFor(m => m.Address).Caption("عنوان العميل");
+        columns.AddFor(m => m.UnitName).Caption("اسم الوحدة");
     })
     .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
@@ -64,9 +56,9 @@
         .TotalItems(items =>
         {
             items.Add()
-                .Column("اسم العميل")
+                .Column("اسم الوحدة")
                 .SummaryType(SummaryType.Count)
-                .DisplayFormat("عدد العملاء : {0}");
+                .DisplayFormat("عدد الوحدات : {0}");
 
             // Add more summaries as needed
         })
@@ -74,13 +66,9 @@
 )
 
 <script>
-    function returnProdutsPage() {
-        window.location.href = '@Url.Action("CustomersAccountPage", "Customers")';
-    }
-
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();
-        var worksheet = workbook.addWorksheet('Customers');
+        var worksheet = workbook.addWorksheet('Units');
 
         DevExpress.excelExporter.exportDataGrid({
             component: e.component,
@@ -88,7 +76,7 @@
             autoFilterEnabled: true
         }).then(function () {
             workbook.xlsx.writeBuffer().then(function (buffer) {
-                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Customers.xlsx');
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Units.xlsx');
             });
         });
     }

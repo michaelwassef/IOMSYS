@@ -27,6 +27,7 @@ namespace IOMSYS.Services
                 RemainderInSalesInvoices = await GetRemainderInSalesInvoicesAsync(fromDate, toDate, branchId) ?? 0,
                 ExpensesAmount = await GetExpensesAmountInExpensesAsync(fromDate, toDate, branchId) ?? 0,
                 Profit = await CalculateProfitAsync(fromDate, toDate, branchId) ?? 0,
+                ExpectedNet = await CalculateExpectedNetprofitAsync(fromDate, toDate, branchId) ?? 0,
                 TotalBuyCost = totalItemsInPurchase.TotalBuyCost ?? 0,
                 TotalSellRevenue = totalItemsInPurchase.TotalSellRevenue ?? 0
             };
@@ -128,9 +129,31 @@ namespace IOMSYS.Services
         public async Task<decimal?> CalculateProfitAsync(DateTime fromDate, DateTime toDate, int branchId)
         {
             var sql = @"
-                SELECT COALESCE(SUM(Amount), 0) AS Balance
-                FROM PaymentTransactions 
-                WHERE BranchId = @BranchId AND TransactionDate BETWEEN @FromDate AND @ToDate";
+              SELECT 
+                CASE 
+                    WHEN NetPaidUp < 0 THEN 0 
+                    ELSE NetPaidUp 
+                END AS NetPaidUp
+            FROM (
+                SELECT 
+                    COALESCE(
+                        (
+                            COALESCE((SELECT SUM(PaidUp)
+                                      FROM SalesInvoices
+                                      WHERE SaleDate >= @FromDate AND SaleDate <= @ToDate AND BranchId = @BranchId), 0)
+                            -
+                            (
+                                COALESCE((SELECT SUM(PaidUp)
+                                           FROM PurchaseInvoices
+                                           WHERE PurchaseDate >= @FromDate AND PurchaseDate <= @ToDate AND BranchId = @BranchId), 0)
+                                +
+                                COALESCE((SELECT SUM(ExpensesAmount)
+                                           FROM Expenses
+                                           WHERE PurchaseDate >= @FromDate AND PurchaseDate <= @ToDate AND BranchId = @BranchId), 0)
+                            )
+                        ), 0
+                    ) AS NetPaidUp
+            ) AS SubQuery;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -138,7 +161,36 @@ namespace IOMSYS.Services
                 return result;
             }
         }
+        public async Task<decimal?> CalculateExpectedNetprofitAsync(DateTime fromDate, DateTime toDate, int branchId)
+        {
+            var sql = @"
+        SELECT 
+            CASE 
+                WHEN netProfit < 0 THEN 0 
+                ELSE netProfit 
+            END AS ExpectedNet
+        FROM (
+            SELECT 
+                COALESCE(
+                    (
+                        COALESCE((SELECT SUM(TotalAmount)
+                                  FROM SalesInvoices
+                                  WHERE SaleDate >= @FromDate AND SaleDate <= @ToDate AND BranchId = @BranchId), 0)
+                        -
+                        COALESCE((SELECT SUM(TotalAmount)
+                                   FROM PurchaseInvoices
+                                   WHERE PurchaseDate >= @FromDate AND PurchaseDate <= @ToDate AND BranchId = @BranchId), 0)
+                    ),
+                    0
+                ) AS netProfit
+        ) AS SubQuery;";
 
+            using (var db = _dapperContext.CreateConnection())
+            {
+                var result = await db.QuerySingleOrDefaultAsync<decimal?>(sql, new { FromDate = fromDate, ToDate = toDate, BranchId = branchId }).ConfigureAwait(false);
+                return result;
+            }
+        }
         public async Task<IEnumerable<DailySalesAmountModel>> GetDailySalesAmountAsync(DateTime fromDate, DateTime toDate, int branchId)
         {
             var sql = @"
@@ -154,7 +206,6 @@ namespace IOMSYS.Services
                 return results;
             }
         }
-
         public async Task<IEnumerable<BestSaleModel>> GetBestSaleAsync(DateTime fromDate, DateTime toDate, int branchId)
         {
             var sql = @"
@@ -178,13 +229,27 @@ namespace IOMSYS.Services
                 return results;
             }
         }
-
-
         public async Task<FinancialData?> GetTotalItemsInPurchaseAsync(DateTime fromDate, DateTime toDate, int branchId)
         {
             var sql = @"
                 SELECT 
-                    SUM(pi.Quantity * p.BuyPrice) AS TotalBuyCost,
+                    (
+                        SELECT SUM(pi.Quantity * p.BuyPrice)
+                        FROM PurchaseItems pi
+                        INNER JOIN Products p ON pi.ProductId = p.ProductId
+                        WHERE pi.ModDate >= @FromDate 
+                        AND pi.ModDate <= @ToDate 
+                        AND pi.BranchId = @BranchId
+                    ) 
+                    + 
+                    (
+                        SELECT SUM(Amount)
+                        FROM PaymentTransactions
+                        WHERE InvoiceId IS NULL 
+                        AND TransactionType = 'اضافة'
+                        AND TransactionDate >= @FromDate 
+                        AND TransactionDate <= @ToDate
+                    ) AS TotalBuyCost,
                     SUM(pi.Quantity * p.SellPrice) AS TotalSellRevenue
                 FROM 
                     PurchaseItems pi
@@ -193,7 +258,8 @@ namespace IOMSYS.Services
                 WHERE 
                     pi.ModDate >= @FromDate 
                     AND pi.ModDate <= @ToDate 
-                    AND pi.BranchId = @BranchId";
+                    AND pi.BranchId = @BranchId
+                GROUP BY pi.BranchId";
 
             using (var db = _dapperContext.CreateConnection())
             {

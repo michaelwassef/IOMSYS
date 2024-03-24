@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -30,11 +31,33 @@ namespace IOMSYS.Controllers
             return View();
         }
 
+        public async Task<IActionResult> CustomersAccountPage()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Customers", "CustomersAccountPage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            return View();
+        }
+
         [HttpGet]
         public async Task<IActionResult> LoadCustomers()
         {
             var Customers = await _customersService.GetAllCustomersAsync();
             return Json(Customers);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadCustomerSums(int CustomerId)
+        {
+            var sums = await _customersService.SelectCustomerSumsByIdAsync(CustomerId);
+            return Json(sums);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadCustomersAccount(int CustomerId)
+        {
+            var Suppliers = await _customersService.SelectCustomerInvoicesByIdAsync(CustomerId);
+            return Json(Suppliers);
         }
 
         [HttpPost]
@@ -85,7 +108,7 @@ namespace IOMSYS.Controllers
                 int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
 
                 if (addCustomerResult > 0)
-                    return Ok(new { SuccessMessage = "Successfully Added", newCustomer.CustomerName, newCustomer.PhoneNumber});
+                    return Ok(new { SuccessMessage = "Successfully Added", newCustomer.CustomerName, newCustomer.PhoneNumber });
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }

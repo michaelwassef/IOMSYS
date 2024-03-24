@@ -7,6 +7,6 @@
         public int SizeId { get; set; }
         public int ColorId { get; set; }
         public int BranchId { get; set; }
-        public int AvailableQty { get; set; }
+        public decimal AvailableQty { get; set; }
     }
 }

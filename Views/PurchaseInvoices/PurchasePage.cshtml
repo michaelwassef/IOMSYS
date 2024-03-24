@@ -218,8 +218,36 @@
                     }
                 },
             ],
+            summary: {
+                totalItems: [
+                    {
+                        column: "PurchaseInvoiceId",
+                        summaryType: "count",
+                        displayFormat: "عدد الفواتير : {0}"
+                    },
+                    {
+                        column: "TotalAmount",
+                        summaryType: "sum",
+                        displayFormat: "اجمالي مبلغ الفواتير : {0}"
+                    },
+                    {
+                        column: "PaidUp",
+                        summaryType: "sum",
+                        displayFormat: "اجمالي المدفوع : {0}"
+                    },
+                    {
+                        column: "Remainder",
+                        summaryType: "sum",
+                        displayFormat: "اجمالي المتبقي : {0}"
+                    }
+                ]
+            },
             columnFixing: {
                 enabled: true
+            },
+            headerFilter: {
+                visible: true
+                , allowSearch: true
             },
             masterDetail: {
                 enabled: true,
@@ -234,6 +262,7 @@
                             { dataField: "SizeName", caption: "المقاس" },
                             { dataField: "ColorName", caption: "اللون" },
                             { dataField: "Quantity", caption: "الكمية" },
+                            { dataField: "UnitName", caption: "الوحدة" },
                             { dataField: "BuyPrice", caption: "سعر الشراء للواحد" }
                         ],
                         dataSource: new DevExpress.data.CustomStore({
