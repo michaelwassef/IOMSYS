@@ -13,6 +13,15 @@ namespace IOMSYS.Services
         {
             _dapperContext = dapperContext;
         }
+        public async Task<int> SelectInvoiceConnectToItemAsync(int SalesItemId)
+        {
+            var sql = @"SELECT SalesInvoiceId FROM SalesInvoiceItems WHERE SalesItemId = @SalesItemId";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryFirstOrDefaultAsync<int>(sql, new { SalesItemId }).ConfigureAwait(false);
+            }
+        }
 
         public async Task<int> AddSalesItemToInvoiceAsync(SalesInvoiceItemsModel salesInvoiceItem)
         {

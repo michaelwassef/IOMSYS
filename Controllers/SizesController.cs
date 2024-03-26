@@ -26,7 +26,6 @@ namespace IOMSYS.Controllers
             return View();
         }
 
-
         [HttpGet]
         public async Task<IActionResult> LoadSizes()
         {
@@ -52,7 +51,10 @@ namespace IOMSYS.Controllers
                 int addSizeResult = await _sizesService.InsertSizeAsync(newSize);
 
                 if (addSizeResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Sizes", addSizeResult, "Insert New Size : " + newSize.SizeName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -61,7 +63,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateSize([FromForm] IFormCollection formData)
@@ -84,6 +85,7 @@ namespace IOMSYS.Controllers
 
                 if (updateSizeResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Sizes", key, "Update Size : " + Size.SizeName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -97,7 +99,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         public async Task<IActionResult> DeleteSize([FromForm] IFormCollection formData)
         {
@@ -107,9 +108,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var size = await _sizesService.SelectSizeByIdAsync(key);
                 int deleteSizeResult = await _sizesService.DeleteSizeAsync(key);
                 if (deleteSizeResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Sizes", key, "Delete Size : " + size.SizeName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

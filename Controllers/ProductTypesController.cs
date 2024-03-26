@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 
 namespace IOMSYS.Controllers
 {
-
     [Authorize]
     public class ProductTypesController : Controller
     {
@@ -23,10 +22,7 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "ProductTypes", "ProductTypesPage");
-            if (!hasPermission)
-            {
-                return RedirectToAction("AccessDenied", "Access");
-            }
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
@@ -42,7 +38,7 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "ProductTypes", "AddNewProductType");
-            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }) ; }
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
                 var values = formData["values"];
@@ -55,7 +51,10 @@ namespace IOMSYS.Controllers
                 int addProductTypeResult = await _productTypesService.InsertProductTypeAsync(newProductType);
 
                 if (addProductTypeResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "ProductTypes", addProductTypeResult, "Insert New ProductType : " + newProductType.ProductTypeName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -64,7 +63,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateProductType([FromForm] IFormCollection formData)
@@ -87,6 +85,7 @@ namespace IOMSYS.Controllers
 
                 if (updateProductTypeResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "ProductTypes", key, "Update ProductType : " + ProductType.ProductTypeName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -100,7 +99,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         public async Task<IActionResult> DeleteProductType([FromForm] IFormCollection formData)
         {
@@ -110,9 +108,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var producttype = await _productTypesService.SelectProductTypeByIdAsync(key);
                 int deleteProductTypeResult = await _productTypesService.DeleteProductTypeAsync(key);
                 if (deleteProductTypeResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "ProductTypes", key, "Delete ProductType : " + producttype.ProductTypeName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

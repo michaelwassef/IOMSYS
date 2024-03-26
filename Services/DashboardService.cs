@@ -232,25 +232,30 @@ namespace IOMSYS.Services
         public async Task<FinancialData?> GetTotalItemsInPurchaseAsync(DateTime fromDate, DateTime toDate, int branchId)
         {
             var sql = @"
-                SELECT 
-                    (
-                        SELECT SUM(pi.Quantity * p.BuyPrice)
-                        FROM PurchaseItems pi
-                        INNER JOIN Products p ON pi.ProductId = p.ProductId
-                        WHERE pi.ModDate >= @FromDate 
-                        AND pi.ModDate <= @ToDate 
-                        AND pi.BranchId = @BranchId
-                    ) 
+               SELECT 
+                    ISNULL(
+                        (
+                            SELECT SUM(pi.Quantity * p.BuyPrice)
+                            FROM PurchaseItems pi
+                            INNER JOIN Products p ON pi.ProductId = p.ProductId
+                            WHERE pi.ModDate >= @FromDate 
+                            AND pi.ModDate <= @ToDate 
+                            AND pi.BranchId = @BranchId
+                        ), 
+                    0)
                     + 
-                    (
-                        SELECT SUM(Amount)
-                        FROM PaymentTransactions
-                        WHERE InvoiceId IS NULL 
-                        AND TransactionType = 'اضافة'
-                        AND TransactionDate >= @FromDate 
-                        AND TransactionDate <= @ToDate
-                    ) AS TotalBuyCost,
-                    SUM(pi.Quantity * p.SellPrice) AS TotalSellRevenue
+                    ISNULL(
+                        (
+                            SELECT SUM(Amount)
+                            FROM PaymentTransactions
+                            WHERE InvoiceId IS NULL 
+                            AND BranchId = @BranchId
+                            AND TransactionType = 'اضافة'
+                            AND TransactionDate >= @FromDate 
+                            AND TransactionDate <= @ToDate
+                        ),
+                    0) AS TotalBuyCost,
+                    ISNULL(SUM(pi.Quantity * p.SellPrice), 0) AS TotalSellRevenue
                 FROM 
                     PurchaseItems pi
                 INNER JOIN 

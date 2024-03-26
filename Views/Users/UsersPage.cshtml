@@ -60,7 +60,7 @@ Html.DevExtreme().DataGrid<UsersModel>()
     {
     columns.AddFor(m => m.UserName).Caption("اسم المستخدم");
     columns.AddFor(m => m.PhoneNumber).Caption("رقم هاتف المستخدم");
-    columns.AddFor(m => m.Password).Caption("كلمة المرور");
+        columns.AddFor(m => m.Password).Caption("كلمة المرور").Visible(false);
     columns.AddFor(m => m.UserTypeId).Caption("نوع المستخدم").Lookup(lookup => lookup
    .DataSource(d => d.Mvc().Controller("Users").LoadAction("LoadUserTypes"))
    .ValueExpr("UserTypeId")

@@ -15,7 +15,7 @@ namespace IOMSYS.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly IPermissionsService _permissionsService;
 
-        public HomeController(ILogger<HomeController> logger,IPermissionsService permissionsService)
+        public HomeController(ILogger<HomeController> logger, IPermissionsService permissionsService)
         {
             _logger = logger;
             _permissionsService = permissionsService;
@@ -25,7 +25,7 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Home", "Index");
-            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            if (!hasPermission) { return RedirectToAction("WarehousePage", "Products"); }
             return View();
         }
 
@@ -37,7 +37,8 @@ namespace IOMSYS.Controllers
 
         public async Task<IActionResult> LogOut()
         {
-
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            await _permissionsService.LogActionAsync(userId, "LogOut", "Home", 0, "EndSession : " + userId, 0);
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login", "Access");
         }

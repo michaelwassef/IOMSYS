@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -12,7 +11,6 @@ namespace IOMSYS.Controllers
     {
         private readonly ICustomersService _customersService;
         private readonly IPermissionsService _permissionsService;
-
 
         public CustomersController(ICustomersService customersService, IPermissionsService permissionsService)
         {
@@ -81,7 +79,10 @@ namespace IOMSYS.Controllers
                 int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
 
                 if (addCustomerResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Customers", addCustomerResult, "Insert New Customer : " + newCustomer.CustomerName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -108,7 +109,10 @@ namespace IOMSYS.Controllers
                 int addCustomerResult = await _customersService.InsertCustomerAsync(newCustomer);
 
                 if (addCustomerResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Customers", addCustomerResult, "Insert New FCustomer : " + newCustomer.CustomerName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added", newCustomer.CustomerName, newCustomer.PhoneNumber });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -117,7 +121,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateCustomer([FromForm] IFormCollection formData)
@@ -143,6 +146,7 @@ namespace IOMSYS.Controllers
 
                 if (updateCustomerResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Customers", key, "Update Customer : " + Customer.CustomerName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -156,7 +160,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         public async Task<IActionResult> DeleteCustomer([FromForm] IFormCollection formData)
         {
@@ -169,9 +172,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var customer = await _customersService.SelectCustomerByIdAsync(key);
                 int deleteCustomerResult = await _customersService.DeleteCustomerAsync(key);
                 if (deleteCustomerResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Customers", key, "Delete Customer : " + customer.CustomerName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

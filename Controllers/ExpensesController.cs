@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -88,6 +87,8 @@ namespace IOMSYS.Controllers
                     };
                     int paymentTransactionResult = await _paymentTransactionService.InsertPaymentTransactionAsync(newPaymentTransaction);
 
+                    await _permissionsService.LogActionAsync(userId, "POST", "Expenses", addExpenseResult,
+                        "Insert New Expense : " + newExpense.ExpensesName + " بقيمة : " + newExpense.ExpensesAmount, newExpense.BranchId);
                     return Ok(new { SuccessMessage = "تم ادخال المصروف بنجاح" });
                 }
 
@@ -142,10 +143,10 @@ namespace IOMSYS.Controllers
                 int updateExpenseResult = await _expensesService.UpdateExpenseAsync(expense);
                 if (updateExpenseResult > 0)
                 {
-                    if (difference > 0) 
+                    if (difference > 0)
                     {
                         expense.ExpensesAmount = difference;
-                        await RecordPaymentTransaction(expense, expense.ExpensesId); 
+                        await RecordPaymentTransaction(expense, expense.ExpensesId);
                     }
                 }
                 else
@@ -153,6 +154,7 @@ namespace IOMSYS.Controllers
                     return BadRequest(new { ErrorMessage = "حدث خطأ اثناء التعديل" });
                 }
 
+                await _permissionsService.LogActionAsync(userId, "PUT", "Expenses", key, "Update Expense : " + expense.ExpensesName + " بقيمة : " + expense.ExpensesAmount, expense.BranchId);
                 return Ok(new { SuccessMessage = "تم التعديل المصروف بنجاح." });
             }
             catch (Exception ex)
@@ -196,7 +198,7 @@ namespace IOMSYS.Controllers
                             return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Expenses", key, "Delete Expense : " + expense.ExpensesName + " بقيمة : " + expense.ExpensesAmount, expense.BranchId);
                     return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
                 else
@@ -224,5 +226,6 @@ namespace IOMSYS.Controllers
             };
             await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
         }
+
     }
 }

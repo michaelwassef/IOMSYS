@@ -212,38 +212,41 @@ namespace IOMSYS.Controllers
             try
             {
                 var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
-
-                int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
-                if (deleteResult > 0)
+                if (!items.Any())
                 {
-                    var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
-
-                    if (paymentTransactions != null && paymentTransactions.Any())
+                    int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
+                    if (deleteResult > 0)
                     {
-                        bool deleteFailed = false;
+                        var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
 
-                        foreach (var paymentTransaction in paymentTransactions)
+                        if (paymentTransactions != null && paymentTransactions.Any())
                         {
-                            var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+                            bool deleteFailed = false;
 
-                            if (deleteTransactionResult <= 0)
+                            foreach (var paymentTransaction in paymentTransactions)
                             {
-                                deleteFailed = true;
-                                break;
+                                var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+
+                                if (deleteTransactionResult <= 0)
+                                {
+                                    deleteFailed = true;
+                                    break;
+                                }
+                            }
+                            if (deleteFailed)
+                            {
+                                return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                             }
                         }
-                        if (deleteFailed)
-                        {
-                            return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
-                        }
-                    }
 
-                    return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
+                        return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { ErrorMessage = "حدث خطأ اثناء الحذف." });
+                    }
                 }
-                else
-                {
-                    return BadRequest(new { ErrorMessage = "حدث خطأ اثناء الحذف." });
-                }
+                return Ok();
             }
             catch (Exception ex)
             {

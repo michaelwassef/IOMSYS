@@ -76,7 +76,10 @@ namespace IOMSYS.Controllers
                 int addUserResult = await _UsersService.InsertUserAsync(newUser);
 
                 if (addUserResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Users", addUserResult, "Insert New User : " + newUser.UserName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -114,6 +117,7 @@ namespace IOMSYS.Controllers
 
                 if (updateUserResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Users", key, "Update User : " + User.UserName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -136,9 +140,15 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                if (key == userId) { return BadRequest(new { ErrorMessage = "Could Not Delete" }); }
+
+                var user = await _UsersService.SelectUserByIdAsync(key);
                 int deleteUserResult = await _UsersService.DeleteUserAsync(key);
                 if (deleteUserResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Users", key, "Delete User : " + user.UserName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

@@ -31,7 +31,7 @@ namespace IOMSYS.Services
                         WHERE B.UserId = @UserId";
             using (var db = _dapperContext.CreateConnection())
             {
-                return await db.QueryAsync<BranchesModel>(sql,new { UserId }).ConfigureAwait(false);
+                return await db.QueryAsync<BranchesModel>(sql, new { UserId }).ConfigureAwait(false);
             }
         }
 
@@ -76,7 +76,7 @@ namespace IOMSYS.Services
             {
                 using (var db = _dapperContext.CreateConnection())
                 {
-                    return await db.ExecuteScalarAsync<int>(sql, new { branch.BranchName,branch.PhoneNumber,branch.LandlinePhone,branch.Address,branch.BranchLogo,branch.BranchMangerId  }).ConfigureAwait(false);
+                    return await db.ExecuteScalarAsync<int>(sql, new { branch.BranchName, branch.PhoneNumber, branch.LandlinePhone, branch.Address, branch.BranchLogo, branch.BranchMangerId }).ConfigureAwait(false);
                 }
             }
             catch

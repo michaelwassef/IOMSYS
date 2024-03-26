@@ -1,6 +1,7 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
 using IOMSYS.Reports;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -17,8 +18,10 @@ namespace IOMSYS.Controllers
         private readonly IBranchInventoryService _branchInventoryService;
         private readonly IPermissionsService _permissionsService;
         private readonly IProductsService _productsService;
+        private readonly ICustomersService _customersService;
+        private readonly IPurchaseInvoicesService _purchaseInvoicesService;
 
-        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService, IPermissionsService permissionsService, IProductsService productsService)
+        public SalesInvoicesController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IPaymentTransactionService paymentTransactionService, IBranchInventoryService branchInventoryService, IPermissionsService permissionsService, IProductsService productsService, ICustomersService customersService, IPurchaseInvoicesService purchaseInvoicesService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesItemsService = salesItemsService;
@@ -27,6 +30,8 @@ namespace IOMSYS.Controllers
             _branchInventoryService = branchInventoryService;
             _permissionsService = permissionsService;
             _productsService = productsService;
+            _customersService = customersService;
+            _purchaseInvoicesService = purchaseInvoicesService;
         }
 
         public async Task<IActionResult> SalesPage()
@@ -58,6 +63,83 @@ namespace IOMSYS.Controllers
             return Json(Invoices);
         }
 
+        //[HttpPost]
+        //public async Task<IActionResult> AddNewSaleInvoice([FromForm] string items, [FromForm] SalesInvoicesModel model)
+        //{
+        //    int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+        //    var hasPermission = await _permissionsService.HasPermissionAsync(userId, "SalesInvoices", "SalesInvoicesPage");
+        //    if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+        //    try
+        //    {
+        //        model.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+        //        model.SalesItems = JsonConvert.DeserializeObject<List<SalesItemsModel>>(items);
+
+        //        foreach (var item in model.SalesItems)
+        //        {
+        //            var availableQuantity = await _productsService.GetAvailableQuantity(item.ProductId, item.ColorId, item.SizeId, model.BranchId);
+        //            var unit = await _productsService.SelectProductByIdAsync(item.ProductId);
+        //            if (unit.UnitId == 1)
+        //            {
+        //                if (item.Quantity != Math.Floor(item.Quantity))
+        //                {
+        //                    return Json(new { success = false, message = $"لا يمكن ادخال {unit.ProductName} بهذه الكمية : {item.Quantity}" });
+        //                }
+        //            }
+        //            if (item.Quantity > availableQuantity)
+        //            {
+        //                return Json(new { success = false, message = $"لا يوجد مخزون كافي للمنتج {item.ProductId} بالمقاس {item.SizeId} واللون {item.ColorId} في الفرع {model.BranchId}." });
+        //            }
+        //        }
+
+        //        decimal itemsTotal = model.SalesItems.Sum(item => item.Quantity * item.SellPrice);
+
+        //        decimal paidUp = model.PaidUp;
+        //        decimal totalAmount = model.TotalAmount;
+        //        decimal remainder = totalAmount - paidUp;
+
+        //        // Check if PaidUp is less than or equal to TotalAmount
+        //        if (paidUp > totalAmount)
+        //        {
+        //            return Json(new { success = false, message = "المدفوع لا يمكن ان يكون اكبر من اجمالي الفاتورة" });
+        //        }
+
+        //        // Check if Remainder is less than or equal to TotalAmount and PaidUp + Remainder equals TotalAmount
+        //        if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != model.Remainder)
+        //        {
+        //            return Json(new { success = false, message = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
+        //        }
+
+        //        if (paidUp == totalAmount) { model.IsFullPaidUp = true; }
+        //        else { model.IsFullPaidUp = false; }
+
+        //        // Insert the invoice
+        //        int invoiceId = await _salesInvoicesService.InsertSalesInvoiceAsync(model);
+
+        //        if (invoiceId <= 0)
+        //            return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
+
+        //        // Insert the items and link them to the invoice and update buyprice
+        //        foreach (var item in model.SalesItems)
+        //        {
+        //            item.IsReturn = false;
+        //            item.BranchId = model.BranchId;
+        //            item.ModDate = DateTime.Now;
+        //            item.ModUser = userId;
+        //            item.SalesItemId = await _salesItemsService.InsertSalesItemAsync(item);
+        //            await _salesInvoiceItemsService.AddSalesItemToInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = item.SalesItemId });
+        //            await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, model.BranchId, -item.Quantity);
+        //        }
+
+        //        if (model.PaidUp > 0) { await RecordPaymentTransaction(model, invoiceId); }
+
+        //        return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" + ex.Message });
+        //    }
+        //}
+
         [HttpPost]
         public async Task<IActionResult> AddNewSaleInvoice([FromForm] string items, [FromForm] SalesInvoicesModel model)
         {
@@ -85,30 +167,40 @@ namespace IOMSYS.Controllers
                         return Json(new { success = false, message = $"لا يوجد مخزون كافي للمنتج {item.ProductId} بالمقاس {item.SizeId} واللون {item.ColorId} في الفرع {model.BranchId}." });
                     }
                 }
-
                 decimal itemsTotal = model.SalesItems.Sum(item => item.Quantity * item.SellPrice);
-
-                decimal paidUp = model.PaidUp;
-                decimal totalAmount = model.TotalAmount;
-                decimal remainder = totalAmount - paidUp;
-
-                // Check if PaidUp is less than or equal to TotalAmount
-                if (paidUp > totalAmount)
+                decimal willpaidUp = 0;
+                var sums = await _customersService.SelectCustomerSumsByIdAsync(model.CustomerId);
+                if (sums.RemainderSum > 0)
                 {
-                    return Json(new { success = false, message = "المدفوع لا يمكن ان يكون اكبر من اجمالي الفاتورة" });
+                    willpaidUp = model.PaidUp;
+                    model.PaidUp = 0;
+                    model.Remainder = itemsTotal;
                 }
-
-                // Check if Remainder is less than or equal to TotalAmount and PaidUp + Remainder equals TotalAmount
-                if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != model.Remainder)
+                else
                 {
-                    return Json(new { success = false, message = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
-                }
+                    decimal paidUp = model.PaidUp;
+                    decimal totalAmount = model.TotalAmount;
+                    decimal remainder = totalAmount - paidUp;
 
-                if (paidUp == totalAmount) { model.IsFullPaidUp = true; }
-                else { model.IsFullPaidUp = false; }
+                    // Check if PaidUp is less than or equal to TotalAmount
+                    if (paidUp > totalAmount)
+                    {
+                        return Json(new { success = false, message = "المدفوع لا يمكن ان يكون اكبر من اجمالي الفاتورة" });
+                    }
+
+                    // Check if Remainder is less than or equal to TotalAmount and PaidUp + Remainder equals TotalAmount
+                    if (remainder > totalAmount || paidUp + remainder != totalAmount || remainder != model.Remainder)
+                    {
+                        return Json(new { success = false, message = "رجاء مراجعة الباقي من اجمالي الفاتورة" });
+                    }
+
+                    if (paidUp == totalAmount) { model.IsFullPaidUp = true; }
+                    else { model.IsFullPaidUp = false; }
+                }
 
                 // Insert the invoice
                 int invoiceId = await _salesInvoicesService.InsertSalesInvoiceAsync(model);
+                decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(model.CustomerId, model.BranchId, willpaidUp, model.PaymentMethodId);
 
                 if (invoiceId <= 0)
                     return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
@@ -125,9 +217,8 @@ namespace IOMSYS.Controllers
                     await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, model.BranchId, -item.Quantity);
                 }
 
-                if (model.PaidUp > 0) { await RecordPaymentTransaction(model, invoiceId); }
-
-                return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
+               if (model.PaidUp > 0) { await RecordPaymentTransaction(model, invoiceId); }
+               return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
             catch (Exception ex)
             {
@@ -287,6 +378,29 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> SaleInvoiceCusReport(int invoiceId)
+        {
+            try
+            {
+                var report = new invoiceCus();
+                report.Parameters["InvoiceId"].Value = invoiceId;
+                var invoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(invoiceId);
+                report.Parameters["CustomerId"].Value = invoice.CustomerId;
+                report.CreateDocument();
+                MemoryStream memoryStream = new MemoryStream();
+                report.ExportToPdf(memoryStream);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                // Return the PDF file to the client
+                return File(memoryStream, "application/pdf", "SaleInvoice.pdf");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred while generating the report.", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetLastInvoiceId()
         {
             try
@@ -343,7 +457,7 @@ namespace IOMSYS.Controllers
                 ModifiedUser = model.UserId,
                 ModifiedDate = DateTime.Now,
                 InvoiceId = invoiceId,
-                Details = model.Notes,
+                Details = "دفعة من فاتورة المبيعات #" + invoiceId + " - " + model.Notes,
             };
             await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
         }

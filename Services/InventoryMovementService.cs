@@ -29,7 +29,7 @@ namespace IOMSYS.Services
         {
             var sql = @"SELECT I.MovementId, p.ProductName, s.SizeName, c.ColorName, I.Quantity,
                 b1.BranchName AS FromBranchName, b2.BranchName AS ToBranchName, I.IsApproved, 
-                I.MovementDate, I.Notes , I.SalesInvoiceId, I.PurchaseInvoiceId, I.ModUser
+                I.MovementDate, I.Notes , I.SalesInvoiceId, I.PurchaseInvoiceId, I.ModUser, I.SaleItemId, I.PurchaseItemId
                 FROM InventoryMovements I
                 LEFT JOIN Products p ON I.ProductId = p.ProductId 
                 LEFT JOIN Sizes s ON I.SizeId = s.SizeId
@@ -52,8 +52,8 @@ namespace IOMSYS.Services
                 try
                 {
                     var movementId = await db.ExecuteScalarAsync<int>(
-                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate, SalesInvoiceId, PurchaseInvoiceId, MakeInvoice, ModUser) 
-                        VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate, @SalesInvoiceId, @PurchaseInvoiceId, @MakeInvoice, @ModUser);
+                        @"INSERT INTO InventoryMovements (ProductId, SizeId, ColorId, Quantity, FromBranchId, ToBranchId, Notes, IsApproved, MovementDate, SalesInvoiceId, PurchaseInvoiceId, MakeInvoice, ModUser, SaleItemId, PurchaseItemId) 
+                        VALUES (@ProductId, @SizeId, @ColorId, @Quantity, @FromBranchId, @ToBranchId, @Notes, @IsApproved, @MovementDate, @SalesInvoiceId, @PurchaseInvoiceId, @MakeInvoice, @ModUser, @SaleItemId, @PurchaseItemId);
                         SELECT CAST(SCOPE_IDENTITY() as int);",
                         movement).ConfigureAwait(false);
 

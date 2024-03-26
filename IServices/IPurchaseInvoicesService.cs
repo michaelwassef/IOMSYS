@@ -6,6 +6,7 @@ namespace IOMSYS.IServices
     {
         Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesAsync();
         Task<PurchaseInvoicesModel> GetPurchaseInvoiceByIdAsync(int purchaseInvoiceId);
+        Task<PurchaseInvoicesModel> GetPurchaseInvoiceBySalesIdAsync(int salesInvoiceId);
         Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesByBranchAsync(int BranchId);
         Task<IEnumerable<PurchaseInvoicesModel>> GetNotPaidPurchaseInvoicesByBranchAsync(DateTime PaidUpDate, int BranchId);
         Task<IEnumerable<PurchaseInvoicesModel>> GetAllNotPaidPurchaseInvoicesByBranchAsync(int BranchId);

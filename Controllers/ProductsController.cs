@@ -4,6 +4,7 @@ using IOMSYS.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Transactions;
 
 namespace IOMSYS.Controllers
 {
@@ -71,7 +72,10 @@ namespace IOMSYS.Controllers
                 int addProductResult = await _ProductsService.InsertProductAsync(newProduct);
 
                 if (addProductResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Products", addProductResult, "Insert New Product : " + newProduct.ProductName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -111,6 +115,7 @@ namespace IOMSYS.Controllers
 
                 if (updateProductResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Products", Product.ProductId, "Update Product : " + Product.ProductName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -133,9 +138,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var product = await _ProductsService.SelectProductByIdAsync(key);
                 int deleteProductResult = await _ProductsService.DeleteProductAsync(key);
                 if (deleteProductResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Products", key, "Delete Product : " + product.ProductName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

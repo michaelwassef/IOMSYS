@@ -1,7 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Reports;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -112,8 +110,8 @@ namespace IOMSYS.Controllers
                 foreach (var item in model.PurchaseItems)
                 {
                     var unit = await _ProductsService.SelectProductByIdAsync(item.ProductId);
-                    if (unit.UnitId == 1) 
-                    { 
+                    if (unit.UnitId == 1)
+                    {
                         if (item.Quantity != Math.Floor(item.Quantity))
                         {
                             return Json(new { success = false, message = $"لا يمكن ادخال {item.ProductName} بهذه الكمية : {item.Quantity}" });
@@ -139,13 +137,15 @@ namespace IOMSYS.Controllers
                 int invoiceId = await _purchaseInvoicesService.InsertPurchaseInvoiceAsync(model);
                 if (invoiceId <= 0)
                     return Json(new { success = false, message = "حدث خطأ ما اثناء الاضافه حاول مرة اخري" });
-                
+
                 await ProcessPurchaseItems(model, invoiceId);
 
-                if(model.PaidUp > 0) {
+                if (model.PaidUp > 0)
+                {
                     model.Notes = "دفعة من فاتورة المشتريات #" + model.PurchaseInvoiceId;
-                    await RecordPaymentTransaction(model, invoiceId); }
-                
+                    await RecordPaymentTransaction(model, invoiceId);
+                }
+
                 if (model.SupplierId == 4)
                 {
                     await CreateAndLinkSalesInvoice(model, userId, invoiceId);
@@ -302,21 +302,22 @@ namespace IOMSYS.Controllers
 
                     int updateSales = await _salesInvoicesService.UpdateSalesInvoiceAsync(saleInvoice);
 
-                    if (saleInvoice.PaidUp > oldpaid) {
+                    if (saleInvoice.PaidUp > oldpaid)
+                    {
                         saleInvoice.Notes = "دفعة من فاتورة المبيعات #" + saleInvoice.SalesInvoiceId;
                         saleInvoice.PaidUp = saleInvoice.PaidUp - oldpaid;
-                        await RecordPaymentTransaction(saleInvoice, saleInvoice.SalesInvoiceId); 
-                    }                    
+                        await RecordPaymentTransaction(saleInvoice, saleInvoice.SalesInvoiceId);
+                    }
                 }
 
                 if (updateResult > 0)
                 {
                     var updatedInvoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(existingInvoice.PurchaseInvoiceId);
-                    if (updatedInvoice.PaidUp > oldpaid) 
+                    if (updatedInvoice.PaidUp > oldpaid)
                     {
                         updatedInvoice.Notes = "دفعة من فاتورة المشتريات #" + existingInvoice.PurchaseInvoiceId;
                         updatedInvoice.PaidUp = updatedInvoice.PaidUp - oldpaid;
-                        await RecordPaymentTransaction(updatedInvoice, updatedInvoice.PurchaseInvoiceId); 
+                        await RecordPaymentTransaction(updatedInvoice, updatedInvoice.PurchaseInvoiceId);
                     }
 
                     return Ok(new { SuccessMessage = "تم تعديل الفاتورة بنجاح.", UpdatedInvoice = updatedInvoice });

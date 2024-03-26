@@ -28,5 +28,16 @@ namespace IOMSYS.Services
                 return count > 0;
             }
         }
+
+        public async Task LogActionAsync(int userId, string action, string tableName, int recordId, string details,int branchId)
+        {
+            var logSql = @"INSERT INTO ApplicationLogs (UserId, Action, TableName, RecordId, Details, LogDate, BranchId) 
+                           VALUES (@UserId, @Action, @TableName, @RecordId, @Details, GETDATE(), @branchId);";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                await db.ExecuteAsync(logSql, new { UserId = userId, Action = action, TableName = tableName, RecordId = recordId, Details = details, BranchId = branchId }).ConfigureAwait(false);
+            }
+        }
     }
 }

@@ -93,7 +93,10 @@ namespace IOMSYS.Controllers
 
                 var offerId = await _offerService.CreateOfferAsync(offer);
                 if (offerId > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Offer", offerId, "Insert New Offer : " + offer.OfferName, 0);
                     return Ok(new { SuccessMessage = "Offer created successfully", OfferId = offerId });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could not create offer" });
             }
@@ -116,7 +119,10 @@ namespace IOMSYS.Controllers
 
                 var success = await _offerService.UpdateOfferAsync(offer);
                 if (success)
+                {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Offer", offer.OfferId, "Update Offer : " + offer.OfferName, 0);
                     return Ok(new { SuccessMessage = "Offer updated successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could not update offer" });
             }
@@ -135,9 +141,13 @@ namespace IOMSYS.Controllers
 
             try
             {
+                var offer = await _offerService.GetOfferByIdAsync(offerId);
                 var success = await _offerService.DeleteOfferAsync(offerId);
                 if (success)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Offer", offerId, "Delete Offer : " + offer.OfferName, 0);
                     return Ok(new { SuccessMessage = "Offer deleted successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could not delete offer" });
             }
@@ -161,11 +171,12 @@ namespace IOMSYS.Controllers
                     return BadRequest(new { Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
                 }
 
-
-
                 var offerDetailId = await _offerService.CreateOfferDetailAsync(offerDetail);
                 if (offerDetailId > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "OfferDetail", offerDetailId, "Insert New Offer Detail to : " + offerDetail.OfferId, 0);
                     return Ok(new { SuccessMessage = "Offer detail created successfully", OfferDetailId = offerDetailId });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could not create offer detail" });
             }
@@ -184,9 +195,13 @@ namespace IOMSYS.Controllers
 
             try
             {
+                var offer = await _offerService.GetOfferDetailByIdAsync(offerDetailId);
                 var success = await _offerService.DeleteOfferDetailAsync(offerDetailId);
                 if (success)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "OfferDetail", offerDetailId, "Delete Offer Detail from : " + offer.OfferId, 0);
                     return Ok(new { SuccessMessage = "Offer detail deleted successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could not delete offer detail" });
             }
@@ -195,5 +210,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

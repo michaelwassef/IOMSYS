@@ -16,6 +16,8 @@
         public int PurchaseInvoiceId { get; set; }
         public bool MakeInvoice { get; set; }
         public int? ModUser { get; set; }
+        public int? SaleItemId { get; set; }
+        public int? PurchaseItemId { get; set; }
         //for join 
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }

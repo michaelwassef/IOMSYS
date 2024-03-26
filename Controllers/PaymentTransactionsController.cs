@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Text.Json;
+using System.Transactions;
 
 namespace IOMSYS.Controllers
 {
@@ -120,7 +121,9 @@ namespace IOMSYS.Controllers
 
                     var frombranshCus = await _branchesService.SelectBranchByIdAsync(model.FromBranchId);
                     var tobranshCus = await _branchesService.SelectBranchByIdAsync(model.ToBranchId);
+
                     decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesBRANSHES(tobranshCus.SupplierId, model.FromBranchId, model.Amount);
+                    await _permissionsService.LogActionAsync(userId, "POST", "PaymentTransactions", 0, "Move Amount : "+amountUtilized+" From : " +frombranshCus.BranchName+" To : "+tobranshCus.BranchName , model.FromBranchId);
                 }
                 return Json(new { success = true, message = "تم نقل المبالغ بنجاح." });
             }
@@ -153,7 +156,10 @@ namespace IOMSYS.Controllers
                 int result = await _paymentTransactionService.InsertPaymentTransactionAsync(transaction);
 
                 if (result > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "PaymentTransactions", result, "Insert Amount : " + transaction.Amount + " To : " + transaction.BranchId + " - PaymentMethod : " + transaction.PaymentMethodId, transaction.BranchId);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -180,7 +186,10 @@ namespace IOMSYS.Controllers
                 int result = await _paymentTransactionService.UpdatePaymentTransactionAsync(existing);
 
                 if (result > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "PaymentTransactions", (int)existing.TransactionId, "Update Amount : " + existing.Amount + " To : " + existing.BranchId + " - PaymentMethod : " + existing.PaymentMethodId, existing.BranchId);
                     return Ok(new { SuccessMessage = "تم التعديل بنجاح" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "حدث خطأ اثناء التعديل" });
             }
@@ -198,10 +207,14 @@ namespace IOMSYS.Controllers
             if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
             try
             {
+                var transaction = await _paymentTransactionService.GetPaymentTransactionByIdAsync(transactionId);
                 int result = await _paymentTransactionService.DeletePaymentTransactionAsync(transactionId);
 
                 if (result > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "PaymentTransactions", (int)transaction.TransactionId, "Delete Amount : " + transaction.Amount + " To : " + transaction.BranchId + " - PaymentMethod : " + transaction.PaymentMethodId, transaction.BranchId);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }
@@ -210,5 +223,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

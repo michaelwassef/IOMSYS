@@ -385,9 +385,9 @@ namespace IOMSYS.Services
 
                 await UpdateSalesInvoiceAsyncS(invoiceId, newPaidUpAmount, newRemainder, isFullPaidUp);
                 var newinvoice = await GetSalesInvoiceByIdAsyncS(invoiceId);
-                if (spendingAmount > 0)
+                if (amountToPay > 0)
                 {
-                    newinvoice.PaidUp = spendingAmount;
+                    newinvoice.PaidUp = amountToPay;
                     newinvoice.PaymentMethodId = PaymentMethodId;
                     newinvoice.Notes = "دفعة من فاتورة المبيعات #" + newinvoice.SalesInvoiceId;
                     await RecordPaymentTransaction(newinvoice, invoiceId);

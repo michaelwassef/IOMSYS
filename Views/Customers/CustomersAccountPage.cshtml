@@ -336,7 +336,7 @@
                             dataSource: new DevExpress.data.CustomStore({
                                 load: function (loadOptions) {
                                     return $.getJSON('/SalesItems/LoadSaleItemsByInvoiceId', {
-                                        purchaseInvoiceId: options.key
+                                        SalesInvoiceId: options.key
                                     });
                                 }
                             })

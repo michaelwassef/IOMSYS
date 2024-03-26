@@ -55,7 +55,10 @@ namespace IOMSYS.Controllers
                 int addUnitResult = await _unitsService.InsertUnitAsync(newUnit);
 
                 if (addUnitResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Units", addUnitResult, "Insert New Unit : " + newUnit.UnitName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -64,7 +67,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateUnit([FromForm] IFormCollection formData)
@@ -90,6 +92,7 @@ namespace IOMSYS.Controllers
 
                 if (updateUnitResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Units", key, "Update Unit : " + Unit.UnitName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -103,7 +106,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         public async Task<IActionResult> DeleteUnit([FromForm] IFormCollection formData)
         {
@@ -116,9 +118,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var unit = await _unitsService.SelectUnitByIdAsync(key);
                 int deleteUnitResult = await _unitsService.DeleteUnitAsync(key);
                 if (deleteUnitResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Units", key, "Delete Unit : " + unit.UnitName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }
@@ -127,5 +133,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
             }
         }
+
     }
 }

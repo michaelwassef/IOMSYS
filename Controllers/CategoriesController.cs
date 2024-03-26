@@ -12,7 +12,6 @@ namespace IOMSYS.Controllers
         private readonly ICategoriesService _categoriesService;
         private readonly IPermissionsService _permissionsService;
 
-
         public CategoriesController(ICategoriesService categoriesService, IPermissionsService permissionsService)
         {
             _categoriesService = categoriesService;
@@ -56,9 +55,11 @@ namespace IOMSYS.Controllers
                     return BadRequest(ModelState);
 
                 int addCategoryResult = await _categoriesService.InsertCategoryAsync(newCategory);
-
                 if (addCategoryResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Categories", addCategoryResult, "Insert New Category : " + newCategory.CategoryName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -67,7 +68,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateCategory([FromForm] IFormCollection formData)
@@ -93,6 +93,7 @@ namespace IOMSYS.Controllers
 
                 if (updateCategoryResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Categories", key, "Update Category : " + Category.CategoryName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -106,7 +107,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         public async Task<IActionResult> DeleteCategory([FromForm] IFormCollection formData)
         {
@@ -119,9 +119,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var category = await _categoriesService.SelectCategoryByIdAsync(key);
                 int deleteCategoryResult = await _categoriesService.DeleteCategoryAsync(key);
                 if (deleteCategoryResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Categories", key, "Delete Category :" + category.CategoryName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

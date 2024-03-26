@@ -12,13 +12,15 @@ namespace IOMSYS.Controllers
     public class AccessController : Controller
     {
         private readonly IAccessService _accessService;
+        private readonly IPermissionsService _permissionsService;
 
-        public AccessController(IAccessService accessService)
+        public AccessController(IAccessService accessService, IPermissionsService permissionsService)
         {
             _accessService = accessService;
+            _permissionsService = permissionsService;
         }
 
-        public IActionResult Login()
+        public async Task<IActionResult> LoginAsync()
         {
             ClaimsPrincipal claimUser = HttpContext.User;
 
@@ -60,9 +62,8 @@ namespace IOMSYS.Controllers
                         IsPersistent = modelLogin.KeepLoggedIn
                     };
 
-                    string username = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), properties);
+                    await _permissionsService.LogActionAsync(Convert.ToInt32(authenticationResult.UserId), "POST", "Login", 0, "New Seission For : " + modelLogin.UserName,0);
                     return RedirectToAction("Index", "Home");
                 }
                 else if (!authenticationResult.IsActive)

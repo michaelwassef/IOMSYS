@@ -38,8 +38,9 @@
                 <div id="inventoryMovementsGrid"></div>
             </div>
            <div class="modal-footer">
-@*                <button type="button" id="acceptAll" class="btn btn-success">قبول كل الطلبات</button>
-                <button type="button" id="rejectAll" class="btn btn-danger">رفض كل الطلبات</button>*@
+                 <div>*يرجي تحديد المقبولين بمفردهم ثم الحفظ والمرفوضين بمفردهم ثم الحفظ*</div>
+               <button type="button" id="acceptAll" class="btn btn-success">قبول كل الطلبات</button>
+                <button type="button" id="rejectAll" class="btn btn-danger">رفض كل الطلبات</button>
                 <button type="button" id="saveChanges" class="btn btn-primary">حفظ</button>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
             </div>
@@ -251,6 +252,49 @@
         rejected: []
     };
 
+    $('#acceptAll').click(function () {
+        (async function () {
+            $('#loadingIndicator').show();
+            var dataGrid = $("#inventoryMovementsGrid").dxDataGrid("instance");
+            // Retrieve the data items
+            var items = dataGrid.getDataSource().items();
+            movementSelections.approved = [];
+            movementSelections.rejected = [];
+
+            items.forEach(function (item) {
+                movementSelections.approved.push(item.MovementId);
+            });
+            if (movementSelections.approved.length > 0) {
+                await approveOrRejectMovements(movementSelections.approved, true);
+                movementSelections.approved = [];
+            }
+
+            $("#inventoryMovementsGrid").dxDataGrid("instance").refresh();
+            $('#loadingIndicator').hide();
+        })();
+    });
+
+    $('#rejectAll').click(function () {
+        (async function () {
+            $('#loadingIndicator').show();
+            var dataGrid = $("#inventoryMovementsGrid").dxDataGrid("instance");
+            var items = dataGrid.getDataSource().items();
+            movementSelections.approved = [];
+            movementSelections.rejected = [];
+            items.forEach(function (item) {
+                movementSelections.rejected.push(item.MovementId);
+            });
+            if (movementSelections.rejected.length > 0) {
+                await approveOrRejectMovements(movementSelections.rejected, false);
+                movementSelections.rejected = [];
+            }
+
+            $("#inventoryMovementsGrid").dxDataGrid("instance").refresh();
+            $('#loadingIndicator').hide();
+        })();
+    });
+
+
     async function printreportofwarehouse() {
         $('#loadingIndicator').show();
         try {
@@ -313,7 +357,7 @@
                 { dataField: "Notes", caption: "ملاحظات" },
                 { dataField: "MovementDate", caption: "تاريخ النقل", dataType: "date" },
                 {
-                    caption: "Actions",
+                    caption: "الإجراءات",
                     cellTemplate: function (container, options) {
                         const approvalButton = $('<button/>')
                             .addClass('btn btn-sm mx-1')
@@ -331,35 +375,14 @@
                             .text(options.data.IsRejected ? 'مرفوض' : 'رفض')
                             .addClass(options.data.IsRejected ? 'btn-secondary' : 'btn-danger')
                             .on('click', function () {
-                                // Toggle rejection state and update button appearance
                                 options.data.IsRejected = !options.data.IsRejected;
-                                options.data.IsApproved = false; // Reset approval state
+                                options.data.IsApproved = false;
                                 updateButtonAppearance(approvalButton, rejectionButton, options.data);
                                 updateSelections(options.data.MovementId, false, options.data.IsRejected);
                             });
-
-                        container.append(approvalButton);
-                        //container.append(approvalButton, rejectionButton);
+                        container.append(approvalButton, rejectionButton);
                     }
                 }
-                //{
-                //caption: "الإجراءات",
-                //    cellTemplate: function (container, options) {
-                //        $('<button/>').addClass('btn btn-success btn-sm mx-1')
-                //            .text('قبول')
-                //            .on('click', function () {
-                //                approveOrRejectMovement(options.data.MovementId, true);
-                //            })
-                //            .appendTo(container);
-
-                //        $('<button/>').addClass('btn btn-danger btn-sm')
-                //            .text('رفض')
-                //            .on('click', function () {
-                //                approveOrRejectMovement(options.data.MovementId, false);
-                //            })
-                //            .appendTo(container);
-                //    }
-                //}
             ],
             allowColumnResizing: true,
             columnAutoWidth: true,
@@ -379,14 +402,22 @@
             }
         }
     });
+
     function updateButtonAppearance(approvalButton, rejectionButton, data) {
-        approvalButton.text(data.IsApproved ? 'Approved' : 'Approve')
-            .removeClass('btn-success btn-secondary')
-            .addClass(data.IsApproved ? 'btn-secondary' : 'btn-success');
-        rejectionButton.text(data.IsRejected ? 'Rejected' : 'Reject')
-            .removeClass('btn-danger btn-secondary')
-            .addClass(data.IsRejected ? 'btn-secondary' : 'btn-danger');
+        if (data.IsApproved) {
+            approvalButton.removeClass('btn-success').addClass('btn-secondary').text('مقبول');
+            rejectionButton.hide();
+        } else if (data.IsRejected) {
+            rejectionButton.removeClass('btn-danger').addClass('btn-secondary').text('مرفوض');
+            approvalButton.hide();
+        } else {
+            approvalButton.addClass('btn-success').removeClass('btn-secondary').text('قبول');
+            rejectionButton.addClass('btn-danger').removeClass('btn-secondary').text('رفض');
+            approvalButton.show();
+            rejectionButton.show();
+        }
     }
+
 
     function updateSelections(movementId, isApproval, isSelected) {
         const index = movementSelections.approved.indexOf(movementId);
@@ -777,6 +808,7 @@
             DevExpress.ui.notify(responseData.message, "success", 3000);
             transferItems = [];
             displayTransferItems() ;
+            $("#gridContainer").dxDataGrid("instance").refresh();
     } catch (error) {
             DevExpress.ui.notify(responseData.message, "error", 3000);
         }
@@ -1086,7 +1118,7 @@
 
                     DevExpress.ui.notify(result.message, "success", 3000);
                     $('#loadingIndicator').hide();
-
+                    $("#gridContainer").dxDataGrid("instance").refresh();
                 } catch (error) {
                     DevExpress.ui.notify(error, "error", 3000);
                     $('#loadingIndicator').hide();
@@ -1243,6 +1275,7 @@
 
             factoryPopupItems.length = 0;
             $("#invoiceItemsGrid3").dxDataGrid("instance").option('dataSource', factoryPopupItems);
+            $("#gridContainer").dxDataGrid("instance").refresh();
             $('#loadingIndicator').hide();
         }
 

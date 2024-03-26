@@ -57,7 +57,10 @@ namespace IOMSYS.Controllers
                 int addColorResult = await _colorsService.InsertColorAsync(newColor);
 
                 if (addColorResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Colors", addColorResult, "Insert New Color : " + newColor.ColorName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -66,7 +69,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateColor([FromForm] IFormCollection formData)
@@ -92,6 +94,7 @@ namespace IOMSYS.Controllers
 
                 if (updateColorResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Colors", key, "Update Color : " + Color.ColorName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -105,7 +108,6 @@ namespace IOMSYS.Controllers
             }
         }
 
-
         [HttpDelete]
         public async Task<IActionResult> DeleteColor([FromForm] IFormCollection formData)
         {
@@ -118,9 +120,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var color = await _colorsService.SelectColorByIdAsync(key);
                 int deleteColorResult = await _colorsService.DeleteColorAsync(key);
                 if (deleteColorResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Colors", key, "DELETE Color : " + color.ColorName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

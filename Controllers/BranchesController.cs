@@ -65,10 +65,19 @@ namespace IOMSYS.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                var user = await _branchesService.SelectBranchIdByManagerIdAsync((int)newbranch.BranchMangerId);
+                if (user != null)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يمكن جعل مستخدم مسئول لاكثر من مخزن واحد" });
+                }
+
                 int addBranchResult = await _branchesService.InsertBranchAsync(newbranch);
 
                 if (addBranchResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "Branches", addBranchResult, "Insert New Branch : " + newbranch.BranchName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -77,7 +86,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdateBranch([FromForm] IFormCollection formData)
@@ -99,10 +107,17 @@ namespace IOMSYS.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                var user = await _branchesService.SelectBranchIdByManagerIdAsync((int)branch.BranchMangerId);
+                if (user != null)
+                {
+                    return BadRequest(new { ErrorMessage = "لا يمكن جعل مستخدم مدير لاكثر من فرع واحد" });
+                }
+
                 int updateBranchResult = await _branchesService.UpdateBranchAsync(branch);
 
                 if (updateBranchResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "Branches", key, "Update Branch : " + branch.BranchName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -128,9 +143,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var branch = await _branchesService.SelectBranchByIdAsync(key);
                 int deleteBranchResult = await _branchesService.DeleteBranchAsync(key);
                 if (deleteBranchResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "Branches", key, "Delete Branch : "+branch.BranchName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

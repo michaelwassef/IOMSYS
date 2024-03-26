@@ -38,8 +38,8 @@
         columns.AddFor(m => m.UnitId).Caption("الوحدة").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Units").LoadAction("LoadUnits")).ValueExpr("UnitId").DisplayExpr("UnitName"));
         columns.AddFor(m => m.CategoryId).Caption("التصنيف").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories")).ValueExpr("CategoryId").DisplayExpr("CategoryName"));
         columns.AddFor(m => m.ProductTypeId).Caption("النوع").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes")).ValueExpr("ProductTypeId").DisplayExpr("ProductTypeName"));
-        columns.AddFor(m => m.FabricQuantity).Caption("كمية القماش المستهلكة");
-
+@*        columns.AddFor(m => m.FabricQuantity).Caption("كمية القماش المستهلكة");
+*@
        @* columns.AddFor(m => m.ProductPhoto).Caption("صورة المنتج").EditCellTemplate(@<text>
             @(Html.DevExtreme().FileUploader().ID("fileUploader").SelectButtonText("اختر صورة المنتج").Accept("image/*"))
             </text>);*@

@@ -22,7 +22,7 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PaymentMethods", "PaymentMethodsPage");
-            if (!hasPermission){ return RedirectToAction("AccessDenied", "Access"); }
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
 
@@ -51,7 +51,10 @@ namespace IOMSYS.Controllers
                 int addPaymentMethodResult = await _paymentMethodsService.InsertPaymentMethodAsync(newPaymentMethod);
 
                 if (addPaymentMethodResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "PaymentMethods", addPaymentMethodResult, "Insert New Payment Method : " + newPaymentMethod.PaymentMethodName, 0);
                     return Ok(new { SuccessMessage = "Successfully Added" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Add" });
             }
@@ -60,7 +63,6 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { ErrorMessage = "Could not add", ExceptionMessage = ex.Message });
             }
         }
-
 
         [HttpPut]
         public async Task<IActionResult> UpdatePaymentMethod([FromForm] IFormCollection formData)
@@ -83,6 +85,7 @@ namespace IOMSYS.Controllers
 
                 if (updatePaymentMethodResult > 0)
                 {
+                    await _permissionsService.LogActionAsync(userId, "PUT", "PaymentMethods", key, "Update Payment Method : " + PaymentMethod.PaymentMethodName, 0);
                     return Ok(new { SuccessMessage = "Updated Successfully" });
                 }
                 else
@@ -105,9 +108,13 @@ namespace IOMSYS.Controllers
             try
             {
                 var key = Convert.ToInt32(formData["key"]);
+                var PaymentMethod = await _paymentMethodsService.SelectPaymentMethodByIdAsync(key);
                 int deletePaymentMethodResult = await _paymentMethodsService.DeletePaymentMethodAsync(key);
                 if (deletePaymentMethodResult > 0)
+                {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "PaymentMethods", key, "Delete Payment Method : " + PaymentMethod.PaymentMethodName, 0);
                     return Ok(new { SuccessMessage = "Deleted Successfully" });
+                }
                 else
                     return BadRequest(new { ErrorMessage = "Could Not Delete" });
             }

@@ -60,6 +60,7 @@ namespace IOMSYS.Controllers
 
             var fromBranchIds = batchModel.Items.Select(item => item.FromBranchId).Distinct().ToList();
             var toBranchIds = batchModel.Items.Select(item => item.ToBranchId).Distinct().ToList();
+            int key = 0;
             if (fromBranchIds.Count > 1 || toBranchIds.Count > 1)
             {
                 return BadRequest(new { message = "يجب النقل من فرع واحد والي فرع واحد" });
@@ -74,6 +75,20 @@ namespace IOMSYS.Controllers
                     {
                         return Json(new { success = false, message = $"لا يمكن ادخال {unit.ProductName} بهذه الكمية : {item.Quantity}" });
                     }
+                }
+            }
+
+            var processedItems = new HashSet<string>();
+            foreach (var item in batchModel.Items)
+            {
+                string itemIdentifier = $"{item.ProductId}-{item.SizeId}-{item.ColorId}-{item.Quantity}-{item.FromBranchId}-{item.ToBranchId}";
+                if (processedItems.Contains(itemIdentifier))
+                {
+                    return Json(new { success = false, message = $"تم الكشف عن عنصر مكرر: {item.ProductId}، ولا يمكن معالجة نفس العنصر مرتين في نفس الدفعة." });
+                }
+                else
+                {
+                    processedItems.Add(itemIdentifier);
                 }
             }
 
@@ -149,35 +164,52 @@ namespace IOMSYS.Controllers
                 var fromBranchxx = await _branchesService.SelectBranchByIdAsync(frombranchx);
 
                 decimal itemsTotal = salesInvoiceModel.SalesItems.Sum(item => item.Quantity * item.SellPrice);
-                decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(fromBranchxx.CustomerId, toBranchxx.BranchId, itemsTotal, 5);
                 salesInvoiceModel.TotalAmount = itemsTotal;
-                salesInvoiceModel.PaidUp = amountUtilized;
-                salesInvoiceModel.Remainder = itemsTotal - amountUtilized;
-                if (salesInvoiceModel.Remainder == 0)
-                {
-                    salesInvoiceModel.IsFullPaidUp = true;
-                }
-                else
-                {
-                    salesInvoiceModel.IsFullPaidUp = false;
-                }
-
+                salesInvoiceModel.PaidUp = 0;
+                salesInvoiceModel.Remainder = itemsTotal;
+                salesInvoiceModel.IsFullPaidUp = false;
                 int salesInvoiceResult = 0;
 
                 if (batchModel.makeInvoice)
-                    salesInvoiceResult = await AddNewSaleInvoice(salesInvoiceModel);
-
-                foreach (var model in pendingMovements)
                 {
-                    model.SalesInvoiceId = salesInvoiceResult;
-                    model.MovementDate = DateTime.Now;
-                    model.IsApproved = false;
-                    model.MakeInvoice = batchModel.makeInvoice;
-                    model.ModUser = userId;
-                    await _inventoryMovementService.MoveInventoryAsync(model);
-                }
+                    salesInvoiceResult = await AddNewSaleInvoice(salesInvoiceModel);
+                    foreach (var model in pendingMovements)
+                    {
+                        var salesItem = salesInvoiceModel.SalesItems.FirstOrDefault(si => si.ProductId == model.ProductId && si.SizeId == model.SizeId && si.ColorId == model.ColorId && si.BranchId == model.FromBranchId && si.Quantity == model.Quantity);
 
-                return Json(new { success = true, message = "تم نقل الكميات بنجاح وإنشاء فاتوره البيع." });
+                        if (salesItem != null)
+                        {
+                            model.SaleItemId = salesItem.SalesItemId;
+                        }
+                        model.SalesInvoiceId = salesInvoiceResult;
+                        model.MovementDate = DateTime.Now;
+                        model.IsApproved = false;
+                        model.MakeInvoice = batchModel.makeInvoice;
+                        model.ModUser = userId;
+                        key = await _inventoryMovementService.MoveInventoryAsync(model);
+                    }
+                }
+                else
+                {
+                    foreach (var model in pendingMovements)
+                    {
+                        model.MovementDate = DateTime.Now;
+                        model.IsApproved = false;
+                        model.MakeInvoice = batchModel.makeInvoice;
+                        model.ModUser = userId;
+                        key = await _inventoryMovementService.MoveInventoryAsync(model);
+                    }
+                }
+                if (batchModel.makeInvoice)
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "InventoryMovement", key, "Insert New InventoryMovement With Invoice From : " + fromBranchxx.BranchName, frombranchx);
+                    return Json(new { success = true, message = "تم نقل الكميات بنجاح وإنشاء فاتوره المبيعات." });
+                }
+                else
+                {
+                    await _permissionsService.LogActionAsync(userId, "POST", "InventoryMovement", key, "Insert New InventoryMovement Without Invoice From : " + fromBranchxx.BranchName, frombranchx);
+                    return Json(new { success = true, message = "تم نقل الكميات بنجاح ولم يتم إنشاء فاتوره المبيعات." });
+                }
             }
             catch (Exception ex)
             {
@@ -195,20 +227,27 @@ namespace IOMSYS.Controllers
             }
             List<int> successfulMovements = new List<int>();
             List<int> failedMovements = new List<int>();
-
+            var tobranchnameid = 0;
+            var tobranchname = "";
             if (!model.IsApproved)
             {
                 foreach (var movementId in model.MovementIds)
                 {
                     var movement = await _inventoryMovementService.SelectInventoryMovementByIdAsync(movementId);
-                    await DeleteMoveSaleInvoice(movement.SalesInvoiceId);
+                    tobranchname = movement.ToBranchName;
+                    if (movement.SaleItemId.HasValue)
+                    {
+                        await DeleteMoveSaleItem(movement.SaleItemId.Value);
+                        await UpdateSalesInvoiceTotals(movement.SalesInvoiceId);
+                    }
                     failedMovements.Add(movementId);
                 }
                 foreach (var movementId in failedMovements)
                 {
                     var result = await _inventoryMovementService.ApproveOrRejectInventoryMovementAsync(movementId, false, 0, false);
                 }
-                return Ok(new { success = true, message = "Movements rejected." });
+                await _permissionsService.LogActionAsync(userId, "POST", "InventoryMovement", 0, "Reject Movements To Branch : " + tobranchname, tobranchnameid);
+                return Ok(new { success = true, message = "تم رفض النقل بنجاح" });
             }
 
             List<PurchaseItemsModel> purchaseItems = new List<PurchaseItemsModel>();
@@ -272,6 +311,9 @@ namespace IOMSYS.Controllers
 
             int PurchaseInvoiceId = 0;
             PurchaseInvoiceId = await AddNewPurchaseInvoice(purchaseInvoiceModel);
+
+            decimal amountUtilized2 = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(toBranch.CustomerId, fromBranch.BranchId, amountUtilized, 5);
+            decimal amountUtilized3 = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(fromBranch.CustomerId, toBranch.BranchId, amountUtilized, 5);
 
             foreach (var movementId in successfulMovements)
             {
@@ -460,6 +502,131 @@ namespace IOMSYS.Controllers
                 return 0;
             }
         }
+        public async Task<int> DeleteMoveSaleItem(int invoiceItemId)
+        {
+            try
+            {
+                var invoiceId = await _salesInvoiceItemsService.SelectInvoiceConnectToItemAsync(invoiceItemId);
+                await _salesInvoiceItemsService.RemoveSalesItemFromInvoiceAsync(new SalesInvoiceItemsModel { SalesInvoiceId = invoiceId, SalesItemId = invoiceItemId });
+                await _salesItemsService.DeleteSalesItemAsync(invoiceItemId);
+                await DeleteInvoiceIfNoItems(invoiceId);
+                return 1;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        public async Task UpdateSalesInvoiceTotals(int salesInvoiceId)
+        {
+            var remainingItems = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(salesInvoiceId);
+            decimal newTotalAmount = remainingItems.Sum(item => item.Quantity * item.SellPrice);
+            var invoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(salesInvoiceId);
+            if (invoice != null)
+            {
+                invoice.TotalAmount = newTotalAmount;
+                if (newTotalAmount > invoice.PaidUp)
+                {
+                    invoice.PaidUp = newTotalAmount - invoice.PaidUp;
+                }
+                else
+                {
+                    invoice.PaidUp = invoice.PaidUp - newTotalAmount;
+                }
+                invoice.Remainder = invoice.TotalAmount - newTotalAmount;
+                await _salesInvoicesService.UpdateSalesInvoiceAsync(invoice);
+                var purchase = await _purchaseInvoicesService.GetPurchaseInvoiceBySalesIdAsync(salesInvoiceId);
+                if (purchase != null)
+                {
+                    purchase.PaidUp = invoice.PaidUp;
+                    purchase.Remainder = invoice.Remainder;
+                    await _purchaseInvoicesService.UpdatePurchaseInvoiceAsync(purchase);
+                }
+            }
+        }
+        public async Task<IActionResult> DeleteInvoiceIfNoItems(int invoiceId)
+        {
+            try
+            {
+                var items = await _salesItemsService.GetSaleItemsByInvoiceIdAsync(invoiceId);
+                if (!items.Any())
+                {
+                    int deleteResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
+                    var purchase = await _purchaseInvoicesService.GetPurchaseInvoiceBySalesIdAsync(invoiceId);
+                    if (purchase != null)
+                    {
+                        var items2 = await _purchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
+
+                        foreach (var item in items2)
+                        {
+                            await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
+                        }
+                        foreach (var item in items2)
+                        {
+                            await _purchaseItemsService.DeletePurchaseItemAsync(item.PurchaseItemId);
+                        }
+                        int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
+                        if (deletePurchaseInvoicesResult > 0)
+                        {
+                            var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+                            if (paymentTransactions != null && paymentTransactions.Any())
+                            {
+                                bool deleteFailed = false;
+                                foreach (var paymentTransaction in paymentTransactions)
+                                {
+                                    var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+                                    if (deleteTransactionResult <= 0)
+                                    {
+                                        deleteFailed = true;
+                                        break;
+                                    }
+                                }
+                                if (deleteFailed)
+                                {
+                                    return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
+                                }
+                            }
+                        }
+                    }
+                    if (deleteResult > 0)
+                    {
+                        var paymentTransactions = await _paymentTransactionService.GetPaymentTransactionsByInvoiceIdAsync(invoiceId);
+
+                        if (paymentTransactions != null && paymentTransactions.Any())
+                        {
+                            bool deleteFailed = false;
+
+                            foreach (var paymentTransaction in paymentTransactions)
+                            {
+                                var deleteTransactionResult = await _paymentTransactionService.DeletePaymentTransactionAsync((int)paymentTransaction.TransactionId);
+
+                                if (deleteTransactionResult <= 0)
+                                {
+                                    deleteFailed = true;
+                                    break;
+                                }
+                            }
+                            if (deleteFailed)
+                            {
+                                return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
+                            }
+                        }
+
+                        return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
+                    }
+                    else
+                    {
+                        return BadRequest(new { ErrorMessage = "حدث خطأ اثناء الحذف." });
+                    }
+                }
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
 
         [HttpPost]
         public async Task<IActionResult> SupplierPaidUp(int SupplierId, int BranchId, int PaymentMethodId, decimal Amount)
@@ -475,6 +642,8 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { message = "لا يوجد رصيد بالخزنة المختاره" });
             }
             decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalances(SupplierId, BranchId, Amount);
+
+            await _permissionsService.LogActionAsync(userId, "POST", "InventoryMovement", 0, "Supplier : " + SupplierId + " has been paid : " + amountUtilized + " FromBranch : " + BranchId, BranchId);
             return Ok(new { success = true, message = $" تم دفع للمورد {amountUtilized}" });
         }
 
@@ -487,6 +656,7 @@ namespace IOMSYS.Controllers
                 return BadRequest(new { message = "ليس لديك صلاحية" });
             }
             decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(CustomerId, BranchId, Amount, PaymentMethodId);
+            await _permissionsService.LogActionAsync(userId, "POST", "InventoryMovement", 0, "Customer : " + CustomerId + " has paid : " + amountUtilized + " ToBranch : " + BranchId, BranchId);
             return Ok(new { success = true, message = $" تم تحصيل من العميل {amountUtilized}" });
         }
     }
