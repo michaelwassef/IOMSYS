@@ -16,7 +16,8 @@
 </div>
 
 <div class="row justify-content-center">
-    <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="showProductDetailsPopup()"> اضافة كميات للفروع </button>
+    <button class="btn col-md-3 btn-primary btn-block my-1 mx-1" onclick="showProductDetailsPopup()">اضافة كميات/توالف للفروع بدون فواتير</button>
+    <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="FactoryPurchasePage()">عرض الكميات بدون فواتير</button>
     <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="showMoveInventoryPopup()"> نقل كميات للفروع</button>
     <button class="btn col-md-2 btn-primary btn-block my-1 mx-1" onclick="showfactoryPopup()"> تصنيع </button>
     <button type="button" class="btn col-md-2 btn-primary btn-block my-1 mx-1" data-toggle="modal" data-target="#dataGridPopup">
@@ -247,6 +248,10 @@
 )
 
 <script>
+    function FactoryPurchasePage() {
+        window.location.href = '@Url.Action("FactoryPurchasePage", "PurchaseInvoices")';
+    }
+
     let movementSelections = {
         approved: [],
         rejected: []

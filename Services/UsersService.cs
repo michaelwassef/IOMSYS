@@ -94,7 +94,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<PermissionModel>> GetAllPermissions()
         {
-            var sql = @"SELECT * FROM Permissions";
+            var sql = @"SELECT * FROM Permissions ORDER BY DisplayPermissionName";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<PermissionModel>(sql).ConfigureAwait(false);

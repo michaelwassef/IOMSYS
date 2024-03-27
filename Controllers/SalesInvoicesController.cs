@@ -1,7 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
 using IOMSYS.Reports;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -217,8 +216,8 @@ namespace IOMSYS.Controllers
                     await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, model.BranchId, -item.Quantity);
                 }
 
-               if (model.PaidUp > 0) { await RecordPaymentTransaction(model, invoiceId); }
-               return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
+                if (model.PaidUp > 0) { await RecordPaymentTransaction(model, invoiceId); }
+                return Json(new { success = true, message = "تم حفظ الفاتورة باصنافها بنجاح" });
             }
             catch (Exception ex)
             {
@@ -306,10 +305,12 @@ namespace IOMSYS.Controllers
                 foreach (var item in items)
                 {
                     await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, (int)item.BranchId, item.Quantity);
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "SalesItem", item.SalesItemId, "Delete Sales Item #" + item.SalesItemId + " ProductId : " + item.ProductId + " SizeId : " + item.SizeId + " ColorId : " + item.ColorId + " Qty : " + item.Quantity + " From Invoice #" + invoiceId, (int)item.BranchId);
                     await _salesItemsService.DeleteSalesItemAsync(item.SalesItemId);
                 }
 
                 // Step 4: Delete the invoice
+                var invoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(invoiceId);
                 int deleteSaleInvoicesResult = await _salesInvoicesService.DeleteSalesInvoiceAsync(invoiceId);
                 if (deleteSaleInvoicesResult > 0)
                 {
@@ -335,7 +336,7 @@ namespace IOMSYS.Controllers
                             return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "SalesInvoices", invoiceId, "Delete Sales Invoice #" + invoiceId + " Customer : " + invoice.CustomerName + " PaymentMethod : " + invoice.PaymentMethodName + " TotalAmount : " + invoice.TotalAmount + " TotalDiscount : " + invoice.TotalDiscount + " PaidUp : " + invoice.PaidUp + " Remainder : " + invoice.Remainder + " SaleDate :" + invoice.SaleDate + " Branch : " + invoice.BranchName, invoice.BranchId);
                     return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
                 else

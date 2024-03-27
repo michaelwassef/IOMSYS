@@ -17,17 +17,37 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<PurchaseItemsModel>> GetAllPurchaseItemsAsync()
         {
             var sql = @"
-                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, pi.BuyPrice, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate
+                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, u1.UnitName, pi.BuyPrice, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate, pi.ModUser
                 FROM PurchaseItems pi
                 LEFT JOIN Products p ON pi.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
-                LEFT JOIN Colors c ON pi.ColorId = c.ColorId";
+                LEFT JOIN Colors c ON pi.ColorId = c.ColorId
+                LEFT JOIN Units u1 ON p.UnitId = u1.UnitId";
 
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<PurchaseItemsModel>(sql).ConfigureAwait(false);
             }
         }
+
+        public async Task<IEnumerable<PurchaseItemsModel>> GetAllFactoryItemsByBranchAsync(int branchId)
+        {
+            var sql = @"
+                SELECT pi.PurchaseItemId, p.ProductName, s.SizeName, c.ColorName, pi.Quantity, U1.UnitName, pi.BuyPrice, pi.Notes, pi.BranchId, pi.Statues, pi.ModDate, u.UserName
+                FROM PurchaseItems pi
+                LEFT JOIN Products p ON pi.ProductId = p.ProductId
+                LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
+                LEFT JOIN Users u ON pi.ModUser = u.UserId
+                LEFT JOIN Colors c ON pi.ColorId = c.ColorId 
+                LEFT JOIN Units u1 ON p.UnitId = u1.UnitId
+                Where pi.BranchId = @BranchId AND pi.Statues = '3'";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<PurchaseItemsModel>(sql, new { BranchId  = branchId}).ConfigureAwait(false);
+            }
+        }
+
         public async Task<PurchaseItemsModel> GetPurchaseItemsByIDitemAsync(int id)
         {
             var sql = @"
@@ -77,6 +97,39 @@ namespace IOMSYS.Services
                 return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseItemId = purchaseItemId }).ConfigureAwait(false);
             }
         }
+
+        public async Task<PurchaseItemsModel> GetPurchaseItemWithoutInvoiceByIdAsync(int purchaseItemId)
+        {
+            var sql = @"
+                SELECT 
+                    pi.PurchaseItemId, 
+                    p.ProductId,
+                    p.ProductName,
+                    s.SizeId,
+                    s.SizeName,
+                    c.ColorId,
+                    c.ColorName, 
+                    pi.Quantity, 
+                    pi.BuyPrice,
+                    pi.Notes,
+                    pi.BranchId,
+                    pi.Statues,
+                    pi.ModDate,
+                    pi.ModUser
+                FROM 
+                    PurchaseItems pi
+                    LEFT JOIN Products p ON pi.ProductId = p.ProductId
+                    LEFT JOIN Sizes s ON pi.SizeId = s.SizeId
+                    LEFT JOIN Colors c ON pi.ColorId = c.ColorId
+                WHERE 
+                    pi.PurchaseItemId = @PurchaseItemId;";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QuerySingleOrDefaultAsync<PurchaseItemsModel>(sql, new { PurchaseItemId = purchaseItemId }).ConfigureAwait(false);
+            }
+        }
+
         public async Task<IEnumerable<PurchaseItemsModel>> GetPurchaseItemsByInvoiceIdAsync(int InvoiceId)
         {
             var sql = @"

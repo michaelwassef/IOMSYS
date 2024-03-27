@@ -84,6 +84,10 @@ namespace IOMSYS.Services
             if (inventory != null)
             {
                 inventory.AvailableQty += quantityAdjustment;
+                if (inventory.AvailableQty < 0)
+                {
+                    return 0;
+                }
                 return await UpdateInventoryQuantityAsync(inventory);
             }
             else

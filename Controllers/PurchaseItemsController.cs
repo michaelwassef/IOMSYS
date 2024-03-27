@@ -38,6 +38,13 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> LoadFactoryItem(int branchId)
+        {
+            var PurchaseItems = await _PurchaseItemsService.GetAllFactoryItemsByBranchAsync(branchId);
+            return Json(PurchaseItems);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> LoadPurchaseItemsByInvoiceId([FromQuery] int purchaseInvoiceId)
         {
             var purchaseItems = await _PurchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(purchaseInvoiceId);
@@ -87,7 +94,7 @@ namespace IOMSYS.Controllers
                     }
                     newPurchaseItems.Statues = 2;
                     var checkava = await _ProductsService.GetAvailableQuantity(newPurchaseItems.ProductId, newPurchaseItems.ColorId, newPurchaseItems.SizeId, newPurchaseItems.BranchId);
-                    if(checkava < -newPurchaseItems.Quantity)
+                    if (checkava < -newPurchaseItems.Quantity)
                     {
                         return Json(new { success = false, message = "لا توجد الكمية المطلوبة لعمل تالف" });
                     }
@@ -176,13 +183,7 @@ namespace IOMSYS.Controllers
 
                 if (addPurchaseItemsResult > 0)
                 {
-                    await _branchInventoryService.AdjustInventoryQuantityAsync(
-                           newPurchaseItems.ProductId,
-                           newPurchaseItems.SizeId,
-                           newPurchaseItems.ColorId,
-                           newPurchaseItems.BranchId,
-                           newPurchaseItems.Quantity);
-
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(newPurchaseItems.ProductId, newPurchaseItems.SizeId, newPurchaseItems.ColorId, newPurchaseItems.BranchId, newPurchaseItems.Quantity);
                     return Json(new { success = true, message = "تم الادخال بنجاح وتم تحديث المخزون." });
                 }
                 else
@@ -255,10 +256,8 @@ namespace IOMSYS.Controllers
                 var purchaseItem = await _PurchaseItemsService.GetPurchaseItemByIdAsync(purchaseItemId);
                 var purchaseInvoiceId = purchaseItem.PurchaseInvoiceId;
 
-                if (purchaseItem == null)
-                {
-                    return NotFound(new { ErrorMessage = "Purchase item not found." });
-                }
+                var availableQty = await _branchInventoryService.GetInventoryByProductAndBranchAsync(purchaseItem.ProductId, purchaseItem.SizeId, purchaseItem.ColorId, purchaseItem.BranchId);
+                if (availableQty.AvailableQty - purchaseItem.Quantity < 0) { return BadRequest(new { ErrorMessage = "لا يمكنك الحذف لقد بيع من الكمية المراد حذفها" }); }
 
                 var removeConnectionResult = await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel
                 {
@@ -269,16 +268,41 @@ namespace IOMSYS.Controllers
                 int deletePurchaseItemsResult = await _PurchaseItemsService.DeletePurchaseItemAsync(purchaseItemId);
                 if (deletePurchaseItemsResult > 0)
                 {
-                    await _branchInventoryService.AdjustInventoryQuantityAsync(
-                        purchaseItem.ProductId,
-                        purchaseItem.SizeId,
-                        purchaseItem.ColorId,
-                        purchaseItem.BranchId,
-                        -purchaseItem.Quantity);
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(purchaseItem.ProductId, purchaseItem.SizeId, purchaseItem.ColorId, purchaseItem.BranchId, -purchaseItem.Quantity);
 
                     await RecalculateInvoiceTotal(purchaseInvoiceId);
                     await DeleteInvoiceIfNoItems(purchaseInvoiceId);
 
+                    return Ok(new { SuccessMessage = "Deleted Successfully, inventory adjusted." });
+                }
+                else
+                {
+                    return BadRequest(new { ErrorMessage = "Could Not Delete" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { ErrorMessage = "An error occurred", ExceptionMessage = ex.Message });
+            }
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> DeletePurchaseItemWithoutInvoices(int purchaseItemId)
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseItems", "DeletePurchaseItemWithoutInvoices");
+            if (!hasPermission) { return BadRequest(new { message = "ليس لديك صلاحية" }); }
+            try
+            {
+                var purchaseItem = await _PurchaseItemsService.GetPurchaseItemWithoutInvoiceByIdAsync(purchaseItemId);
+                var availableQty = await _branchInventoryService.GetInventoryByProductAndBranchAsync(purchaseItem.ProductId, purchaseItem.SizeId, purchaseItem.ColorId, purchaseItem.BranchId);
+                if (availableQty.AvailableQty - purchaseItem.Quantity < 0){ return BadRequest(new { ErrorMessage = "لا يمكنك الحذف لقد بيع من الكمية المراد حذفها" }); }
+
+                int deletePurchaseItemsResult = await _PurchaseItemsService.DeletePurchaseItemAsync(purchaseItemId);
+                if (deletePurchaseItemsResult > 0)
+                {
+                    var adjustInventoryquantity = await _branchInventoryService.AdjustInventoryQuantityAsync(purchaseItem.ProductId, purchaseItem.SizeId, purchaseItem.ColorId, purchaseItem.BranchId, -purchaseItem.Quantity);
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "PurchaseItems", purchaseItemId, "Delete purchaseItemId : " + purchaseItemId+" ProductId : "+ purchaseItem.ProductId+" SizeId : "+ purchaseItem.SizeId+" ColorId : "+ purchaseItem.ColorId+" Qty : "+ purchaseItem.Quantity, purchaseItem.BranchId);
                     return Ok(new { SuccessMessage = "Deleted Successfully, inventory adjusted." });
                 }
                 else

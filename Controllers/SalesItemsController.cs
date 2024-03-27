@@ -1,6 +1,8 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IOMSYS.Controllers
@@ -13,14 +15,16 @@ namespace IOMSYS.Controllers
         private readonly ISalesInvoiceItemsService _salesInvoiceItemsService;
         private readonly IBranchInventoryService _branchInventoryService;
         private readonly IPaymentTransactionService _paymentTransactionService;
+        private readonly IPermissionsService _permissionsService;
 
-        public SalesItemsController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService)
+        public SalesItemsController(ISalesInvoicesService salesInvoicesService, ISalesItemsService salesItemsService, ISalesInvoiceItemsService salesInvoiceItemsService, IBranchInventoryService branchInventoryService, IPaymentTransactionService paymentTransactionService, IPermissionsService permissionsService)
         {
             _salesInvoicesService = salesInvoicesService;
             _salesInvoiceItemsService = salesInvoiceItemsService;
             _salesItemsService = salesItemsService;
             _branchInventoryService = branchInventoryService;
             _paymentTransactionService = paymentTransactionService;
+            _permissionsService = permissionsService;
         }
 
         [HttpGet]
@@ -129,6 +133,7 @@ namespace IOMSYS.Controllers
                 await _paymentTransactionService.InsertPaymentTransactionAsync(paymentTransaction);
                 await RecalculateInvoiceTotal(salesInvoiceId, returnedAmount);
                 await DeleteReturnInvoiceIfNoItems(salesInvoiceId);
+                await _permissionsService.LogActionAsync(userId, "PUT", "ReturnSales", salesItemId, "Return Item : "+salesItemId+" From Invoice : #" + salesInvoice.SalesInvoiceId,salesInvoice.BranchId);
                 return Ok(new { SuccessMessage = "تم الاسترجاع بنجاح" });
             }
             catch (Exception ex)

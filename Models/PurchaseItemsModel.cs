@@ -20,5 +20,6 @@
         public int? UnitId { get; set; }
         public string? UnitName { get; set; }
         public int? ModUser { get; set; }
+        public string? UserName { get; set; }
     }
 }

@@ -30,6 +30,14 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Products", "ProductsPage");
+            if (!hasPermission) { return RedirectToAction("ProductsWitoutPricePage", "Products"); }
+            return View();
+        }
+
+        public async Task<IActionResult> ProductsWitoutPricePage()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Products", "ProductsWitoutPricePage");
             if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }

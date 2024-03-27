@@ -1,5 +1,6 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
+using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -39,6 +40,14 @@ namespace IOMSYS.Controllers
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "PurchaseInvoices", "PurchasePage");
+            if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
+            return View();
+        }
+
+        public async Task<IActionResult> FactoryPurchasePage()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "FactoryPurchasePage", "PurchasePage");
             if (!hasPermission) { return RedirectToAction("AccessDenied", "Access"); }
             return View();
         }
@@ -345,26 +354,29 @@ namespace IOMSYS.Controllers
                 // Step 1: Retrieve all items associated with the invoice
                 var items = await _purchaseItemsService.GetPurchaseItemsByInvoiceIdAsync(invoiceId);
 
+                foreach (var item in items)
+                {
+                    var purchaseItem = await _purchaseItemsService.GetPurchaseItemWithoutInvoiceByIdAsync(item.PurchaseItemId);
+                    var availableQty = await _branchInventoryService.GetInventoryByProductAndBranchAsync(purchaseItem.ProductId, purchaseItem.SizeId, purchaseItem.ColorId, purchaseItem.BranchId);
+                    if (availableQty.AvailableQty - purchaseItem.Quantity < 0) { return BadRequest(new { ErrorMessage = "لا يمكنك الحذف لقد بيع من الكمية المراد حذفها" }); }
+                }
+
                 // Step 2: Remove links from PurchaseInvoiceItems
                 foreach (var item in items)
                 {
-                    await _branchInventoryService.AdjustInventoryQuantityAsync(
-                        item.ProductId,
-                        item.SizeId,
-                        item.ColorId,
-                        item.BranchId,
-                        -item.Quantity);
-
                     await _purchaseInvoiceItemsService.RemoveItemFromPurchaseInvoiceAsync(new PurchaseInvoiceItemsModel { PurchaseInvoiceId = invoiceId, PurchaseItemId = item.PurchaseItemId });
                 }
 
                 // Step 3: Delete items from PurchaseItems
                 foreach (var item in items)
                 {
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "PurchaseItem", item.PurchaseItemId, "Delete Sales Item #" + item.PurchaseItemId + " ProductId : " + item.ProductId + " SizeId : " + item.SizeId + " ColorId : " + item.ColorId + " Qty : " + item.Quantity + " From Invoice #" + invoiceId, (int)item.BranchId);
+                    await _branchInventoryService.AdjustInventoryQuantityAsync(item.ProductId, item.SizeId, item.ColorId, item.BranchId, -item.Quantity);
                     await _purchaseItemsService.DeletePurchaseItemAsync(item.PurchaseItemId);
                 }
 
                 // Step 4: Delete the invoice
+                var invoice = await _purchaseInvoicesService.GetPurchaseInvoiceByIdAsync(invoiceId);
                 int deletePurchaseInvoicesResult = await _purchaseInvoicesService.DeletePurchaseInvoiceAsync(invoiceId);
                 if (deletePurchaseInvoicesResult > 0)
                 {
@@ -389,7 +401,7 @@ namespace IOMSYS.Controllers
                             return BadRequest(new { ErrorMessage = "Failed to delete one or more related payment transactions." });
                         }
                     }
-
+                    await _permissionsService.LogActionAsync(userId, "DELETE", "PurchaseInvoices", invoiceId, "Delete Sales Invoice #" + invoiceId + " Supplier : " + invoice.SupplierName + " PaymentMethod : " + invoice.PaymentMethodName + " TotalAmount : " + invoice.TotalAmount + " PaidUp : " + invoice.PaidUp + " Remainder : " + invoice.Remainder + " PurchaseDate :" + invoice.PurchaseDate + " Branch : " + invoice.BranchName, invoice.BranchId);
                     return Ok(new { SuccessMessage = "تم الحذف بنجاح" });
                 }
                 else

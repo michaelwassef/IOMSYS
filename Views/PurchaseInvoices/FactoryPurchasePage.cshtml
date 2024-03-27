@@ -1,0 +1,155 @@
+﻿
+@{
+    ViewData["Title"] = "FactoryPurchasePage";
+    Layout = "_DevExtremeLayout";
+}
+
+<div class="page-title">
+    <h1>مدخلات بدون فواتير</h1>
+</div>
+
+<div class="row">
+    <div class="form-group col-md-3 mb-3">
+        <label for="branchId">اسم الفرع</label>
+        <select id="BranchId" class="form-control"></select>
+    </div>
+</div>
+
+<div id="gridContainer"></div>
+
+<script>
+    $(function () {
+        $.getJSON('/Branches/LoadBranchesByUser', function (data) {
+            var branchSelect = $('#BranchId');
+            $.each(data, function () {
+                branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
+            });
+        });
+
+        $("#gridContainer").dxDataGrid({
+            dataSource: new DevExpress.data.CustomStore({
+                key: "PurchaseItemId",
+                load: function (loadOptions) {
+                    var d = $.Deferred();
+                    var params = { branchId: $('#BranchId').val() };
+
+                    $.getJSON('/PurchaseItems/LoadFactoryItem', params)
+                        .done(function (result) { d.resolve(result); })
+                        .fail(function () { d.reject("Data Loading Error"); });
+
+                    return d.promise();
+                },
+                remove: function (key) {
+                    return $.ajax({
+                        url: '/PurchaseItems/DeletePurchaseItemWithoutInvoices?purchaseItemId=' + encodeURIComponent(key),
+                        method: 'DELETE'
+                    });
+                }
+            }),
+            selection: { mode: "multiple" },
+            export: { enabled: true, allowExportSelectedData: true },
+            onExporting: exporting,
+            columnAutoWidth: true,
+            editing: {
+                mode: "popup",
+                allowDeleting: true,
+                popup: {
+                    width: 800,
+                    height: 700
+                }
+            },
+            rtlEnabled: true,
+            paging: { pageSize: 10 },
+            pager: {
+                showPageSizeSelector: true,
+                allowedPageSizes: [10, 25, 50, 100]
+            },
+            searchPanel: { visible: true, highlightCaseSensitive: true },
+            groupPanel: { visible: false },
+            rowAlternationEnabled: true,
+            width: "100%",
+            showBorders: true,
+            columns: [
+                {
+                    dataField: "ProductName",
+                    caption: "المنتج"
+                },
+                {
+                    dataField: "SizeName",
+                    caption: "المقاس"
+                },
+                {
+                    dataField: "ColorName",
+                    caption: "اللون"
+                },
+                {
+                    dataField: "Quantity",
+                    caption: "الكمية"
+                },
+                {
+                    dataField: "UnitName",
+                    caption: "الوحدة"
+                },
+                {
+                    dataField: "Notes",
+                    caption: "ملاحظات"
+                },
+                {
+                    dataField: "ModDate",
+                    caption: "تاريخ الادخال",
+                    dataType: "date"
+                },
+                {
+                    dataField: "UserName",
+                    caption: "مدخل البيانات"
+                },
+                {
+                    dataField: "BranchId",
+                    caption: "اسم الفرع",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "BranchId",
+                            loadUrl: "/Branches/LoadBranches"
+                        }),
+                        valueExpr: "BranchId",
+                        displayExpr: "BranchName"
+                    }
+                },
+            ],
+            summary: {
+                totalItems: [
+                    {
+                        column: "Quantity",
+                        summaryType: "sum",
+                        displayFormat: "اجمالي الكميات : {0}"
+                    }
+                ]
+            },
+            columnFixing: {
+                enabled: true
+            },
+            headerFilter: {
+                visible: true
+                , allowSearch: true
+            },
+        });
+
+        $('#BranchId').change(function () {
+            $("#gridContainer").dxDataGrid("instance").refresh();
+        });
+    });
+
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('PurchaseItems');
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'PurchaseItems.xlsx');
+            });
+        });
+    }
+</script>

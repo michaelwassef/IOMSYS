@@ -1,0 +1,65 @@
+﻿
+@{
+    ViewData["Title"] = "ProductsWitoutPricePage";
+    Layout = "_DevExtremeLayout";
+}
+
+<div class="page-title">
+    <h1>المنتجات</h1>
+</div>
+
+@(Html.DevExtreme().DataGrid<ProductsModel>()
+    .ID("gridContainer")
+    .DataSource(d => d.Mvc().Controller("Products").LoadAction("LoadProducts").InsertAction("AddNewProduct").UpdateAction("UpdateProduct").DeleteAction("DeleteProduct").Key("ProductId"))
+    .Selection(s => s.Mode(SelectionMode.Multiple))
+    .Export(e => e.Enabled(true).AllowExportSelectedData(true))
+    .OnExporting("exporting")
+    .ColumnAutoWidth(true)
+    .AllowColumnResizing(true)
+    .Editing(e => e.Mode(GridEditMode.Popup).AllowAdding(true).AllowUpdating(true).AllowDeleting(true).Popup(p => p.Title("بيانات المنتج الاساسية").ShowTitle(true).Width(800).Height(705)))
+    .RtlEnabled(true)
+    .Paging(p => p.PageSize(10))
+    .Pager(p => p.ShowPageSizeSelector(true).AllowedPageSizes(new[] { 10, 25, 50, 100 }))
+    .SearchPanel(s => s.Visible(true).HighlightCaseSensitive(true))
+    .GroupPanel(g => g.Visible(false))
+    .RowAlternationEnabled(true)
+    .Width("100%")
+    .ShowBorders(true)
+    .Columns(columns =>
+    {
+        columns.AddFor(m => m.ProductId).Caption("كود").AllowEditing(false);
+        columns.AddFor(m => m.ProductName).Caption("المنتج");
+        columns.AddFor(m => m.WholesalePrice).Caption("سعر بيع الجملة");
+        columns.AddFor(m => m.SellPrice).Caption("سعر بيع المنتج");
+        columns.AddFor(m => m.MaxDiscount).Caption("اقصي قيمة خصم");
+        columns.AddFor(m => m.Notes).Caption("ملاحظات");
+        columns.AddFor(m => m.UnitId).Caption("الوحدة").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Units").LoadAction("LoadUnits")).ValueExpr("UnitId").DisplayExpr("UnitName"));
+        columns.AddFor(m => m.CategoryId).Caption("التصنيف").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("Categories").LoadAction("LoadCategories")).ValueExpr("CategoryId").DisplayExpr("CategoryName"));
+        columns.AddFor(m => m.ProductTypeId).Caption("النوع").Lookup(lookup => lookup.DataSource(d => d.Mvc().Controller("ProductTypes").LoadAction("LoadProductTypes")).ValueExpr("ProductTypeId").DisplayExpr("ProductTypeName"));
+    })
+    .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
+    .HeaderFilter(f => f.Visible(true))
+)
+
+
+<script>
+    function exporting(e) {
+        var workbook = new ExcelJS.Workbook();
+        var worksheet = workbook.addWorksheet('Products');
+        DevExpress.excelExporter.exportDataGrid({
+            component: e.component,
+            worksheet: worksheet,
+            autoFilterEnabled: true
+        }).then(function () {
+            workbook.xlsx.writeBuffer().then(function (buffer) {
+                saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'Products.xlsx');
+            });
+        });
+    }
+</script>
+
+<style>
+    .select2-container--open {
+        z-index: 9999999 !important;
+    }
+</style>
