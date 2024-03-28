@@ -36,6 +36,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<TransactionDetailModel>> LoadDetailsPaymentTransactionsByBranchAsync(int branchId, DateTime fromdate, DateTime todate)
         {
+
             var sql = @"SELECT 
                 P.TransactionId,
                 P.BranchId,
@@ -43,7 +44,10 @@ namespace IOMSYS.Services
                 P.TransactionType,
                 P.TransactionDate as TransactionDate,
                 P.Amount,
-                P.Details,
+                CASE 
+                    WHEN EXISTS (SELECT 1 FROM Expenses WHERE ExpensesId = P.InvoiceId) THEN e.Notes        
+                    ELSE P.Details
+                END AS Details,
                 P.ModifiedDate,
                 P.ModifiedUser,
                 P.InvoiceId,
@@ -55,7 +59,7 @@ namespace IOMSYS.Services
                     WHEN EXISTS (SELECT 1 FROM PurchaseInvoices WHERE PurchaseInvoiceId = P.InvoiceId) THEN 'فاتورة مشتريات'
                     WHEN P.TransactionType = 'خصم' AND EXISTS (SELECT 1 FROM SalesInvoices WHERE SalesInvoiceId = P.InvoiceId) THEN 'مرتجع فاتورة مبيعات'
                     WHEN EXISTS (SELECT 1 FROM Expenses WHERE ExpensesId = P.InvoiceId) THEN 'مصروفات'
-                    ELSE P.TransactionType 
+                    ELSE 'ادخال يدوي'
                 END AS InvoiceType,
                CASE 
                     WHEN EXISTS (SELECT 1 FROM SalesInvoices WHERE SalesInvoiceId = P.InvoiceId) THEN c.CustomerName
@@ -74,6 +78,8 @@ namespace IOMSYS.Services
                 SalesInvoices si ON si.SalesInvoiceId = P.InvoiceId
             LEFT JOIN 
                 PurchaseInvoices pi ON pi.PurchaseInvoiceId = P.InvoiceId
+            LEFT JOIN 
+                Expenses e ON e.ExpensesId = P.InvoiceId
             LEFT JOIN 
                 Customers c ON c.CustomerId = si.CustomerId
             LEFT JOIN 

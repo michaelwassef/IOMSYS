@@ -58,7 +58,14 @@ namespace IOMSYS.Controllers
         [HttpGet]
         public async Task<IActionResult> LoadSalesInvoicesByBranch(int branchId)
         {
-            var Invoices = await _salesInvoicesService.GetAllSalesInvoicesByBranshAsync(branchId);
+            var Invoices = await _salesInvoicesService.GetAllSalesInvoicesByBranchAsync(branchId);
+            return Json(Invoices);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadSalesInvoicesByBranchAndDate(int branchId, DateTime FromDate, DateTime ToDate)
+        {
+            var Invoices = await _salesInvoicesService.GetAllSalesInvoicesByBranchAndDateAsync(branchId, FromDate, ToDate);
             return Json(Invoices);
         }
 
@@ -197,6 +204,10 @@ namespace IOMSYS.Controllers
                     else { model.IsFullPaidUp = false; }
                 }
 
+                if (model.SaleDate.TimeOfDay == TimeSpan.Zero)
+                {
+                    model.SaleDate = model.SaleDate.Add(DateTime.Now.TimeOfDay);
+                }
                 // Insert the invoice
                 int invoiceId = await _salesInvoicesService.InsertSalesInvoiceAsync(model);
                 decimal amountUtilized = await _paymentTransactionService.ProcessInvoicesAndUpdateBalancesS(model.CustomerId, model.BranchId, willpaidUp, model.PaymentMethodId);

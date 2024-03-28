@@ -32,6 +32,15 @@ namespace IOMSYS.Services
             }
         }
 
+        public async Task<IEnumerable<ExpenseModel>> GetAllExpensesByBranchAndDateAsync(int branchId,DateTime FromDate,DateTime ToDate)
+        {
+            var sql = @"SELECT * FROM Expenses Where BranchId = @BranchId AND PurchaseDate >= @FromDate AND PurchaseDate <= @ToDate ORDER BY ExpensesId DESC";
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<ExpenseModel>(sql, new { BranchId = branchId, FromDate, ToDate}).ConfigureAwait(false);
+            }
+        }
+
         public async Task<ExpenseModel?> SelectExpenseByIdAsync(int expensesId)
         {
             var sql = @"SELECT * FROM Expenses WHERE ExpensesId = @ExpensesId";

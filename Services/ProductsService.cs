@@ -33,13 +33,16 @@ namespace IOMSYS.Services
                             P.MinQuantity,
                             COALESCE(SUM(BI.AvailableQty), 0) AS TotalQuantity,
                             P.WholesalePrice,
-                            P.FabricQuantity
+                            P.FabricQuantity,
+                            U.UnitName
                         FROM 
                             Products P
                         INNER JOIN 
                             Categories C ON C.CategoryId = P.CategoryId
                         INNER JOIN 
                             ProductTypes T ON T.ProductTypeId = P.ProductTypeId
+                        INNER JOIN 
+                            Units U ON U.UnitId = P.UnitId
                         LEFT JOIN 
                             BranchInventory BI ON P.ProductId = BI.ProductId
                         GROUP BY 
@@ -57,7 +60,8 @@ namespace IOMSYS.Services
                             P.Notes, 
                             P.MinQuantity,
                             P.WholesalePrice,
-                            P.FabricQuantity;";
+                            P.FabricQuantity,
+                            U.UnitName;";
 
             using (var db = _dapperContext.CreateConnection())
             {

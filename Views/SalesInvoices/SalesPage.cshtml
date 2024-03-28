@@ -8,12 +8,34 @@
     <h1>فواتير المبيعات</h1>
 </div>
 
-<div class="row">
-    <div class="form-group col-md-3 mb-3">
-        <label for="branchId">اسم الفرع</label>
-        <select id="BranchId" class="form-control"></select>
+<div class="container my-4">
+    <div class="row align-items-end">
+        <!-- Branch Selection -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="branchId">اسم الفرع</label>
+                <select id="BranchId" class="form-control"></select>
+            </div>
+        </div>
+
+        <!-- From Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="fromDate" class="font-weight-bold">من تاريخ:</label>
+                <div id="fromDate" class="custom-date-box"></div>
+            </div>
+        </div>
+
+        <!-- To Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="toDate" class="font-weight-bold">الي تاريخ:</label>
+                <div id="toDate" class="custom-date-box"></div>
+            </div>
+        </div>
     </div>
 </div>
+
 <div class="row justify-content-center">
     <button type="button" onclick="returnProdutsPage()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">عرض مرتجعات الفروع</button>
     <button type="button" onclick="returnProdutsPage2()" class="btn col-md-2 btn-primary btn-block my-1 mx-1">كشف فواتير العملاء</button>
@@ -106,7 +128,7 @@
 )
 
 <script>
-        function returnProdutsPage2() {
+    function returnProdutsPage2() {
         window.location.href = '@Url.Action("CustomersAccountPage", "Customers")';
     }
 
@@ -117,6 +139,65 @@
     function openReturnInvoice(invoiceId) {
         const returnInvoiceUrl = `/SalesInvoices/ReturnInvoice?invoiceId=${invoiceId}`;
         window.location.href = returnInvoiceUrl;
+    }
+
+    function initializeDateBoxes2() {
+        loadBranches2();
+        const today = new Date();
+
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        $("#fromDate").dxDateBox({
+            type: "date",
+            value: today,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
+            }
+        });
+
+        $("#toDate").dxDateBox({
+            type: "date",
+            value: tomorrow,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
+            }
+        });
+
+            $("#gridContainer").dxDataGrid("instance").refresh();
+    }
+
+    function loadBranches2() {
+        fetch('/Branches/LoadBranchesByUser')
+            .then(response => response.json())
+            .then(data => {
+                populateDropdownData(data);
+            })
+            .catch(error => console.error('Unable to load branches.', error));
+    }
+
+    function populateDropdownData(data) {
+        const selectElement = document.getElementById('BranchId');
+        selectElement.innerHTML = '';
+        data.forEach(item => {
+            const option = new Option(item['BranchName'], item['BranchId']);
+            selectElement.add(option);
+        });
+    }
+
+    function loadDataForGrid() {
+        const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const branchId = $('#BranchId').val();
+
+        return $.getJSON('/SalesInvoices/LoadSalesInvoicesByBranchAndDate', { branchId, FromDate: fromDate, ToDate: toDate })
+            .fail(function () {
+                DevExpress.ui.notify("Data Loading Error", "error", 3000);
+            });
     }
 
     function exporting(e) {
@@ -198,25 +279,13 @@
     }
 
     $(function () {
-        $.getJSON('/Branches/LoadBranchesByUser', function (data) {
-            var branchSelect = $('#BranchId');
-            $.each(data, function () {
-                branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
-            });
-        });
-
         $("#gridContainer").dxDataGrid({
             dataSource: new DevExpress.data.CustomStore({
                 key: "SalesInvoiceId",
                 load: function (loadOptions) {
-                    var d = $.Deferred();
-                    var params = { branchId: $('#BranchId').val() };
-
-                    $.getJSON('/SalesInvoices/LoadSalesInvoicesByBranch', params)
-                        .done(function (result) { d.resolve(result); })
-                        .fail(function () { d.reject("Data Loading Error"); });
-
-                    return d.promise();
+                    return loadDataForGrid().then(function (data) {
+                        return data;
+                    });
                 },
                 onRowUpdating: function (e) {
                     var oldData = e.oldData;
@@ -232,14 +301,36 @@
                             ...values,
                             SalesInvoiceId: key,
                         })
+                    })
+                    .done(function (response) {
+                        if (response && response.SuccessMessage) {
+                            DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                        }
+                    })
+                    .fail(function (jqXHR) {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                            DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                        }
                     });
                 },
                 remove: function (key) {
-                    return $.ajax({
-                        url: '/SalesInvoices/DeleteSaleInvoice?invoiceId=' + encodeURIComponent(key),
-                        method: 'DELETE'
-                    });
-                }
+                return $.ajax({
+                    url: '/SalesInvoices/DeleteSaleInvoice?invoiceId=' + encodeURIComponent(key),
+                    method: 'DELETE',
+                    contentType: 'application/json'
+                })
+                .done(function (response) {
+                    if (response && response.SuccessMessage) {
+                        DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                    }
+                })
+                .fail(function (jqXHR) {
+                    if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                        DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                    }
+                });
+             }
+
             }),
             showBorders: true,
             paging: {
@@ -249,6 +340,24 @@
                 showPageSizeSelector: true,
                 allowedPageSizes: [10, 25, 50]
             },
+            selection: {
+                mode: "multiple"
+            },
+            export: {
+                enabled: true,
+                allowExportSelectedData: true
+            },
+            onExporting: exporting,
+            allowColumnResizing: true,
+            columnAutoWidth: true,
+            rtlEnabled: true,
+            searchPanel: {
+                visible: true,
+                highlightCaseSensitive: true
+            },
+            groupPanel: { visible: false },
+            rowAlternationEnabled: true,
+            width: "100%",
             columns: [
                 {
                     caption: "استرجاع",
@@ -313,7 +422,7 @@
                 {
                     dataField: "SaleDate",
                     caption: "تاريخ الفاتوره",
-                    dataType: "date"
+                    dataType: "datetime"
                 },
                 {
                     dataField: "PaidUpDate",
@@ -323,7 +432,7 @@
                 {
                     dataField: "UserId",
                     caption: "مدخل الفاتوره",
-                        allowEditing: false,
+                    allowEditing: false,
                     lookup: {
                         dataSource: DevExpress.data.AspNet.createStore({
                             key: "UserId",
@@ -348,7 +457,6 @@
             ],
             onToolbarPreparing: function (e) {
                 var toolbarItems = e.toolbarOptions.items;
-
                 var addButton = {
                     widget: 'dxButton',
                     options: {
@@ -361,7 +469,6 @@
                     location: 'after',
                     name: 'addButton'
                 };
-
                 var pdfButton = {
                     widget: 'dxButton',
                     options: {
@@ -381,224 +488,25 @@
                     name: 'pdfButton'
                 };
 
-                toolbarItems.push(addButton);
-                toolbarItems.push(pdfButton);
+                toolbarItems.push(addButton, pdfButton);
+                //toolbarItems.push({
+                //    widget: 'dxButton',
+                //    options: {
+                //        icon: 'fas fa-file-pdf',
+                //        text: 'طباعة PDF',
+                //        onClick: function () {
+                //            exportToPDF();
+                //        }
+                //    },
+                //    location: 'after',
+                //    name: 'pdfButton'
+                //});
             }
-            });
-
-
-        $(function () {
-            $("#gridContainer").dxDataGrid({
-                dataSource: new DevExpress.data.CustomStore({
-                    key: "SalesInvoiceId",
-                    load: function (loadOptions) {
-                        var d = $.Deferred();
-                        var params = { branchId: $('#BranchId').val() };
-
-                        $.getJSON('/SalesInvoices/LoadSalesInvoicesByBranch', params)
-                            .done(function (result) { d.resolve(result); })
-                            .fail(function () { d.reject("Data Loading Error"); });
-
-                        return d.promise();
-                    },
-                    onRowUpdating: function (e) {
-                        var oldData = e.oldData;
-                        var newData = e.newData;
-                        e.newData = Object.assign({}, oldData, newData);
-                    },
-                    update: function (key, values) {
-                        return $.ajax({
-                            url: '/SalesInvoices/UpdateSaleInvoice',
-                            method: 'PUT',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                ...values,
-                                SalesInvoiceId: key,
-                            })
-                        });
-                    },
-                    remove: function (key) {
-                        return $.ajax({
-                            url: '/SalesInvoices/DeleteSaleInvoice?invoiceId=' + encodeURIComponent(key),
-                            method: 'DELETE'
-                        });
-                    }
-                }),
-                showBorders: true,
-                paging: {
-                    pageSize: 30
-                },
-                pager: {
-                    showPageSizeSelector: true,
-                    allowedPageSizes: [10, 25, 50]
-                },
-                selection: {
-                    mode: "multiple"
-                },
-                export: {
-                    enabled: true,
-                    allowExportSelectedData: true
-                },
-                onExporting: exporting,
-                allowColumnResizing: true,
-                columnAutoWidth: true,
-                rtlEnabled: true,
-                searchPanel: {
-                    visible: true,
-                    highlightCaseSensitive: true
-                },
-                groupPanel: { visible: false },
-                rowAlternationEnabled: true,
-                width: "100%",
-                columns: [
-                    {
-                        caption: "استرجاع",
-                        cellTemplate: function (container, options) {
-                            $("<a>").addClass("dx-link")
-                                .text("استرجاع الفاتورة")
-                                .on("click", function () {
-                                    window.location.href = "/SalesInvoices/ReturnInvoice?invoiceId=" + options.data.SalesInvoiceId;
-                                })
-                                .appendTo(container);
-                        }
-                    },
-                    {
-                        dataField: "SalesInvoiceId",
-                        caption: "رقم الفاتورة"
-                    },
-                    {
-                        dataField: "TotalAmount",
-                        caption: "اجمالي الفاتورة بعد الخصم"
-                    },
-                    {
-                        dataField: "TotalDiscount",
-                        caption: "اجمالي الخصم"
-                    },
-                    {
-                        dataField: "PaidUp",
-                        caption: "المدفوع من الفاتورة"
-                    },
-                    {
-                        dataField: "Remainder",
-                        caption: "الباقي من المبلغ"
-                    },
-                    {
-                        dataField: "CustomerId",
-                        caption: "اسم العميل",
-                        allowEditing: false,
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "CustomerId",
-                                loadUrl: "/Customers/LoadCustomers"
-                            }),
-                            valueExpr: "CustomerId",
-                            displayExpr: "CustomerName"
-                        }
-                    },
-                    {
-                        dataField: "Notes",
-                        caption: "ملاحظات"
-                    },
-                    {
-                        dataField: "PaymentMethodId",
-                        caption: "الخزنة",
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "PaymentMethodId",
-                                loadUrl: "/PaymentMethods/LoadPaymentMethods"
-                            }),
-                            valueExpr: "PaymentMethodId",
-                            displayExpr: "PaymentMethodName"
-                        }
-                    },
-                    {
-                        dataField: "SaleDate",
-                        caption: "تاريخ الفاتوره",
-                        dataType: "date"
-                    },
-                    {
-                        dataField: "PaidUpDate",
-                        caption: "تاريخ التحصيل",
-                        dataType: "date"
-                    },
-                    {
-                        dataField: "UserId",
-                        caption: "مدخل الفاتوره",
-                        allowEditing: false,
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "UserId",
-                                loadUrl: "/Users/LoadUsers"
-                            }),
-                            valueExpr: "UserId",
-                            displayExpr: "UserName"
-                        }
-                    },
-                    {
-                        dataField: "BranchId",
-                        caption: "الفرع",
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "BranchId",
-                                loadUrl: "/Branches/LoadBranches"
-                            }),
-                            valueExpr: "BranchId",
-                            displayExpr: "BranchName"
-                        }
-                    },
-                ],
-                onToolbarPreparing: function (e) {
-                    var toolbarItems = e.toolbarOptions.items;
-                    var addButton = {
-                        widget: 'dxButton',
-                        options: {
-                            icon: 'fas fa-plus',
-                            text: 'اضافة فاتورة مبيعات جديدة',
-                            onClick: function () {
-                                window.location.href = '@Url.Action("SalesInvoicesPage", "SalesInvoices")';
-                            }
-                        },
-                        location: 'after',
-                        name: 'addButton'
-                    };
-                    var pdfButton = {
-                        widget: 'dxButton',
-                        options: {
-                            icon: 'fas fa-file-pdf',
-                            text: 'طباعة فاتورة',
-                            onClick: function () {
-                                var selectedRowKeys = $("#gridContainer").dxDataGrid("instance").getSelectedRowKeys();
-                                if (selectedRowKeys.length > 0) {
-                                    var invoiceId = selectedRowKeys[0];
-                                    generatePDFReport(invoiceId);
-                                } else {
-                                    DevExpress.ui.notify("يرجى تحديد فاتورة لإنشاء التقرير", "error", 1500);
-                                }
-                            }
-                        },
-                        location: 'after',
-                        name: 'pdfButton'
-                    };
-
-                    toolbarItems.push(addButton, pdfButton);
-                    //toolbarItems.push({
-                    //    widget: 'dxButton',
-                    //    options: {
-                    //        icon: 'fas fa-file-pdf',
-                    //        text: 'طباعة PDF',
-                    //        onClick: function () {
-                    //            exportToPDF();
-                    //        }
-                    //    },
-                    //    location: 'after',
-                    //    name: 'pdfButton'
-                    //});
-                }
-            });
         });
+        initializeDateBoxes2();
+    });
 
-        $('#BranchId').change(function () {
-            $("#gridContainer").dxDataGrid("instance").refresh();
-        });
+    $('#BranchId').change(function () {
+        $("#gridContainer").dxDataGrid("instance").refresh();
     });
 </script>

@@ -32,7 +32,7 @@ namespace IOMSYS.Services
             }
         }
 
-        public async Task<IEnumerable<SalesInvoicesModel>> GetAllSalesInvoicesByBranshAsync(int BranchId)
+        public async Task<IEnumerable<SalesInvoicesModel>> GetAllSalesInvoicesByBranchAsync(int BranchId)
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
@@ -47,6 +47,24 @@ namespace IOMSYS.Services
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<SalesInvoicesModel>(sql, new { BranchId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<IEnumerable<SalesInvoicesModel>> GetAllSalesInvoicesByBranchAndDateAsync(int BranchId, DateTime FromDate, DateTime ToDate)
+        {
+            var sql = @"
+                SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
+                       si.CustomerId, c.CustomerName, si.BranchId, b.BranchName, si.PaymentMethodId, pm.PaymentMethodName, si.UserId, u.UserName, si.PaidUpDate, si.IsFullPaidUp, si.Notes
+                FROM SalesInvoices si
+                LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
+                LEFT JOIN Branches b ON si.BranchId = b.BranchId
+                LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
+                LEFT JOIN Users u ON si.UserId = u.UserId
+                WHERE si.BranchId = @BranchId AND si.IsReturn = 0 AND si.SaleDate >= @FromDate AND si.SaleDate <= @ToDate ORDER BY si.SalesInvoiceId DESC";
+
+            using (var db = _dapperContext.CreateConnection())
+            {
+                return await db.QueryAsync<SalesInvoicesModel>(sql, new { BranchId, FromDate, ToDate }).ConfigureAwait(false);
             }
         }
 

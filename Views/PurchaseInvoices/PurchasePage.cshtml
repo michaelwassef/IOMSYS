@@ -8,10 +8,31 @@
     <h1>فواتير المشتريات</h1>
 </div>
 
-<div class="row">
-    <div class="form-group col-md-3 mb-3">
-        <label for="branchId">اسم الفرع</label>
-        <select id="BranchId" class="form-control"></select>
+<div class="container my-4">
+    <div class="row align-items-end">
+        <!-- Branch Selection -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="branchId">اسم الفرع</label>
+                <select id="BranchId" class="form-control"></select>
+            </div>
+        </div>
+
+        <!-- From Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="fromDate" class="font-weight-bold">من تاريخ:</label>
+                <div id="fromDate" class="custom-date-box"></div>
+            </div>
+        </div>
+
+        <!-- To Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="toDate" class="font-weight-bold">الي تاريخ:</label>
+                <div id="toDate" class="custom-date-box"></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -26,30 +47,77 @@
 <div id="gridContainer"></div>
 
 <script>
-        function returnProdutsPage() {
+    function returnProdutsPage() {
         window.location.href = '@Url.Action("SuppliersAccountPage", "Suppliers")';
     }
 
-    $(function () {
-        $.getJSON('/Branches/LoadBranchesByUser', function (data) {
-            var branchSelect = $('#BranchId');
-            $.each(data, function () {
-                branchSelect.append($('<option/>').val(this.BranchId).text(this.BranchName));
-            });
+    function initializeDateBoxes2() {
+        loadBranches2();
+        const today = new Date();
+
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        $("#fromDate").dxDateBox({
+            type: "date",
+            value: today,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
+            }
         });
 
+        $("#toDate").dxDateBox({
+            type: "date",
+            value: tomorrow,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
+            }
+        });
+
+        $("#gridContainer").dxDataGrid("instance").refresh();
+    }
+
+    function loadBranches2() {
+        fetch('/Branches/LoadBranchesByUser')
+            .then(response => response.json())
+            .then(data => {
+                populateDropdownData(data);
+            })
+            .catch(error => console.error('Unable to load branches.', error));
+    }
+
+    function populateDropdownData(data) {
+        const selectElement = document.getElementById('BranchId');
+        selectElement.innerHTML = '';
+        data.forEach(item => {
+            const option = new Option(item['BranchName'], item['BranchId']);
+            selectElement.add(option);
+        });
+    }
+
+    function loadDataForGrid() {
+        const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const branchId = $('#BranchId').val();
+
+        return $.getJSON('/PurchaseInvoices/LoadPurchaseInvoicesByBranchAndDate', { branchId, FromDate: fromDate, ToDate: toDate })
+            .fail(function () {
+                DevExpress.ui.notify("Data Loading Error", "error", 3000);
+            });
+    }
+
+    $(function () {
         $("#gridContainer").dxDataGrid({
             dataSource: new DevExpress.data.CustomStore({
                 key: "PurchaseInvoiceId",
                 load: function (loadOptions) {
-                    var d = $.Deferred();
-                    var params = { branchId: $('#BranchId').val() };
-
-                    $.getJSON('/PurchaseInvoices/LoadPurchaseInvoicesByBranch', params)
-                        .done(function (result) { d.resolve(result); })
-                        .fail(function () { d.reject("Data Loading Error"); });
-
-                    return d.promise();
+                    return loadDataForGrid().then(function (data) {
+                        return data;
+                    });
                 },
                 onRowUpdating: function (e) {
                     var oldData = e.oldData;
@@ -63,35 +131,42 @@
                 },
                 update: function (key, values) {
                     var url = '/PurchaseInvoices/UpdatePurchaseInvoice/' + encodeURIComponent(key);
-
-                    // Construct the data object with a "values" property
                     var dataToSend = JSON.stringify({ values: values });
-
                     return $.ajax({
                         url: url,
                         method: 'PUT',
                         contentType: 'application/json',
                         data: dataToSend
                     })
-                        .done(function (response) {
-                            // Success notification
-                            DevExpress.ui.notify({ message: "Invoice updated successfully" }, "success", 3000);
-                        })
-                        .fail(function (jqXHR) {
-                            // Error handling
-                            var message = "Could not update invoice";
-                            if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
-                                message = jqXHR.responseJSON.ErrorMessage;
-                            }
-                            DevExpress.ui.notify({ message: message }, "error", 3000);
-                        });
+                    .done(function (response) {
+                        if (response && response.SuccessMessage) {
+                            DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                        }
+                    })
+                    .fail(function (jqXHR) {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                            DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                        }
+                    });
                 },
                 remove: function (key) {
-                    return $.ajax({
-                        url: '/PurchaseInvoices/DeletePurchaseInvoice?invoiceId=' + encodeURIComponent(key),
-                        method: 'DELETE'
-                    });
-                }
+                return $.ajax({
+                    url: '/PurchaseInvoices/DeletePurchaseInvoice?invoiceId=' + encodeURIComponent(key),
+                    method: 'DELETE',
+                    contentType: 'application/json'
+                })
+                .done(function (response) {
+                    if (response && response.SuccessMessage) {
+                        DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                    }
+                })
+                .fail(function (jqXHR) {
+                    if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                        DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                    }
+                });
+            }
+
             }),
             onToolbarPreparing: onToolbarPreparing,
             selection: { mode: "multiple" },
@@ -106,7 +181,7 @@
                     title: "فاتورة مشتريات",
                     showTitle: true,
                     width: 800,
-                    height: 700
+                    height: 650
                 }
             },
             rtlEnabled: true,
@@ -181,7 +256,7 @@
                 {
                     dataField: "PurchaseDate",
                     caption: "تاريخ الفاتورة",
-                    dataType: "date"
+                    dataType: "datetime"
                 },
                 {
                     dataField: "Notes",
@@ -276,6 +351,8 @@
                 }
             }
         });
+
+        initializeDateBoxes2();
 
         $('#BranchId').change(function () {
             $("#gridContainer").dxDataGrid("instance").refresh();

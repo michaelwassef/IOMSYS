@@ -153,6 +153,9 @@ namespace IOMSYS.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                transaction.TransactionDate = transaction.TransactionDate.Add(DateTime.Now.TimeOfDay);
+                
+
                 int result = await _paymentTransactionService.InsertPaymentTransactionAsync(transaction);
 
                 if (result > 0)

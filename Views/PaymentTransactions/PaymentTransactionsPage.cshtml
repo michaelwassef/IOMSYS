@@ -100,15 +100,23 @@
      .AllowColumnResizing(true)
      .ColumnAutoWidth(true)
     .Editing(e => e
-        .Mode(GridEditMode.Popup)
+       .Mode(GridEditMode.Popup)
        .AllowAdding(true)
        .AllowUpdating(true)
        .AllowDeleting(true)
-        .Popup(p => p
+       .Popup(p => p
                 .Title("بيانات المعاملة")
                 .ShowTitle(true)
                 .Width(700)
                 .Height(450))
+                .Form(form => form.ColCount(2).Items(items =>
+                {
+                    items.AddSimpleFor(m => m.BranchId);
+                    items.AddSimpleFor(m => m.Amount);
+                    items.AddSimpleFor(m => m.PaymentMethodId);
+                    items.AddSimpleFor(m => m.Details);
+                    items.AddSimpleFor(m => m.TransactionDate);
+                }))
     )
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))
@@ -126,7 +134,7 @@
     .Columns(columns =>
     {
         columns.AddFor(m => m.TransactionId).Caption("كود العملية").AllowEditing(false);
-        columns.AddFor(m => m.InvoiceType).Caption("اسم العملية");
+        columns.AddFor(m => m.InvoiceType).Caption("اسم العملية").AllowEditing(false);
         columns.AddFor(m => m.InvoiceId).Caption("رقم الفاتورة").AllowEditing(false);
         columns.AddFor(m => m.BranchId).Caption("اسم الفرع").Lookup(lookup => lookup
           .DataSource(d => d.Mvc().Controller("Branches").LoadAction("LoadBranches"))

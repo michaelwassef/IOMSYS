@@ -1,6 +1,5 @@
 ﻿using IOMSYS.IServices;
 using IOMSYS.Models;
-using IOMSYS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -91,6 +90,13 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> LoadPurchaseInvoicesByBranchAndDate(int branchId, DateTime FromDate, DateTime ToDate)
+        {
+            var purchaseInvoices = await _purchaseInvoicesService.GetAllPurchaseInvoicesByBranchAndDateAsync(branchId, FromDate, ToDate);
+            return Json(purchaseInvoices);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> LoadNotPaidPurchaseInvoicesByBranch(DateTime PaidUpDate, int branchId)
         {
             var purchaseInvoices = await _purchaseInvoicesService.GetNotPaidPurchaseInvoicesByBranchAsync(PaidUpDate, branchId);
@@ -138,6 +144,11 @@ namespace IOMSYS.Controllers
 
                 model.Remainder = model.TotalAmount - model.PaidUp;
                 model.IsFullPaidUp = model.PaidUp == model.TotalAmount;
+
+                if (model.PurchaseDate.TimeOfDay == TimeSpan.Zero)
+                {
+                    model.PurchaseDate = model.PurchaseDate.Add(DateTime.Now.TimeOfDay);
+                }
 
                 decimal paymentBalance = await _paymentTransactionService.GetBranchAccountBalanceByPaymentAsync(model.BranchId, model.PaymentMethodId);
                 if (model.PaidUp > paymentBalance)

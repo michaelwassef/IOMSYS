@@ -7,184 +7,290 @@
     <h1>المصروفات</h1>
 </div>
 
-<div class="row">
-    <div class="form-group col-md-3 mb-3">
-        <label for="BranchId">اسم الفرع</label>
-        <select id="BranchId" class="form-control"></select>
+<div class="container my-4">
+    <div class="row align-items-end">
+        <!-- Branch Selection -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="BranchId">اسم الفرع</label>
+                <select id="BranchId" class="form-control"></select>
+            </div>
+        </div>
+
+        <!-- From Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="fromDate" class="font-weight-bold">من تاريخ:</label>
+                <div id="fromDate" class="custom-date-box"></div>
+            </div>
+        </div>
+
+        <!-- To Date -->
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="toDate" class="font-weight-bold">الي تاريخ:</label>
+                <div id="toDate" class="custom-date-box"></div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div id="gridContainer"></div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', async function () {
-        const apiUrl = '/Expenses/LoadExpensesByBranch?branchId=';
-        const branchesUrl = '/Branches/LoadBranchesByUser';
-        const paymentMethodsUrl = '/PaymentMethods/LoadPaymentMethods';
-        const usersUrl = '/Users/LoadUsers';
-        const branchesDropdown = document.getElementById('BranchId');
-        const gridContainer = $("#gridContainer");
+    function initializeDateBoxes3() {
+        loadBranches3();
+        const today = new Date();
 
-        async function fetchData(url) {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Network response was not ok.');
-            return await response.json();
-        }
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
 
-        function populateDropdown(data) {
-            const options = data.map(item => `<option value="${item.BranchId}">${item.BranchName}</option>`).join('');
-            branchesDropdown.innerHTML = options;
-        }
-
-        function initializeDataGrid(branchId) {
-            gridContainer.dxDataGrid({
-                dataSource: DevExpress.data.AspNet.createStore({
-                    key: "ExpensesId",
-                    loadUrl: apiUrl + branchId,
-                    insertUrl: "/Expenses/AddNewExpense",
-                    updateUrl: "/Expenses/UpdateExpense",
-                    deleteUrl: "/Expenses/DeleteExpense",
-                    onBeforeSend: function (method, ajaxOptions) {
-                        ajaxOptions.xhrFields = { withCredentials: true };
-                    }
-                }),
-                columns: [
-                    { dataField: "ExpensesName", caption: "البند", validationRules: [{ type: "required" }] },
-                    { dataField: "ExpensesAmount", caption: "المبلغ", dataType: "number", validationRules: [{ type: "required" }] },
-                    { dataField: "Notes", caption: "ملاحظات" },
-                    {
-                        dataField: "PaymentMethodId", caption: "طريقة الدفع",
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "PaymentMethodId",
-                                loadUrl: "/PaymentMethods/LoadPaymentMethods"
-                            }),
-                            valueExpr: "PaymentMethodId",
-                            displayExpr: "PaymentMethodName"
-                        },
-                        validationRules: [{ type: "required" }]
-                    },
-                    {
-                        dataField: "BranchId", caption: "اسم الفرع",
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "BranchId",
-                                loadUrl: "/Branches/LoadBranches"
-                            }),
-                            valueExpr: "BranchId",
-                            displayExpr: "BranchName"
-                        },
-                        validationRules: [{ type: "required" }]
-                    },
-                    { dataField: "PurchaseDate", caption: "تاريخ المعاملة", dataType: "date", allowEditing: false },
-                    {
-                        dataField: "UserId", caption: "مدخل المعاملة", allowEditing: false,
-                        lookup: {
-                            dataSource: DevExpress.data.AspNet.createStore({
-                                key: "UserId",
-                                loadUrl: "/Users/LoadUsers"
-                            }),
-                            valueExpr: "UserId",
-                            displayExpr: "UserName"
-                        }
-                    }
-                ],
-                headerFilter: {
-                    visible: true
-                    ,allowSearch: true
-                },
-                HeaderFilter: true,
-                rtlEnabled: true,
-                paging: { pageSize: 10 },
-                pager: {
-                    showPageSizeSelector: true,
-                    allowedPageSizes: [10, 25, 50, 100]
-                },
-                searchPanel: { visible: true, highlightCaseSensitive: true },
-                groupPanel: { visible: false },
-                rowAlternationEnabled: true,
-                width: "100%",
-                showBorders: true,
-                columnFixing: {
-                    enabled: true
-                },
-                columnAutoWidth: true,
-                editing: {
-                    allowAdding: true,
-                    allowUpdating: true,
-                    allowDeleting: true,
-                    mode: "popup",
-                    popup: {
-                        title: "المصروف",
-                        showTitle: true,
-                        width: 700,
-                        height: 530,
-                    },
-                },
-                onEditorPreparing: function (e) {
-                    if (e.parentType === "dataRow" && (e.dataField === "PurchaseDate" || e.dataField === "UserId")) {
-                        e.editorOptions.visible = false;
-                    }
-
-                    if (e.parentType === "dataRow" && e.dataField === "BranchId") {
-                        e.editorOptions.dataSource = DevExpress.data.AspNet.createStore({
-                            key: "BranchId",
-                            loadUrl: "/Branches/LoadBranchesByUser"
-                        });
-                    }
-                },
-                summary: {
-                    totalItems: [
-                        {
-                            column: "ExpensesName",
-                            summaryType: "count",
-                            displayFormat: "عدد المصروفات : {0}"
-                        },
-                        {
-                            column: "ExpensesAmount",
-                            summaryType: "sum",
-                            displayFormat: "اجمالي المبالغ المصروفة : {0}"
-                        }
-                    ]
-                },
-                export: {
-                    enabled: true,
-                    allowExportSelectedData: true
-                },
-                onExporting: function (e) {
-                    const workbook = new ExcelJS.Workbook();
-                    const worksheet = workbook.addWorksheet('Expenses');
-
-                    DevExpress.excelExporter.exportDataGrid({
-                        component: e.component,
-                        worksheet: worksheet,
-                        autoFilterEnabled: true
-                    }).then(function () {
-                        workbook.xlsx.writeBuffer().then(function (buffer) {
-                            saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Expenses.xlsx");
-                        });
-                    });
-                    e.cancel = true;
-                },
-            });
-
-        }
-
-        async function init() {
-            try {
-                const branchesData = await fetchData(branchesUrl);
-                populateDropdown(branchesData);
-                const defaultBranchId = branchesData.length > 0 ? branchesData[0].BranchId : null;
-                if (defaultBranchId) initializeDataGrid(defaultBranchId);
-
-                branchesDropdown.addEventListener('change', function () {
-                    initializeDataGrid(this.value);
-                });
-            } catch (error) {
-                console.error('Error loading data:', error);
+        $("#fromDate").dxDateBox({
+            type: "date",
+            value: today,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
             }
-        }
+        });
 
-        init();
+        $("#toDate").dxDateBox({
+            type: "date",
+            value: tomorrow,
+            displayFormat: "yyyy-MM-dd",
+            onValueChanged: function () {
+                $("#gridContainer").dxDataGrid("instance").refresh();
+            }
+        });
+
+        $("#gridContainer").dxDataGrid("instance").refresh();
+    }
+
+    function loadBranches3() {
+        fetch('/Branches/LoadBranchesByUser')
+            .then(response => response.json())
+            .then(data => {
+                populateDropdownData(data);
+            })
+            .catch(error => console.error('Unable to load branches.', error));
+    }
+
+    function populateDropdownData(data) {
+        const selectElement = document.getElementById('BranchId');
+        selectElement.innerHTML = '';
+        data.forEach(item => {
+            const option = new Option(item['BranchName'], item['BranchId']);
+            selectElement.add(option);
+        });
+    }
+
+    function loadDataForGrid() {
+        const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const branchId = $('#BranchId').val();
+
+        return $.getJSON('/Expenses/LoadExpensesByBranchAndDate', { branchId, FromDate: fromDate, ToDate: toDate })
+            .fail(function () {
+                DevExpress.ui.notify("Data Loading Error", "error", 3000);
+            });
+    }
+
+    $(function () {
+        $("#gridContainer").dxDataGrid({
+            dataSource: new DevExpress.data.CustomStore({
+                key: "ExpensesId",
+                load: function (loadOptions) {
+                    return loadDataForGrid().then(function (data) {
+                        return data;
+                    });
+                },
+                insert: function (values) {
+                    var url = '/Expenses/AddNewExpense';
+                    var dataToSend = JSON.stringify({ values: values });
+                    return $.ajax({
+                        url: url,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: dataToSend
+                    })
+                    .done(function (response) {
+                        if (response.SuccessMessage) {
+                            DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                        }
+                    })
+                    .fail(function (jqXHR) {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                            DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                        } else {
+                            DevExpress.ui.notify("An error occurred while adding the expense.", "error", 3000);
+                        }
+                    });
+                },
+                update: function (key, values) {
+                    var url = '/Expenses/UpdateExpense?key=' + encodeURIComponent(key);
+                    var dataToSend = JSON.stringify({ values: values });
+                    return $.ajax({
+                        url: url,
+                        method: 'PUT',
+                        contentType: 'application/json',
+                        data: dataToSend
+                    })
+                    .done(function (response) {
+                        if (response.SuccessMessage) {
+                            DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                        }
+                    })
+                    .fail(function (jqXHR) {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                            DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                        }
+                    });
+                },
+                remove: function (key) {
+                    return $.ajax({
+                        url: '/Expenses/DeleteExpense?key=' + encodeURIComponent(key),
+                        method: 'DELETE',
+                        contentType: 'application/json'
+                    })
+                    .done(function (response) {
+                        if (response && response.SuccessMessage) {
+                            DevExpress.ui.notify(response.SuccessMessage, "success", 3000);
+                        }
+                    })
+                    .fail(function (jqXHR) {
+                        if (jqXHR.responseJSON && jqXHR.responseJSON.ErrorMessage) {
+                            DevExpress.ui.notify(jqXHR.responseJSON.ErrorMessage, "error", 3000);
+                        }
+                    });
+                }
+
+            }),
+            columns: [
+                { dataField: "ExpensesName", caption: "البند", validationRules: [{ type: "required" }] },
+                { dataField: "ExpensesAmount", caption: "المبلغ", dataType: "number", validationRules: [{ type: "required" }] },
+                { dataField: "Notes", caption: "ملاحظات" },
+                {
+                    dataField: "PaymentMethodId", caption: "طريقة الدفع",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "PaymentMethodId",
+                            loadUrl: "/PaymentMethods/LoadPaymentMethods"
+                        }),
+                        valueExpr: "PaymentMethodId",
+                        displayExpr: "PaymentMethodName"
+                    },
+                    validationRules: [{ type: "required" }]
+                },
+                {
+                    dataField: "BranchId", caption: "اسم الفرع",
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "BranchId",
+                            loadUrl: "/Branches/LoadBranches"
+                        }),
+                        valueExpr: "BranchId",
+                        displayExpr: "BranchName"
+                    },
+                    validationRules: [{ type: "required" }]
+                },
+                { dataField: "PurchaseDate", caption: "تاريخ المعاملة", dataType: "datetime", allowEditing: false },
+                {
+                    dataField: "UserId", caption: "مدخل المعاملة", allowEditing: false,
+                    lookup: {
+                        dataSource: DevExpress.data.AspNet.createStore({
+                            key: "UserId",
+                            loadUrl: "/Users/LoadUsers"
+                        }),
+                        valueExpr: "UserId",
+                        displayExpr: "UserName"
+                    }
+                }
+            ],
+            headerFilter: {
+                visible: true
+                ,allowSearch: true
+            },
+            HeaderFilter: true,
+            rtlEnabled: true,
+            paging: { pageSize: 10 },
+            pager: {
+                showPageSizeSelector: true,
+                allowedPageSizes: [10, 25, 50, 100]
+            },
+            searchPanel: { visible: true, highlightCaseSensitive: true },
+            groupPanel: { visible: false },
+            rowAlternationEnabled: true,
+            width: "100%",
+            showBorders: true,
+            columnFixing: {
+                enabled: true
+            },
+            columnAutoWidth: true,
+            editing: {
+                allowAdding: true,
+                allowUpdating: true,
+                allowDeleting: true,
+                mode: "popup",
+                popup: {
+                    title: "المصروف",
+                    showTitle: true,
+                    width: 700,
+                    height: 530,
+                },
+            },
+            onEditorPreparing: function (e) {
+                if (e.parentType === "dataRow" && (e.dataField === "PurchaseDate" || e.dataField === "UserId")) {
+                    e.editorOptions.visible = false;
+                }
+        
+                if (e.parentType === "dataRow" && e.dataField === "BranchId") {
+                    e.editorOptions.dataSource = DevExpress.data.AspNet.createStore({
+                        key: "BranchId",
+                        loadUrl: "/Branches/LoadBranchesByUser"
+                    });
+                }
+            },
+            summary: {
+                totalItems: [
+                    {
+                        column: "ExpensesName",
+                        summaryType: "count",
+                        displayFormat: "عدد المصروفات : {0}"
+                    },
+                    {
+                        column: "ExpensesAmount",
+                        summaryType: "sum",
+                        displayFormat: "اجمالي المبالغ المصروفة : {0}"
+                    }
+                ]
+            },
+            export: {
+                enabled: true,
+                allowExportSelectedData: true
+            },
+            onExporting: function (e) {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Expenses');
+        
+                DevExpress.excelExporter.exportDataGrid({
+                    component: e.component,
+                    worksheet: worksheet,
+                    autoFilterEnabled: true
+                }).then(function () {
+                    workbook.xlsx.writeBuffer().then(function (buffer) {
+                        saveAs(new Blob([buffer], { type: "application/octet-stream" }), "Expenses.xlsx");
+                    });
+                });
+                e.cancel = true;
+            },
+        });
+        
+        initializeDateBoxes3();
+        
+        $('#BranchId').change(function () {
+            $("#gridContainer").dxDataGrid("instance").refresh();
+        });
     });
 </script>

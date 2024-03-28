@@ -15,7 +15,20 @@
     .OnExporting("exporting")
     .ColumnAutoWidth(true)
     .AllowColumnResizing(true)
-    .Editing(e => e.Mode(GridEditMode.Popup).AllowAdding(true).AllowUpdating(true).AllowDeleting(true).Popup(p => p.Title("بيانات المنتج الاساسية").ShowTitle(true).Width(800).Height(705)))
+    .Editing(e => e.Mode(GridEditMode.Popup).AllowAdding(true).AllowUpdating(true).AllowDeleting(true).Popup(p => p.Title("بيانات المنتج الاساسية").ShowTitle(true).Width(800).Height(650))
+     .Form(form => form.ColCount(2).Items(items =>
+       {
+           items.AddSimpleFor(m => m.ProductName);
+           items.AddSimpleFor(m => m.BuyPrice);
+           items.AddSimpleFor(m => m.WholesalePrice);
+           items.AddSimpleFor(m => m.SellPrice);
+           items.AddSimpleFor(m => m.MinQuantity);
+           items.AddSimpleFor(m => m.MaxDiscount);
+           items.AddSimpleFor(m => m.Notes);
+           items.AddSimpleFor(m => m.UnitId);
+           items.AddSimpleFor(m => m.CategoryId);
+           items.AddSimpleFor(m => m.ProductTypeId);
+       })))
     .RtlEnabled(true)
     .Paging(p => p.PageSize(10))
     .Pager(p => p.ShowPageSizeSelector(true).AllowedPageSizes(new[] { 10, 25, 50, 100 }))

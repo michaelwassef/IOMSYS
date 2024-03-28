@@ -1,8 +1,10 @@
-﻿using IOMSYS.IServices;
+﻿using DevExpress.Drawing;
+using IOMSYS.IServices;
 using IOMSYS.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace IOMSYS.Controllers
 {
@@ -42,8 +44,15 @@ namespace IOMSYS.Controllers
             return Json(Products);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> LoadExpensesByBranchAndDate(int branchId,DateTime FromDate,DateTime ToDate)
+        {
+            var Products = await _expensesService.GetAllExpensesByBranchAndDateAsync(branchId,FromDate,ToDate);
+            return Json(Products);
+        }
+
         [HttpPost]
-        public async Task<IActionResult> AddNewExpense([FromForm] IFormCollection formData)
+        public async Task<IActionResult> AddNewExpense([FromBody] JsonElement data)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Expenses", "AddNewExpense");
@@ -51,9 +60,12 @@ namespace IOMSYS.Controllers
 
             try
             {
-                var values = formData["values"];
                 var newExpense = new ExpenseModel();
-                JsonConvert.PopulateObject(values, newExpense);
+                if (data.TryGetProperty("values", out JsonElement valuesElement))
+                {
+                    var values = valuesElement.ToString();
+                    JsonConvert.PopulateObject(values, newExpense);
+                }
 
                 newExpense.PurchaseDate = DateTime.Now;
                 newExpense.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
@@ -102,7 +114,7 @@ namespace IOMSYS.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateExpense([FromForm] IFormCollection formData)
+        public async Task<IActionResult> UpdateExpense(int key, [FromBody] JsonElement data)
         {
             int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
             var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Expenses", "UpdateExpense");
@@ -110,12 +122,13 @@ namespace IOMSYS.Controllers
 
             try
             {
-                var key = Convert.ToInt32(formData["key"]);
-                var values = formData["values"];
                 var expense = await _expensesService.SelectExpenseByIdAsync(key);
                 var oldexpense = await _expensesService.SelectExpenseByIdAsync(key);
-                JsonConvert.PopulateObject(values, expense);
-
+                if (data.TryGetProperty("values", out JsonElement valuesElement))
+                {
+                    var values = valuesElement.ToString();
+                    JsonConvert.PopulateObject(values, expense);
+                }
                 decimal difference = 0;
                 expense.PurchaseDate = DateTime.Now;
                 expense.UserId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);

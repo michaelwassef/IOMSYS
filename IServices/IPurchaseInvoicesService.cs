@@ -8,6 +8,7 @@ namespace IOMSYS.IServices
         Task<PurchaseInvoicesModel> GetPurchaseInvoiceByIdAsync(int purchaseInvoiceId);
         Task<PurchaseInvoicesModel> GetPurchaseInvoiceBySalesIdAsync(int salesInvoiceId);
         Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesByBranchAsync(int BranchId);
+        Task<IEnumerable<PurchaseInvoicesModel>> GetAllPurchaseInvoicesByBranchAndDateAsync(int BranchId, DateTime FromDate, DateTime ToDate);
         Task<IEnumerable<PurchaseInvoicesModel>> GetNotPaidPurchaseInvoicesByBranchAsync(DateTime PaidUpDate, int BranchId);
         Task<IEnumerable<PurchaseInvoicesModel>> GetAllNotPaidPurchaseInvoicesByBranchAsync(int BranchId);
         Task<int> InsertPurchaseInvoiceAsync(PurchaseInvoicesModel purchaseInvoice);
