@@ -50,6 +50,7 @@
     <script src="~/js/devextreme/jquery.js"></script>
     <script src="~/js/devextreme/bootstrap.js"></script>
 
+
     @* Uncomment to use Globalize for localization *@
     @* Docs: https://docs.devexpress.com/AspNetCore/400577#globalize *@
     @*<script src="~/js/devextreme/cldr.js"></script>*@
@@ -87,6 +88,10 @@
 
     <!-- Custom Styles -->
     <style>
+        .dx-rtl .dx-datagrid {
+            overflow-x: auto;
+        }
+
         body {
             font-family: 'Cairo', sans-serif;
             background-color: #f4f4f4;

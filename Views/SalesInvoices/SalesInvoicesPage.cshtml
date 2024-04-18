@@ -115,8 +115,13 @@
                 <input type="number" id="totalAmount" class="form-control" placeholder="اجمالي مبلغ الفاتورة" required readonly min="0" />
             </div>
             <div class="form-group col-md-4 mb-3">
-                <label for="totalDiscount">اجمالي الخصم</label>
+                <label for="totalDiscount">اجمالي خصم الاصناف</label>
                 <input type="number" id="totalDiscount" class="form-control" placeholder="اجمالي الخصم" readonly min="0" />
+            </div>
+            <div class="form-group col-md-4 mb-3">
+                <label for="totalDiscount2">خصم علي الفاتورة</label>
+                <input type="number" id="totalDiscount2" class="form-control" placeholder="خصم علي الفاتورة" min="0" />
+                <div id="totalDiscountDisplay" class="text-primary mt-2"></div>
             </div>
             <div class="form-group col-md-4 mb-3">
                 <label for="paidUp">المدفوع</label>
@@ -580,6 +585,34 @@
         }
     }
 
+    async function hasPermissionDiscount() {
+        try {
+            const permissionResponse = await fetch(`/Products/AddDiscount`);
+            if (permissionResponse.ok) {
+                return true;
+            } else {
+                DevExpress.ui.notify(`ليس لديك صلاحية لاضافة خصم اخر`, "error", 5000);
+                return false;
+            }
+        } catch (error) {
+            DevExpress.ui.notify(error.toString(), "error", 5000);
+            return false;
+        }
+    }
+
+    async function checkDiscountPermission() {
+        try {
+            const response = await fetch('/Products/AddDiscount');
+            if (response.ok) {
+                document.getElementById('totalDiscount2').readOnly = false;
+            } else {
+                document.getElementById('totalDiscount2').readOnly = true;
+            }
+        } catch (error) {
+
+        }
+    }
+
     async function fetchSellPrice(productId) {
        $('#loadingIndicator').show();
         let hasWholesalePricePermission = false;
@@ -635,6 +668,7 @@
     });
 
     $(document).ready(function() {
+        checkDiscountPermission();
         $('#ProductId, #SizeId, #ColorId, #BranchId').change(function() {
             // Get the current selected values
             var productId = $('#ProductId').val();
@@ -652,6 +686,10 @@
             }
 
         });
+    });
+
+    document.getElementById('totalDiscount2').addEventListener('input', function () {
+        calculateTotals();
     });
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -736,11 +774,6 @@
         var effectiveSellPrice = discount > 0 ? sellPrice - discount : sellPrice;
         var Totaldiscount = discount * quantity;
 
-        if (effectiveSellPrice < 0) {
-            DevExpress.ui.notify('الخصم لا يمكن أن يكون أكبر من سعر البيع للواحد', "error", 5000);
-            return;
-        }
-
         // Add the item to the temporary inventory
         var branchId = document.getElementById('BranchId').value;
         const key = `${productId}-${sizeId}-${colorId}-${branchId}`;
@@ -769,6 +802,7 @@
         refreshItemsGrid();
         calculateTotals();
         calculateDiscounts();
+        updateTotalDiscountDisplay();
     }
 
     let productsLookup = [];
@@ -857,15 +891,28 @@
 
     function calculateTotals() {
         let totalAmount = 0;
+        let additionalDiscount = parseFloat(document.getElementById('totalDiscount2').value) || 0;
 
         tempItems.forEach(item => {
             totalAmount += item.Quantity * item.SellPrice;
         });
 
-        document.getElementById('totalAmount').value = totalAmount.toFixed(2) - document.getElementById('totalDiscount').value ;
-        document.getElementById('paidUp').value = totalAmount.toFixed(2) - document.getElementById('totalDiscount').value ;
+        document.getElementById('totalAmount').value = totalAmount.toFixed(2) - additionalDiscount;
+        document.getElementById('paidUp').value = totalAmount.toFixed(2) - additionalDiscount;
+
+        updateTotalDiscountDisplay();
         calculateRemainder();
     }
+
+    function updateTotalDiscountDisplay() {
+        let totalDiscount = parseFloat(document.getElementById('totalDiscount').value) || 0;
+        let additionalDiscount = parseFloat(document.getElementById('totalDiscount2').value) || 0;
+        let totaldiscountValue = totalDiscount + additionalDiscount;
+        let totaldiscountText = "اجمالي الخصم : " + totaldiscountValue.toFixed(2);
+
+        $('#totalDiscountDisplay').html(totaldiscountText);
+    }
+
 
     function calculateRemainder() {
         const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
@@ -947,7 +994,10 @@
         formData.append("Remainder", document.getElementById('remainder').value);
         formData.append("SaleDate", document.getElementById('saleDate').value);
         formData.append("PaidUpDate", document.getElementById('PaidUpDate').value);
-        formData.append("TotalDiscount", document.getElementById('totalDiscount').value);
+        let totalDiscount = parseFloat(document.getElementById('totalDiscount').value) || 0;
+        let additionalDiscount = parseFloat(document.getElementById('totalDiscount2').value) || 0;
+        let combinedDiscount = totalDiscount + additionalDiscount;
+        formData.append("TotalDiscount", combinedDiscount);
 
         try {
             let response = await fetch('/SalesInvoices/AddNewSaleInvoice', {
@@ -964,6 +1014,7 @@
                     refreshItemsGrid();
                     resetTemporaryInventory();
                     document.getElementById('totalAmount').value = '0';
+                    document.getElementById('totalDiscount2').value = '0';
                     document.getElementById('paidUp').value = '0';
                     document.getElementById('remainder').value = '0';
                     DevExpress.ui.notify(result.message, "success", 5000);

@@ -30,12 +30,13 @@ namespace IOMSYS.Services
         public async Task<IEnumerable<SalesItemsModel>> GetAllReturnSalesItemsAsync(int BranchId)
         {
             var sql = @"
-                SELECT si.SalesItemId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId, si.ReturnDate, p.UnitId, U.UnitName, si.ModDate, si.ModUser
+                SELECT si.SalesItemId, P.ProductId, p.ProductName, s.SizeName, c.ColorName, si.Quantity, si.BranchId, si.SellPrice, si.ItemDiscount, si.DiscountId, si.ReturnDate, p.UnitId, U.UnitName, si.ModDate, si.ModUser, Us.UserName
                 FROM SalesItems si
                 LEFT JOIN Products p ON si.ProductId = p.ProductId
                 LEFT JOIN Sizes s ON si.SizeId = s.SizeId
                 LEFT JOIN Colors c ON si.ColorId = c.ColorId
                 LEFT JOIN Units U ON p.UnitId = u.UnitId
+                LEFT JOIN Users Us ON si.ModUser = Us.UserId
                 where si.IsReturn=1 AND BranchId = @BranchId";
 
             using (var db = _dapperContext.CreateConnection())

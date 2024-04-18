@@ -264,6 +264,15 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> AddDiscount()
+        {
+            int userId = Convert.ToInt32(User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value);
+            var hasPermission = await _permissionsService.HasPermissionAsync(userId, "Products", "AddDiscount");
+            if (!hasPermission) { return BadRequest(new { ErrorMessage = "ليس لديك صلاحية" }); }
+            return Ok();
+        }
+
+        [HttpGet]
         public async Task<IActionResult> TotalBranchInventoryReport(int BranchId)
         {
             MemoryStream memoryStream = new MemoryStream();

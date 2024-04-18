@@ -54,13 +54,17 @@ namespace IOMSYS.Services
         {
             var sql = @"
                 SELECT si.SalesInvoiceId, si.TotalAmount, si.PaidUp, si.Remainder, si.SaleDate, si.TotalDiscount,
-                       si.CustomerId, c.CustomerName, si.BranchId, b.BranchName, si.PaymentMethodId, pm.PaymentMethodName, si.UserId, u.UserName, si.PaidUpDate, si.IsFullPaidUp, si.Notes
+                       si.CustomerId, c.CustomerName, si.BranchId, b.BranchName, si.PaymentMethodId, pm.PaymentMethodName, 
+                       si.UserId, u.UserName, si.PaidUpDate, si.IsFullPaidUp, si.Notes
                 FROM SalesInvoices si
                 LEFT JOIN Customers c ON si.CustomerId = c.CustomerId
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON si.UserId = u.UserId
-                WHERE si.BranchId = @BranchId AND si.IsReturn = 0 AND si.SaleDate >= @FromDate AND si.SaleDate <= @ToDate ORDER BY si.SalesInvoiceId DESC";
+                WHERE si.BranchId = @BranchId AND si.IsReturn = 0 
+                      AND si.SaleDate >= @FromDate AND si.SaleDate < @ToDate 
+                ORDER BY si.SalesInvoiceId DESC";
+
 
             using (var db = _dapperContext.CreateConnection())
             {

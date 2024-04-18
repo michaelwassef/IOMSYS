@@ -60,7 +60,7 @@
         .ValueExpr("UserId")
         .DisplayExpr("UserName"));
     })
-        .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
+    .ColumnFixing(columnFixing => { columnFixing.Enabled(true); })
     .HeaderFilter(f => f.Visible(true))
     .Summary(summary => summary
         .TotalItems(items =>
@@ -74,7 +74,11 @@
         })
     )
 )
-
+<style>
+    .dx-rtl .dx-datagrid {
+        overflow-x: auto;
+    }
+</style>
 <script>
     function exporting(e) {
         var workbook = new ExcelJS.Workbook();

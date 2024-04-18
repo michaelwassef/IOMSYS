@@ -1,5 +1,4 @@
-﻿using DevExpress.Drawing;
-using IOMSYS.IServices;
+﻿using IOMSYS.IServices;
 using IOMSYS.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,9 +44,9 @@ namespace IOMSYS.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> LoadExpensesByBranchAndDate(int branchId,DateTime FromDate,DateTime ToDate)
+        public async Task<IActionResult> LoadExpensesByBranchAndDate(int branchId, DateTime FromDate, DateTime ToDate)
         {
-            var Products = await _expensesService.GetAllExpensesByBranchAndDateAsync(branchId,FromDate,ToDate);
+            var Products = await _expensesService.GetAllExpensesByBranchAndDateAsync(branchId, FromDate, ToDate);
             return Json(Products);
         }
 
@@ -77,7 +76,7 @@ namespace IOMSYS.Controllers
                     return BadRequest(new { ErrorMessage = "لا يمكن ادخال قيمه سالبه" });
 
                 var branchBalance = await _paymentTransactionService.GetBranchAccountBalanceByPaymentAsync(newExpense.BranchId, newExpense.PaymentMethodId);
-                if (newExpense.ExpensesAmount >= branchBalance)
+                if (newExpense.ExpensesAmount > branchBalance)
                 {
                     return BadRequest(new { ErrorMessage = "لا يوجد رصيد في الخزنة للخصم منه" });
                 }

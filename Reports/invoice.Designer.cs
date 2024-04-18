@@ -314,7 +314,7 @@
             this.xrLabel5.CanGrow = false;
             this.xrLabel5.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
             new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[Query].[CustomerName]")});
-            this.xrLabel5.Font = new DevExpress.Drawing.DXFont("Arial", 12F);
+            this.xrLabel5.Font = new DevExpress.Drawing.DXFont("Arial", 10F);
             this.xrLabel5.LocationFloat = new DevExpress.Utils.PointFloat(178.935F, 36.66663F);
             this.xrLabel5.Name = "xrLabel5";
             this.xrLabel5.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 100F);
@@ -322,7 +322,7 @@
             this.xrLabel5.StylePriority.UseBackColor = false;
             this.xrLabel5.StylePriority.UseFont = false;
             this.xrLabel5.StylePriority.UseTextAlignment = false;
-            this.xrLabel5.TextAlignment = DevExpress.XtraPrinting.TextAlignment.TopCenter;
+            this.xrLabel5.TextAlignment = DevExpress.XtraPrinting.TextAlignment.TopRight;
             this.xrLabel5.WordWrap = false;
             // 
             // GroupHeader1
@@ -438,6 +438,7 @@
             // 
             // lineTotal
             // 
+            this.lineTotal.CanGrow = false;
             this.lineTotal.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
             new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[TotalSellPrice]")});
             this.lineTotal.Font = new DevExpress.Drawing.DXFont("Segoe UI", 10F, DevExpress.Drawing.DXFontStyle.Bold);
@@ -450,12 +451,14 @@
             this.lineTotal.StylePriority.UseForeColor = false;
             this.lineTotal.StylePriority.UsePadding = false;
             this.lineTotal.StylePriority.UseTextAlignment = false;
-            this.lineTotal.Text = "ج.م‏000";
             this.lineTotal.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.lineTotal.TextFormatString = "{0:0.0}";
             this.lineTotal.Weight = 0.19783251762461729D;
+            this.lineTotal.WordWrap = false;
             // 
             // unitPrice
             // 
+            this.unitPrice.CanGrow = false;
             this.unitPrice.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
             new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[SellPricePerItem]")});
             this.unitPrice.Font = new DevExpress.Drawing.DXFont("Segoe UI", 10F, DevExpress.Drawing.DXFontStyle.Bold);
@@ -467,9 +470,10 @@
             this.unitPrice.StylePriority.UseFont = false;
             this.unitPrice.StylePriority.UsePadding = false;
             this.unitPrice.StylePriority.UseTextAlignment = false;
-            this.unitPrice.Text = "ج.م‏000";
             this.unitPrice.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            this.unitPrice.TextFormatString = "{0:0.0}";
             this.unitPrice.Weight = 0.19696370517241807D;
+            this.unitPrice.WordWrap = false;
             // 
             // quantity
             // 
@@ -516,6 +520,7 @@
             // 
             // detailTableCell5
             // 
+            this.detailTableCell5.CanGrow = false;
             this.detailTableCell5.Font = new DevExpress.Drawing.DXFont("Segoe UI", 9.75F, DevExpress.Drawing.DXFontStyle.Bold);
             this.detailTableCell5.Name = "detailTableCell5";
             this.detailTableCell5.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
@@ -526,6 +531,7 @@
             // 
             // detailTableCell2
             // 
+            this.detailTableCell2.CanGrow = false;
             this.detailTableCell2.Name = "detailTableCell2";
             this.detailTableCell2.Padding = new DevExpress.XtraPrinting.PaddingInfo(0, 0, 5, 0, 100F);
             this.detailTableCell2.StylePriority.UsePadding = false;

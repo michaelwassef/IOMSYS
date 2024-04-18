@@ -16,7 +16,7 @@ namespace IOMSYS.Services
 
         public async Task<IEnumerable<SizesModel>> GetAllSizesAsync()
         {
-            var sql = @"SELECT * FROM Sizes";
+            var sql = @"SELECT * FROM Sizes ORDER BY SizeName";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<SizesModel>(sql).ConfigureAwait(false);

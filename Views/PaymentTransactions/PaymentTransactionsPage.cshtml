@@ -450,22 +450,23 @@
 
     ///////////////////////////////////////////////////
     $(function () {
+        initializePage();
+    });
+
+    function initializePage() {
         initializeDateBoxes();
         loadBranches();
         setupBranchSelectionChangeHandler();
-    });
+    }
 
     function initializeDateBoxes() {
         const today = new Date();
-
-        const endOfToday = new Date(today);
-        endOfToday.setHours(23, 59, 59, 999);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
         $("#fromDate").dxDateBox({
             type: "date",
-            value: today,
+            value: startOfDay,
             displayFormat: "yyyy-MM-dd",
             onValueChanged: function () {
                 refreshGridDataBasedOnDateChange();
@@ -474,7 +475,7 @@
 
         $("#toDate").dxDateBox({
             type: "date",
-            value: tomorrow,
+            value: endOfDay,
             displayFormat: "yyyy-MM-dd",
             onValueChanged: function () {
                 refreshGridDataBasedOnDateChange();
@@ -483,16 +484,16 @@
     }
 
     function loadBranches() {
-        fetch('/Branches/LoadBranchesByUser')
-            .then(response => response.json())
-            .then(data => {
-                populateDropdownData(data);
-                if (data.length > 0) {
-                    fetchBranchAccountBalance(data[0]['BranchId']);
-                    refreshGridDataBasedOnDateChange();
-                }
-            })
-            .catch(error => console.error('Unable to load branches.', error));
+        $.get('/Branches/LoadBranchesByUser', function (data) {
+            const selectElement = $('#BranchId');
+            selectElement.empty();
+            data.forEach(item => {
+                selectElement.append(new Option(item.BranchName, item.BranchId));
+            });
+            selectElement.change();
+        }).fail(function () {
+            console.error('Unable to load branches.');
+        });
     }
 
     function setupBranchSelectionChangeHandler() {
@@ -501,13 +502,39 @@
 
     function refreshGridDataBasedOnDateChange() {
         const branchId = $('#BranchId').val();
-        const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
-        const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const fromDate = $("#fromDate").dxDateBox("instance").option("value");
+        const toDate = $("#toDate").dxDateBox("instance").option("value");
+
+        const formattedFromDate = formatDateAsISO(fromDate, true);
+        const formattedToDate = formatDateAsISO(toDate, false);
+
         if (branchId) {
-            const loadUrl = `/PaymentTransactions/LoadDetailsPaymentTransactionsByBranch?branchId=${branchId}&fromdate=${fromDate}&todate=${toDate}`;
+            const loadUrl = `/PaymentTransactions/LoadDetailsPaymentTransactionsByBranch?branchId=${branchId}&fromdate=${formattedFromDate}&todate=${formattedToDate}`;
             loadSalesInvoices(loadUrl);
             fetchBranchAccountBalance(branchId);
         }
+    }
+
+    function formatDateAsISO(date, startOfDay) {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        let hour = startOfDay ? "00" : "23";
+        let minutes = startOfDay ? "00" : "59";
+        let seconds = startOfDay ? "00" : "59";
+
+        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour}:${minutes}:${seconds}`;
+    }
+
+    function loadSalesInvoices(url) {
+        const gridInstance = $("#gridContainer").dxDataGrid("instance");
+        gridInstance.option("dataSource", new DevExpress.data.CustomStore({
+            key: "TransactionId",
+            load: () => fetch(url).then(response => response.json()),
+            insert: values => insertPaymentTransaction(values),
+            update: (key, values) => updatePaymentTransaction(key, values),
+            remove: key => deletePaymentTransaction(key)
+        }));
     }
 
     function populateDropdownData(data) {
@@ -537,17 +564,6 @@
         } catch (error) {
             console.error('Error fetching branch account balance:', error);
         }
-    }
-
-    function loadSalesInvoices(url) {
-        const gridInstance = $("#gridContainer").dxDataGrid("instance");
-        gridInstance.option("dataSource", new DevExpress.data.CustomStore({
-            key: "TransactionId",
-            load: () => fetch(url).then(response => response.json()),
-            insert: values => insertPaymentTransaction(values),
-            update: (key, values) => updatePaymentTransaction(key, values),
-            remove: key => deletePaymentTransaction(key)
-        }));
     }
 
     function insertPaymentTransaction(values) {

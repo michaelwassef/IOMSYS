@@ -18,6 +18,7 @@ namespace IOMSYS.Models
         public DateTime? ReturnDate { get; set; }
         public DateTime ModDate { get; set; }
         public int ModUser { get; set; }
+        public string? UserName { get; set; }
         //for joins
         public string? ProductName { get; set; }
         public string? SizeName { get; set; }

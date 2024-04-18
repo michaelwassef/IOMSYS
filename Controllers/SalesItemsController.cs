@@ -110,12 +110,17 @@ namespace IOMSYS.Controllers
 
                 // Step 4: Adjust inventory quantity, recalculate invoice total, and delete invoice if necessary
                 await _branchInventoryService.AdjustInventoryQuantityAsync(salesInvoiceIdModel.ProductId, salesInvoiceIdModel.SizeId, salesInvoiceIdModel.ColorId, (int)salesInvoiceIdModel.BranchId, salesInvoiceIdModel.Quantity);
-
-                // Step 5: Calculate returned amount
-                var returnedAmount = salesInvoiceIdModel.Quantity * salesInvoiceIdModel.SellPrice;
-
-                // Step 6: Retrieve sales invoice details
+                decimal returnedAmount = 0;
                 var salesInvoice = await _salesInvoicesService.GetSalesInvoiceByIdAsync(salesInvoiceId);
+
+                if (salesInvoiceIdModel.Quantity * salesInvoiceIdModel.SellPrice > salesInvoice.PaidUp)
+                {
+                   returnedAmount = salesInvoice.PaidUp;
+                }
+                else
+                {
+                    returnedAmount = salesInvoiceIdModel.Quantity * salesInvoiceIdModel.SellPrice;
+                }
 
                 // Step 7: Create payment transaction and update sales invoice
                 var paymentTransaction = new PaymentTransactionModel
@@ -183,7 +188,7 @@ namespace IOMSYS.Controllers
                 {
                     invoice.TotalAmount = totalAmount;
                     invoice.PaidUp = invoice.PaidUp - returnedAmount;
-                    invoice.Remainder = invoice.TotalAmount - invoice.Remainder;
+                    invoice.Remainder = invoice.TotalAmount - invoice.PaidUp;
                     var updateResult = await _salesInvoicesService.UpdateSalesInvoiceAsync(invoice);
                     return updateResult > 0;
                 }

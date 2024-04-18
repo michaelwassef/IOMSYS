@@ -85,8 +85,8 @@ namespace IOMSYS.Services
             LEFT JOIN 
                 Suppliers s ON s.SupplierId = pi.SupplierId
             WHERE
-                P.BranchId = @BranchId AND P.ModifiedDate >= @fromdate AND P.ModifiedDate <= @todate
-                ORDER BY P.ModifiedDate DESC;";
+                P.BranchId = @BranchId AND P.TransactionDate >= @fromdate AND P.TransactionDate <= @todate
+                ORDER BY P.TransactionDate DESC;";
             using (var db = _dapperContext.CreateConnection())
             {
                 return await db.QueryAsync<TransactionDetailModel>(sql, new { BranchId = branchId, fromdate, todate }).ConfigureAwait(false);

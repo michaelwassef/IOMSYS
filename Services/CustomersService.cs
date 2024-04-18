@@ -43,7 +43,7 @@ namespace IOMSYS.Services
                 LEFT JOIN Branches b ON si.BranchId = b.BranchId
                 LEFT JOIN PaymentMethods pm ON si.PaymentMethodId = pm.PaymentMethodId
                 LEFT JOIN Users u ON si.UserId = u.UserId
-                WHERE si.CustomerId = @CustomerId ORDER BY si.SalesInvoiceId DESC";
+                WHERE si.CustomerId = @CustomerId AND si.IsReturn = 0 ORDER BY si.SalesInvoiceId DESC";
 
             using (var db = _dapperContext.CreateConnection())
             {

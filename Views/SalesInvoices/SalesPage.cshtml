@@ -93,8 +93,8 @@
         .LoadParams(new { SalesInvoiceId = new JS("data.SalesInvoiceId") }))
         .Editing(e => e
         .Mode(GridEditMode.Popup)
-        .AllowDeleting(true)
-        )
+@*        .AllowDeleting(true)
+*@        )
         .RtlEnabled(true)
         )
             </text>);
@@ -141,18 +141,23 @@
         window.location.href = returnInvoiceUrl;
     }
 
-    function initializeDateBoxes2() {
-        loadBranches2();
-        const today = new Date();
+    $(function () {
+        initializePage();
+    });
 
-        const endOfToday = new Date(today);
-        endOfToday.setHours(23, 59, 59, 999);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+    function initializePage() {
+        initializeDateBoxes();
+        loadBranches();
+    }
+
+    function initializeDateBoxes() {
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
         $("#fromDate").dxDateBox({
             type: "date",
-            value: today,
+            value: startOfDay,
             displayFormat: "yyyy-MM-dd",
             onValueChanged: function () {
                 $("#gridContainer").dxDataGrid("instance").refresh();
@@ -161,23 +166,25 @@
 
         $("#toDate").dxDateBox({
             type: "date",
-            value: tomorrow,
+            value: endOfDay,
             displayFormat: "yyyy-MM-dd",
             onValueChanged: function () {
                 $("#gridContainer").dxDataGrid("instance").refresh();
             }
         });
-
-            $("#gridContainer").dxDataGrid("instance").refresh();
     }
 
-    function loadBranches2() {
-        fetch('/Branches/LoadBranchesByUser')
-            .then(response => response.json())
-            .then(data => {
-                populateDropdownData(data);
-            })
-            .catch(error => console.error('Unable to load branches.', error));
+    function loadBranches() {
+        $.get('/Branches/LoadBranchesByUser', function (data) {
+            const selectElement = $('#BranchId');
+            selectElement.empty();
+            data.forEach(item => {
+                selectElement.append(new Option(item.BranchName, item.BranchId));
+            });
+            selectElement.change();
+        }).fail(function () {
+            console.error('Unable to load branches.');
+        });
     }
 
     function populateDropdownData(data) {
@@ -190,14 +197,36 @@
     }
 
     function loadDataForGrid() {
-        const fromDate = $("#fromDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
-        const toDate = $("#toDate").dxDateBox("instance").option("value").toISOString().split('T')[0];
+        const fromDateValue = $("#fromDate").dxDateBox("instance").option("value");
+        const toDateValue = $("#toDate").dxDateBox("instance").option("value");
+
+        const fromDate = formatDateAsISO(fromDateValue, true);
+        const toDate = formatDateAsISO(toDateValue, false);
+
         const branchId = $('#BranchId').val();
 
         return $.getJSON('/SalesInvoices/LoadSalesInvoicesByBranchAndDate', { branchId, FromDate: fromDate, ToDate: toDate })
             .fail(function () {
                 DevExpress.ui.notify("Data Loading Error", "error", 3000);
             });
+    }
+
+    function formatDateAsISO(date, startOfDay) {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        let hour, minutes, seconds;
+
+        if (startOfDay) {
+            hour = '00';
+            minutes = '00';
+            seconds = '00';
+        } else {
+            hour = '23';
+            minutes = '59';
+            seconds = '59';
+        }
+        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour}:${minutes}:${seconds}`;
     }
 
     function exporting(e) {
@@ -503,7 +532,7 @@
                 //});
             }
         });
-        initializeDateBoxes2();
+        initializeDateBoxes();
     });
 
     $('#BranchId').change(function () {

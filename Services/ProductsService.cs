@@ -32,6 +32,8 @@ namespace IOMSYS.Services
                             P.Notes, 
                             P.MinQuantity,
                             COALESCE(SUM(BI.AvailableQty), 0) AS TotalQuantity,
+                            COALESCE(si.TotalSoldQuantity, 0) AS TotalSoldQuantity,
+                            COALESCE(si.TotalSellPrice, 0) AS TotalSellPrice,
                             P.WholesalePrice,
                             P.FabricQuantity,
                             U.UnitName
@@ -45,6 +47,14 @@ namespace IOMSYS.Services
                             Units U ON U.UnitId = P.UnitId
                         LEFT JOIN 
                             BranchInventory BI ON P.ProductId = BI.ProductId
+                        LEFT JOIN 
+                           (SELECT 
+                               si.ProductId, 
+                               SUM(si.Quantity) AS TotalSoldQuantity, 
+                               SUM(si.SellPrice * si.Quantity) AS TotalSellPrice
+                            FROM SalesItems si
+                            INNER JOIN SalesInvoiceItems sii ON si.SalesItemId = sii.SalesItemId
+                            GROUP BY si.ProductId) si ON P.ProductId = si.ProductId
                         GROUP BY 
                             P.ProductId, 
                             P.ProductName, 
@@ -61,7 +71,10 @@ namespace IOMSYS.Services
                             P.MinQuantity,
                             P.WholesalePrice,
                             P.FabricQuantity,
-                            U.UnitName;";
+                            si.TotalSoldQuantity,
+                            si.TotalSellPrice,
+                            U.UnitName
+                        ORDER BY P.ProductName;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -106,7 +119,6 @@ namespace IOMSYS.Services
                 return -1;
             }
         }
-
 
         public async Task<int> UpdateProductAsync(ProductsModel product)
         {
@@ -184,7 +196,8 @@ namespace IOMSYS.Services
                     T.ProductTypeName,
                     P.UnitId
                 HAVING 
-                    SUM(BI.AvailableQty) > 0;";
+                    SUM(BI.AvailableQty) > 0
+                ORDER BY P.ProductName;";
 
             using (var db = _dapperContext.CreateConnection())
             {
@@ -290,39 +303,57 @@ namespace IOMSYS.Services
 
                                 UNION ALL
 
-                             SELECT
-                                  SI.ProductId,
-                                  CASE 
-                                      WHEN SI.IsReturn = 1 THEN 'مرتجعات'
-                                      ELSE 'مبيعات'
-                                  END AS RecordType,
-                                  P.ProductName,
-                                  S.SizeName,
-                                  C.ColorName,
-                                  CAT.CategoryName,
-                                  PT.ProductTypeName,
-                                  CASE
-                                      WHEN SI.IsReturn = 1 THEN SI.Quantity
-                                      ELSE -SI.Quantity
-                                  END AS Quantity,
-                                  ui.UnitName,
-                                  b.BranchName,
-                                  SI.ModDate AS DateAdded,
-                                  NULL AS Notes,
-                                  u.UserName
-                              FROM SalesItems SI
-                              LEFT JOIN SalesInvoiceItems SII ON SI.SalesItemId = SII.SalesItemId
-                              LEFT JOIN SalesInvoices SIv ON SII.SalesInvoiceId = SIv.SalesInvoiceId
-                              LEFT JOIN InventoryMovements IM ON SIv.SalesInvoiceId = IM.SalesInvoiceId
-                              INNER JOIN Products P ON SI.ProductId = P.ProductId
-                              INNER JOIN Sizes S ON SI.SizeId = S.SizeId
-                              INNER JOIN Colors C ON SI.ColorId = C.ColorId
-                              INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
-                              INNER JOIN Units ui ON P.UnitId = ui.UnitId
-                              INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
-                              INNER JOIN Branches b ON SI.BranchId = b.BranchId
-                              INNER JOIN Users u ON SI.ModUser = u.UserId
-                              WHERE SI.BranchId = @BranchId  AND IM.MovementId IS NULL
+                      SELECT
+                          SI.ProductId,
+                          'مبيعات' AS RecordType,
+                          P.ProductName,
+                          S.SizeName,
+                          C.ColorName,
+                          CAT.CategoryName,
+                          PT.ProductTypeName,
+                          -SI.Quantity AS Quantity,
+                          ui.UnitName,
+                          b.BranchName,
+                          SI.ModDate AS DateAdded,
+                          NULL AS Notes,
+                          u.UserName
+                      FROM SalesItems SI
+                      INNER JOIN Products P ON SI.ProductId = P.ProductId
+                      INNER JOIN Sizes S ON SI.SizeId = S.SizeId
+                      INNER JOIN Colors C ON SI.ColorId = C.ColorId
+                      INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                      INNER JOIN Units ui ON P.UnitId = ui.UnitId
+                      INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                      INNER JOIN Branches b ON SI.BranchId = b.BranchId
+                      INNER JOIN Users u ON SI.ModUser = u.UserId
+                      WHERE SI.BranchId = @BranchId
+                  
+                      UNION ALL
+                  
+                      SELECT
+                          SI.ProductId,
+                          'مرتجعات' AS RecordType,
+                          P.ProductName,
+                          S.SizeName,
+                          C.ColorName,
+                          CAT.CategoryName,
+                          PT.ProductTypeName,
+                          SI.Quantity AS Quantity,
+                          ui.UnitName,
+                          b.BranchName,
+                          SI.ReturnDate AS DateAdded,
+                          NULL AS Notes,
+                          u.UserName
+                      FROM SalesItems SI
+                      INNER JOIN Products P ON SI.ProductId = P.ProductId
+                      INNER JOIN Sizes S ON SI.SizeId = S.SizeId
+                      INNER JOIN Colors C ON SI.ColorId = C.ColorId
+                      INNER JOIN Categories CAT ON P.CategoryId = CAT.CategoryId
+                      INNER JOIN Units ui ON P.UnitId = ui.UnitId
+                      INNER JOIN ProductTypes PT ON P.ProductTypeId = PT.ProductTypeId
+                      INNER JOIN Branches b ON SI.BranchId = b.BranchId
+                      INNER JOIN Users u ON SI.ModUser = u.UserId
+                      WHERE SI.BranchId = @BranchId AND SI.IsReturn = 1
 
                                 UNION ALL
 
@@ -490,7 +521,6 @@ namespace IOMSYS.Services
                 return availabilityText;
             }
         }
-
 
     }
 }
